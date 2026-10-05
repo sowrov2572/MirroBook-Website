@@ -1,0 +1,6 @@
+{
+  "name": "MirrorBook - Reflecting Creativity",
+  "description": "Minimal creative agency for advertising, video editing, design, AI software development, and digital tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
