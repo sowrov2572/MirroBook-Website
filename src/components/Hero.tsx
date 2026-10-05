@@ -75,13 +75,13 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
             >
               {/* Full Panoramic Image Banner */}
               <img
-                src="https://i.ibb.co/WNjVG5Qk/mirrorbook.jpg"
+                src="https://i.ibb.co/dsxmjMSP/mirrorbook.jpg"
                 alt="MirrorBook Agency Banner"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   const target = e.currentTarget;
-                  if (!target.src.includes('dsxmjMSP')) {
-                    target.src = 'https://i.ibb.co/dsxmjMSP/mirrorbook.jpg';
+                  if (!target.src.includes('WNjVG5Qk')) {
+                    target.src = 'https://i.ibb.co/WNjVG5Qk/mirrorbook.jpg';
                   }
                 }}
                 className="w-full h-full object-cover object-center group-hover/banner:scale-[1.02] transition-transform duration-700 ease-out"

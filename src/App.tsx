@@ -159,13 +159,11 @@ export default function App() {
   };
 
   const handleClearOrders = () => {
-    if (window.confirm('Are you sure you want to clear all orders from the registry?')) {
-      setOrders([]);
-      try {
-        localStorage.removeItem('mirrorbook_orders');
-      } catch {
-        // ignore
-      }
+    setOrders([]);
+    try {
+      localStorage.removeItem('mirrorbook_orders');
+    } catch {
+      // ignore
     }
   };
 

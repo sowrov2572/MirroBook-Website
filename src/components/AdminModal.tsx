@@ -959,12 +959,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                   <Edit2 size={14} />
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    if (window.confirm(`Delete "${product.title}"?`)) {
-                                      onDeleteProduct(product.id);
-                                    }
-                                  }}
+                                  onClick={() => onDeleteProduct(product.id)}
                                   className="p-1.5 text-[#666666] hover:text-red-400 hover:bg-red-950/20 rounded"
+                                  title="Delete Product"
                                 >
                                   <Trash2 size={14} />
                                 </button>

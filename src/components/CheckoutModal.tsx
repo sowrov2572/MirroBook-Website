@@ -9,6 +9,11 @@ import {
   CheckCircle,
   AlertCircle,
   MessageCircle,
+  Smartphone,
+  Landmark,
+  Zap,
+  Flame,
+  Send,
 } from 'lucide-react';
 import { CheckoutItem, PaymentMethod, Order, PaymentConfig, ProductItem } from '../types';
 import {
@@ -25,6 +30,40 @@ interface CheckoutModalProps {
   allProducts?: ProductItem[];
 }
 
+// Payment method icons component
+const MethodIcon: React.FC<{ method: PaymentMethod; className?: string }> = ({ method, className = 'w-3.5 h-3.5' }) => {
+  switch (method) {
+    case 'bKash':
+      // Iconic origami bird / mobile finance icon
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.8l5.5 3.4-5.5 3.5-5.5-3.5L12 4.8zM6 9.8l5 3.2v6.2l-5-3.1V9.8zm12 6.3l-5 3.1V13l5-3.2v6.3z" />
+        </svg>
+      );
+    case 'Nagad':
+      // Flame / geometric spark
+      return <Flame className={className} />;
+    case 'Rocket':
+      // Sleek rocket / launch icon
+      return <Zap className={className} />;
+    case 'Upay':
+      // Upay lightning / chevron
+      return <Smartphone className={className} />;
+    case 'Bank Transfer':
+      return <Landmark className={className} />;
+    default:
+      return <Smartphone className={className} />;
+  }
+};
+
+// Robust numeric price extractor
+function extractNumericPrice(priceStr: string | number): number {
+  if (typeof priceStr === 'number') return priceStr;
+  const sanitized = priceStr.replace(/,/g, '');
+  const match = sanitized.match(/\d+(?:\.\d+)?/);
+  return match ? parseFloat(match[0]) : 0;
+}
+
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   item,
   onClose,
@@ -37,7 +76,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('bKash');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Form Fields
+  // Form Fields (Clean & Minimal)
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -57,8 +96,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!item) return null;
 
-  // Extract numeric price for verification
-  const numericPrice = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
+  // Extract numeric price for verification against Sheet
+  const numericPrice = extractNumericPrice(item.price);
 
   // Find product's protected download link if available
   const matchedProduct = allProducts.find(
@@ -73,7 +112,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   const cleanPhoneForWhatsApp = (num: string) => {
-    return num.replace(/[^0-9]/g, '');
+    let digits = num.replace(/[^0-9]/g, '');
+    if (digits.startsWith('01') && digits.length === 11) {
+      digits = '88' + digits;
+    }
+    return digits;
   };
 
   // 1. Primary Action: "Verify & Complete Order"
@@ -135,7 +178,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             `Customer: ${verifiedOrder.customerName}\n` +
             `Email: ${verifiedOrder.customerEmail}\n` +
             `Phone: ${verifiedOrder.customerPhone}\n\n` +
-            `Access link unlocked automatically for customer.`;
+            `Status: Unlocked automatically.`;
 
           sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText);
         }
@@ -147,7 +190,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         // Step c) Verification failed / Pending review
         setVerificationFailed(true);
         setVerificationMessage(
-          verifyRes.message || 'Transaction ID not yet found in automated payment records.'
+          verifyRes.message || 'Transaction ID not verified or Sheet not connected yet.'
         );
       }
     } catch {
@@ -247,14 +290,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       )}`
     : '#';
 
+  const paymentMethods: { method: PaymentMethod; label: string }[] = [
+    { method: 'bKash', label: 'bKash' },
+    { method: 'Nagad', label: 'Nagad' },
+    { method: 'Rocket', label: 'Rocket' },
+    { method: 'Upay', label: 'Upay' },
+    { method: 'Bank Transfer', label: 'Bank' },
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg bg-[#0E0E0E] border border-white/10 rounded-2xl shadow-2xl text-left overflow-hidden my-6">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-[#0A0A0A]">
+      <div className="relative w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl text-left overflow-hidden my-6">
+        {/* Top Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.08] bg-[#070707]">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#CCFF00]" />
-            <h3 className="font-display text-sm font-semibold tracking-wider uppercase text-white">
+            <h3 className="font-display text-xs font-semibold tracking-wider uppercase text-white">
               Checkout
             </h3>
           </div>
@@ -269,12 +320,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
         {/* 1. COMPLETED SUCCESS VIEW */}
         {completedOrder ? (
-          <div className="p-6 space-y-5">
-            <div className="text-center py-2">
-              <div className="w-12 h-12 rounded-full bg-[#CCFF00]/10 border border-[#CCFF00] text-[#CCFF00] mx-auto flex items-center justify-center mb-3">
-                {isAutoVerified ? <ShieldCheck size={24} /> : <CheckCircle size={24} />}
+          <div className="p-5 space-y-4">
+            <div className="text-center py-1">
+              <div className="w-11 h-11 rounded-full bg-[#CCFF00]/10 border border-[#CCFF00] text-[#CCFF00] mx-auto flex items-center justify-center mb-2.5">
+                {isAutoVerified ? <ShieldCheck size={22} /> : <CheckCircle size={22} />}
               </div>
-              <h4 className="font-display text-xl font-bold text-white mb-0.5">
+              <h4 className="font-display text-lg font-bold text-white mb-0.5">
                 {isAutoVerified ? 'Payment Verified' : 'Order Submitted'}
               </h4>
               <p className="text-xs font-mono text-[#888888]">
@@ -283,10 +334,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             {/* Receipt Summary */}
-            <div className="bg-[#141414] border border-white/10 rounded-xl p-4 space-y-2 text-xs">
+            <div className="bg-[#121212] border border-white/10 rounded-xl p-3.5 space-y-1.5 text-xs">
               <div className="flex justify-between py-1 border-b border-white/5">
                 <span className="text-[#888888]">Item</span>
-                <span className="text-white font-medium">{completedOrder.itemName}</span>
+                <span className="text-white font-medium truncate max-w-[200px]">{completedOrder.itemName}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-white/5">
                 <span className="text-[#888888]">Amount</span>
@@ -308,9 +359,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 href={completedOrder.downloadUrl || downloadUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3.5 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl shadow-[0_0_20px_rgba(204,255,0,0.3)] flex items-center justify-center gap-2 cursor-pointer transition-all"
+                className="w-full py-3 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl shadow-[0_0_20px_rgba(204,255,0,0.3)] flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
-                <Download size={15} />
+                <Download size={14} />
                 <span>Download / Access Now</span>
               </a>
             )}
@@ -321,19 +372,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 href={customerWhatsAppLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full py-3 text-xs font-semibold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`w-full py-2.5 text-xs font-semibold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   isAutoVerified
                     ? 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
                     : 'bg-[#CCFF00] hover:bg-[#b8e600] text-black shadow-[0_0_20px_rgba(204,255,0,0.25)]'
                 }`}
               >
                 <MessageCircle size={14} />
-                <span>{isAutoVerified ? 'Open WhatsApp' : 'Forward Details to WhatsApp'}</span>
+                <span>{isAutoVerified ? 'Open WhatsApp' : 'Message on WhatsApp'}</span>
               </a>
 
               <button
                 onClick={onClose}
-                className="w-full py-2.5 text-xs text-[#888888] hover:text-white transition-colors cursor-pointer text-center"
+                className="w-full py-2 text-xs text-[#888888] hover:text-white transition-colors cursor-pointer text-center"
               >
                 Close
               </button>
@@ -341,31 +392,34 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
         ) : (
           /* 2. MINIMAL UNCLUTTERED CHECKOUT FORM */
-          <div className="p-6 space-y-4">
+          <div className="p-5 space-y-3.5">
             {/* Clean Item Name & Price Banner */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[#777777] block">
-                  Selected Item
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#666666] block">
+                  Item
                 </span>
-                <span className="font-display text-base font-bold text-white">
+                <span className="font-display text-sm sm:text-base font-bold text-white truncate max-w-[220px] block">
                   {item.name}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[#777777] block">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#666666] block">
                   Price
                 </span>
-                <span className="font-display text-xl font-bold text-[#CCFF00] tabular-nums">
+                <span className="font-display text-lg sm:text-xl font-bold text-[#CCFF00] tabular-nums">
                   {item.price}
                 </span>
               </div>
             </div>
 
-            {/* Payment Method Selector Tabs */}
-            <div className="grid grid-cols-5 gap-1 p-1 bg-[#141414] rounded-xl border border-white/10">
-              {(['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer'] as PaymentMethod[]).map(
-                (method) => {
+            {/* Payment Method Selector Tabs with Name & Icon */}
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#666666] block mb-1.5">
+                Payment Method
+              </span>
+              <div className="grid grid-cols-5 gap-1 p-1 bg-[#121212] rounded-xl border border-white/10">
+                {paymentMethods.map(({ method, label }) => {
                   const isActive = selectedMethod === method;
                   return (
                     <button
@@ -375,25 +429,24 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         setSelectedMethod(method);
                         setVerificationFailed(false);
                       }}
-                      className={`py-2 px-1 text-[11px] font-medium rounded-lg transition-all text-center cursor-pointer ${
+                      className={`py-2 px-1 text-[11px] font-medium rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer ${
                         isActive
-                          ? 'bg-[#CCFF00] text-black font-semibold'
+                          ? 'bg-[#CCFF00] text-black font-semibold shadow-sm'
                           : 'text-[#888888] hover:text-white hover:bg-white/5'
                       }`}
                     >
-                      <span className="truncate block">
-                        {method === 'Bank Transfer' ? 'Bank' : method}
-                      </span>
+                      <MethodIcon method={method} className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{label}</span>
                     </button>
                   );
-                }
-              )}
+                })}
+              </div>
             </div>
 
             {/* Dynamic Account Details Box */}
-            <div className="bg-[#141414] border border-white/10 rounded-xl p-3.5">
+            <div className="bg-[#121212] border border-white/10 rounded-xl p-3">
               {selectedMethod === 'Bank Transfer' ? (
-                <div className="space-y-1.5 text-xs">
+                <div className="space-y-1 text-xs">
                   <div className="flex justify-between text-[#888888]">
                     <span>Bank</span>
                     <span className="text-white font-medium">{config.bankDetails.bankName}</span>
@@ -426,10 +479,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-[#777777] block">
-                      Send Money to ({selectedMethod} Personal)
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-[#666666] block">
+                      Send Money ({selectedMethod} Personal)
                     </span>
-                    <span className="text-base font-mono font-bold text-white tracking-wide">
+                    <span className="text-sm sm:text-base font-mono font-bold text-white tracking-wide">
                       {getActiveAccountNumber()}
                     </span>
                   </div>
@@ -437,16 +490,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleCopy(getActiveAccountNumber(), `num-${selectedMethod}`)}
-                    className="px-3 py-1.5 text-xs font-mono uppercase bg-white/10 hover:bg-[#CCFF00] hover:text-black text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="px-2.5 py-1.5 text-xs font-mono uppercase bg-white/10 hover:bg-[#CCFF00] hover:text-black text-white rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     {copiedKey === `num-${selectedMethod}` ? (
                       <>
-                        <Check size={12} className="text-black" />
+                        <Check size={11} className="text-black" />
                         <span>Copied</span>
                       </>
                     ) : (
                       <>
-                        <Copy size={12} />
+                        <Copy size={11} />
                         <span>Copy</span>
                       </>
                     )}
@@ -455,20 +508,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               )}
             </div>
 
-            {/* Input Fields Form */}
-            <form onSubmit={handleVerifyAndComplete} className="space-y-3">
+            {/* Input Fields Form: Name, Email, Phone, Sender Number, TrxID */}
+            <form onSubmit={handleVerifyAndComplete} className="space-y-2.5">
               {errorMsg && (
-                <div className="p-2 bg-red-950/40 border border-red-800 text-xs text-red-300 rounded-lg flex items-center gap-2">
-                  <AlertCircle size={13} />
+                <div className="p-2 bg-red-950/40 border border-red-800 text-xs text-red-300 rounded-lg flex items-center gap-1.5">
+                  <AlertCircle size={13} className="shrink-0" />
                   <span>{errorMsg}</span>
                 </div>
               )}
 
-              {/* Name & Email */}
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Name & Email (Minimal labels) */}
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[10px] font-mono text-[#888888] mb-1">
-                    Full Name
+                  <label className="block text-[10px] font-mono text-[#777777] mb-1">
+                    Name
                   </label>
                   <input
                     type="text"
@@ -476,13 +529,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your name"
-                    className="w-full bg-[#161616] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                    className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono text-[#888888] mb-1">
-                    Email Address
+                  <label className="block text-[10px] font-mono text-[#777777] mb-1">
+                    Email
                   </label>
                   <input
                     type="email"
@@ -490,14 +543,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@email.com"
-                    className="w-full bg-[#161616] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                    className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none"
                   />
                 </div>
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-[10px] font-mono text-[#888888] mb-1">
+                <label className="block text-[10px] font-mono text-[#777777] mb-1">
                   Phone / WhatsApp
                 </label>
                 <input
@@ -506,15 +559,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="01XXXXXXXXX"
-                  className="w-full bg-[#161616] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                  className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-mono"
                 />
               </div>
 
               {/* Sender Account & TrxID */}
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[10px] font-mono text-[#888888] mb-1">
-                    Sender Account Number
+                  <label className="block text-[10px] font-mono text-[#777777] mb-1">
+                    Sender Number
                   </label>
                   <input
                     type="text"
@@ -522,13 +575,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={senderAccount}
                     onChange={(e) => setSenderAccount(e.target.value)}
                     placeholder="01XXXXXXXXX"
-                    className="w-full bg-[#161616] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                    className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono text-[#888888] mb-1">
-                    TrxID / Reference
+                  <label className="block text-[10px] font-mono text-[#777777] mb-1">
+                    Transaction ID (TrxID)
                   </label>
                   <input
                     type="text"
@@ -536,14 +589,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={trxId}
                     onChange={(e) => setTrxId(e.target.value)}
                     placeholder="e.g. 9X29A8K02"
-                    className="w-full bg-[#161616] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono uppercase"
+                    className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-mono uppercase"
                   />
                 </div>
               </div>
 
-              {/* Verification Feedback Banner */}
+              {/* Verification Feedback Banner & Fallback Option */}
               {verificationFailed && (
-                <div className="p-3 bg-[#181818] border border-white/10 rounded-xl space-y-2">
+                <div className="p-3 bg-[#141414] border border-white/10 rounded-xl space-y-2">
                   <div className="text-xs text-[#CCFF00] flex items-center gap-1.5 font-mono">
                     <AlertCircle size={13} className="shrink-0" />
                     <span>{verificationMessage}</span>
@@ -554,7 +607,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     disabled={isSubmittingManual}
                     className="w-full py-2 text-xs font-semibold uppercase tracking-wider bg-white/10 hover:bg-[#CCFF00] hover:text-black text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    {isSubmittingManual ? <Loader2 size={13} className="animate-spin" /> : null}
+                    {isSubmittingManual ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                     <span>Submit for Manual Review</span>
                   </button>
                 </div>
@@ -565,7 +618,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <button
                   type="submit"
                   disabled={isVerifying}
-                  className="w-full py-3 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.99] text-black rounded-xl shadow-[0_0_20px_rgba(204,255,0,0.25)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-2.5 sm:py-3 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] active:scale-[0.99] text-black rounded-xl shadow-[0_0_20px_rgba(204,255,0,0.25)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isVerifying ? (
                     <>
