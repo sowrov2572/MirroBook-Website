@@ -97,6 +97,7 @@ export interface PaymentConfig {
   rocketNumber: string;
   upayNumber: string;
   bankDetails: BankDetails;
+  secondaryBankDetails?: BankDetails;
   webAppUrl: string;
   telegramBotToken: string;
   telegramChatId: string;
@@ -105,6 +106,7 @@ export interface PaymentConfig {
 
 export interface Order {
   id: string;
+  userId?: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -117,6 +119,16 @@ export interface Order {
   status?: 'Pending' | 'Verified' | 'Completed';
   productId?: string;
   downloadUrl?: string;
+}
+
+export interface UserPurchase {
+  id: string;
+  productId?: string;
+  title: string;
+  category?: string;
+  downloadUrl: string;
+  purchasedAt: string;
+  trxId?: string;
 }
 
 export interface CheckoutItem {

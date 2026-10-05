@@ -15,50 +15,60 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
             <span className="font-display text-2xl font-bold tracking-tight text-white block">
               MirrorBook
             </span>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#CCFF00] font-semibold">
+            <p className="text-xs tracking-normal text-[#71B913] font-semibold">
               Reflecting Creativity
             </p>
-            <p className="text-sm text-[#777777] max-w-sm leading-relaxed pt-2">
+            <p className="text-sm text-[#888888] max-w-sm leading-relaxed pt-2 font-normal">
               Full-service digital studio combining high-impact video production, bespoke brand identity systems, and custom AI software design.
             </p>
           </div>
 
           {/* Direct Navigation */}
           <div className="space-y-3">
-            <span className="text-xs uppercase tracking-wider text-white font-semibold block">
+            <span className="text-xs uppercase tracking-normal text-white font-bold block">
               Index
             </span>
             <ul className="space-y-2 text-xs text-[#888888]">
               <li>
-                <a href="#services" className="hover:text-[#CCFF00] transition-colors">Services</a>
+                <a href="#services" className="hover:text-[#71B913] transition-colors">Services</a>
               </li>
               <li>
-                <a href="#packages" className="hover:text-[#CCFF00] transition-colors">Agency Packages</a>
+                <a href="#portfolio" className="hover:text-[#71B913] transition-colors">Portfolio</a>
               </li>
               <li>
-                <a href="#plugins" className="hover:text-[#CCFF00] transition-colors">Plugin Store</a>
+                <a href="#packages" className="hover:text-[#71B913] transition-colors">Agency Packages</a>
               </li>
               <li>
-                <a href="#courses" className="hover:text-[#CCFF00] transition-colors">Courses & Masterclasses</a>
+                <a href="#plugins" className="hover:text-[#71B913] transition-colors">Plugin Store</a>
               </li>
               <li>
-                <a href="#tutorials" className="hover:text-[#CCFF00] transition-colors">Free Video Tutorials</a>
+                <a href="#courses" className="hover:text-[#71B913] transition-colors">Courses & Tutorials</a>
               </li>
             </ul>
           </div>
 
           {/* Studio Network / Social Links */}
           <div className="space-y-3">
-            <span className="text-xs uppercase tracking-wider text-white font-semibold block">
+            <span className="text-xs uppercase tracking-normal text-white font-bold block">
               Network
             </span>
             <ul className="space-y-2 text-xs text-[#888888]">
               <li>
                 <a
+                  href="https://sowrovhosenstudio.netlify.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#71B913] transition-colors font-medium text-white/90"
+                >
+                  Portfolio Studio ↗
+                </a>
+              </li>
+              <li>
+                <a
                   href="https://twitter.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#CCFF00] transition-colors"
+                  className="hover:text-[#71B913] transition-colors"
                 >
                   X (Twitter)
                 </a>
@@ -68,19 +78,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
                   href="https://youtube.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#CCFF00] transition-colors"
+                  className="hover:text-[#71B913] transition-colors"
                 >
                   YouTube
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-[#CCFF00] transition-colors"
-                >
-                  GitHub
                 </a>
               </li>
               <li>
@@ -88,7 +88,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
                   href="https://discord.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#CCFF00] transition-colors"
+                  className="hover:text-[#71B913] transition-colors"
                 >
                   Discord
                 </a>
@@ -98,7 +98,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
                   href="https://linkedin.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#CCFF00] transition-colors"
+                  className="hover:text-[#71B913] transition-colors"
                 >
                   LinkedIn
                 </a>
@@ -113,13 +113,13 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
 
           <div className="flex items-center gap-6">
             <a href="#services" className="hover:text-[#888888] transition-colors">
-              Privacy & Licensing
+              Privacy &amp; Licensing
             </a>
             <span className="text-[#333333]">·</span>
             {/* Discreet Admin Link */}
             <button
               onClick={onOpenAdmin}
-              className="text-[#444444] hover:text-[#CCFF00] transition-colors flex items-center gap-1.5 cursor-pointer text-xs"
+              className="text-[#444444] hover:text-[#71B913] transition-colors flex items-center gap-1.5 cursor-pointer text-xs"
               title="Admin Registry Portal"
             >
               <Lock size={12} />

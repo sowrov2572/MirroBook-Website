@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Play, Pause, Clock, User, CheckCircle2, Volume2, VolumeX, Maximize2, Shield } from 'lucide-react';
+import { X, Play, Pause, Clock, User, CheckCircle2, Volume2, VolumeX } from 'lucide-react';
 
 export interface PlayableVideo {
   title: string;
@@ -25,15 +25,15 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ video, onClo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl glass-panel rounded-3xl border border-white/[0.15] overflow-hidden shadow-[0_25px_80px_rgba(0,0,0,0.9)] my-6">
-        {/* Top Glossy Status Bar */}
+        {/* Top Status Bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-white/[0.02]">
           <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-[#CCFF00] shadow-[0_0_8px_#CCFF00] animate-pulse" />
-            <span className="text-xs uppercase tracking-wider font-mono text-[#CCFF00]">
+            <span className="w-2 h-2 rounded-full bg-[#71B913] shadow-[0_0_8px_#71B913] animate-pulse" />
+            <span className="text-xs uppercase tracking-normal font-semibold text-[#71B913]">
               {video.software || 'MirrorBook Media Player'}
             </span>
             <span className="text-xs text-white/20">/</span>
-            <span className="text-xs text-[#888888] font-mono flex items-center gap-1.5">
+            <span className="text-xs text-[#888888] flex items-center gap-1.5">
               <Clock size={12} />
               {video.duration || '03:20'}
             </span>
@@ -50,25 +50,25 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ video, onClo
 
         {/* Video Player Display Canvas */}
         <div className="relative aspect-video bg-[#070707] flex items-center justify-center border-b border-white/[0.08] group overflow-hidden">
-          {/* Subtle Ambient Refractive Grid */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(204,255,0,0.1),transparent_70%)]" />
+          {/* Ambient Refractive Grid */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(113,185,19,0.12),transparent_70%)]" />
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:28px_28px]" />
 
           {/* Video Stream Header Overlay */}
-          <div className="absolute top-4 left-6 right-6 flex items-center justify-between z-20 text-[11px] font-mono text-[#AAAAAA]">
-            <div className="glass-pill px-3 py-1 rounded-full text-white/90">
+          <div className="absolute top-4 left-6 right-6 flex items-center justify-between z-20 text-[11px] text-[#AAAAAA]">
+            <div className="glass-pill px-3 py-1 rounded-full text-white/90 font-medium">
               Master Stream // 4K 60FPS HDR
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00] animate-ping" />
-              <span className="text-[#CCFF00]">Lossless Feed</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#71B913] animate-ping" />
+              <span className="text-[#71B913] font-semibold">Lossless Feed</span>
             </div>
           </div>
 
           {/* Interactive Play/Pause Trigger */}
           <div
             onClick={() => setIsPlaying(!isPlaying)}
-            className="relative z-10 w-20 h-20 rounded-full bg-[#CCFF00] text-black flex items-center justify-center shadow-[0_0_50px_rgba(204,255,0,0.5)] hover:scale-110 active:scale-95 transition-all cursor-pointer"
+            className="relative z-10 w-20 h-20 rounded-full bg-[#71B913] text-black flex items-center justify-center shadow-[0_0_50px_rgba(113,185,19,0.5)] hover:scale-110 active:scale-95 transition-all cursor-pointer"
           >
             {isPlaying ? (
               <Pause size={30} className="fill-black" />
@@ -91,11 +91,11 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ video, onClo
             >
               <div
                 style={{ width: `${progress}%` }}
-                className="absolute top-0 left-0 bottom-0 bg-[#CCFF00] shadow-[0_0_10px_#CCFF00] transition-all duration-150"
+                className="absolute top-0 left-0 bottom-0 bg-[#71B913] shadow-[0_0_10px_#71B913] transition-all duration-150"
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs font-mono text-[#AAAAAA]">
+            <div className="flex items-center justify-between text-xs text-[#AAAAAA]">
               <div className="flex items-center gap-3">
                 <span className="text-white font-medium">01:42</span>
                 <span>/</span>
@@ -110,7 +110,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ video, onClo
                 >
                   {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
                 </button>
-                <span className="text-[10px] text-[#CCFF00] glass-pill px-2 py-0.5 rounded">
+                <span className="text-[10px] text-[#71B913] glass-pill px-2 py-0.5 rounded font-semibold">
                   Spatial Stereo
                 </span>
               </div>
@@ -123,16 +123,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ video, onClo
           <h3 className="font-display text-2xl font-bold text-white mb-2">
             {video.title}
           </h3>
-          <p className="text-sm text-[#999999] leading-relaxed mb-5 font-light">
+          <p className="text-sm text-[#999999] leading-relaxed mb-5 font-normal">
             {video.description}
           </p>
 
           <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/[0.08] text-xs text-[#777777]">
             <div className="flex items-center gap-2">
-              <User size={14} className="text-[#CCFF00]" />
+              <User size={14} className="text-[#71B913]" />
               <span>Lead Specialist: <strong className="text-white font-medium">{video.instructor || 'MirrorBook Creative Director'}</strong></span>
             </div>
-            <div className="flex items-center gap-1.5 text-[#CCFF00] font-mono">
+            <div className="flex items-center gap-1.5 text-[#71B913] font-semibold">
               <CheckCircle2 size={14} />
               <span>Full ProRes 422HQ Project Files &amp; LUTs Included</span>
             </div>

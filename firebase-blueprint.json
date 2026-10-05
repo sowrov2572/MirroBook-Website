@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A digital product, plugin, tutorial, or agency package",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "priceDisplay": { "type": "string" },
+        "period": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "protectedUrl": { "type": "string" },
+        "duration": { "type": "string" },
+        "instructor": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "type", "title", "price"]
+    },
+    "PaymentConfig": {
+      "title": "PaymentConfig",
+      "description": "Global payment numbers and accounts configuration",
+      "type": "object",
+      "properties": {
+        "bKashNumber": { "type": "string" },
+        "nagadNumber": { "type": "string" },
+        "rocketNumber": { "type": "string" },
+        "upayNumber": { "type": "string" },
+        "bankDetails": { "type": "object" },
+        "secondaryBankDetails": { "type": "object" },
+        "webAppUrl": { "type": "string" },
+        "telegramBotToken": { "type": "string" },
+        "telegramChatId": { "type": "string" },
+        "whatsAppNumber": { "type": "string" }
+      }
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer purchase or inquiry order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "itemPrice": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "senderAccount": { "type": "string" },
+        "trxId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string" },
+        "downloadUrl": { "type": "string" }
+      },
+      "required": ["id", "customerName", "itemName", "trxId"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "A secured digital asset license unlocked for an authenticated creator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "downloadUrl": { "type": "string" },
+        "purchasedAt": { "type": "string" },
+        "trxId": { "type": "string" }
+      },
+      "required": ["id", "title", "downloadUrl"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Public catalog of agency packages, plugins, tutorials, and courses"
+    },
+    "/settings/{settingId}": {
+      "schema": "PaymentConfig",
+      "description": "Global app configurations such as payment accounts and webhooks"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer payment verification and manual review orders"
+    },
+    "/users/{userId}/purchases/{purchaseId}": {
+      "schema": "Purchase",
+      "description": "Secured user downloads and digital licenses locked to their Google/Firebase account"
+    }
+  }
+}

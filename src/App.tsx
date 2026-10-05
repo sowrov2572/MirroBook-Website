@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { User } from 'firebase/auth';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Services } from './components/Services';
@@ -10,9 +11,10 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { VideoPlayerModal, PlayableVideo } from './components/VideoPlayerModal';
 import { AdminModal } from './components/AdminModal';
 import { StartProjectModal } from './components/StartProjectModal';
+import { UserVaultModal } from './components/UserVaultModal';
 import { Footer } from './components/Footer';
-import { CheckoutItem, TutorialItem, Order, ProductItem, ShowcaseItem, PaymentConfig } from './types';
-import { INITIAL_DEMO_ORDERS, INITIAL_PRODUCTS } from './data/content';
+import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase } from './types';
+import { INITIAL_PRODUCTS } from './data/content';
 import {
   loadPaymentConfig,
   savePaymentConfig,
@@ -22,63 +24,104 @@ import {
   syncProductsToSheet,
   fetchProductsFromSheet,
   SHEETS_URL_KEY,
-  PRODUCTS_STORAGE_KEY,
 } from './utils/syncService';
+import {
+  subscribeToProducts,
+  saveProductToFirestore,
+  deleteProductFromFirestore,
+  subscribeToPaymentConfig,
+  savePaymentConfigToFirestore,
+  subscribeToOrders,
+  deleteOrderFromFirestore,
+  signInWithGoogle,
+  signOutUser,
+  onAuthChange,
+  subscribeToUserPurchases,
+} from './utils/firebase';
 
 export default function App() {
   const [checkoutItem, setCheckoutItem] = useState<CheckoutItem | null>(null);
   const [activeVideo, setActiveVideo] = useState<PlayableVideo | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isStartProjectOpen, setIsStartProjectOpen] = useState(false);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
+
+  // User Auth & Personal Vault state
+  const [user, setUser] = useState<User | null>(null);
+  const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
 
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(loadPaymentConfig);
 
   // Dynamic Products and Google Sheets state
-  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
   const [sheetsUrl, setSheetsUrl] = useState<string>('');
 
-  // 1. Load orders & products from localStorage on mount
+  // 1. Firebase Auth listener
   useEffect(() => {
-    // Orders
-    try {
-      const storedOrders = localStorage.getItem('mirrorbook_orders');
-      if (storedOrders) {
-        setOrders(JSON.parse(storedOrders));
-      } else {
-        localStorage.setItem('mirrorbook_orders', JSON.stringify(INITIAL_DEMO_ORDERS));
-        setOrders(INITIAL_DEMO_ORDERS);
-      }
-    } catch {
-      setOrders(INITIAL_DEMO_ORDERS);
+    const unsubscribeAuth = onAuthChange((currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => {
+      unsubscribeAuth();
+    };
+  }, []);
+
+  // 2. Personal Vault purchases listener for logged-in user
+  useEffect(() => {
+    if (!user) {
+      setUserPurchases([]);
+      return;
     }
 
-    // Google Sheets URL
+    const unsubscribePurchases = subscribeToUserPurchases(user.uid, (purchases) => {
+      setUserPurchases(purchases);
+    });
+
+    return () => {
+      unsubscribePurchases();
+    };
+  }, [user]);
+
+  // 3. Real-time Firebase Firestore Global Synchronization
+  useEffect(() => {
+    // Seed new Easy Flow Plugin directly to Firestore so it's live worldwide immediately
+    const easyFlowProduct = INITIAL_PRODUCTS.find((p) => p.id === 'plugin-easy-flow');
+    if (easyFlowProduct) {
+      saveProductToFirestore(easyFlowProduct).catch(() => {});
+    }
+
+    // Listen to live products from Firestore (shared worldwide)
+    const unsubscribeProducts = subscribeToProducts((cloudProducts) => {
+      if (cloudProducts.length > 0) {
+        setProducts(cloudProducts);
+      }
+    });
+
+    // Listen to live payment config from Firestore (shared worldwide)
+    const unsubscribeConfig = subscribeToPaymentConfig((cloudConfig) => {
+      setPaymentConfig(cloudConfig);
+      savePaymentConfig(cloudConfig);
+    });
+
+    // Listen to live customer orders from Firestore
+    const unsubscribeOrders = subscribeToOrders((cloudOrders) => {
+      if (cloudOrders.length > 0) {
+        setOrders(cloudOrders);
+      }
+    });
+
+    // Google Sheets URL fallback
     const storedSheetsUrl = localStorage.getItem(SHEETS_URL_KEY) || '';
     setSheetsUrl(storedSheetsUrl);
 
-    // Products
-    try {
-      const storedProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-      if (storedProducts) {
-        setProducts(JSON.parse(storedProducts));
-      } else {
-        localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(INITIAL_PRODUCTS));
-        setProducts(INITIAL_PRODUCTS);
-      }
-    } catch {
-      setProducts(INITIAL_PRODUCTS);
-    }
-
-    // If sheets URL exists, attempt background sync
-    if (storedSheetsUrl) {
-      fetchProductsFromSheet(storedSheetsUrl).then((res) => {
-        if (res.success && res.items && res.items.length > 0) {
-          setProducts(res.items);
-        }
-      });
-    }
+    return () => {
+      unsubscribeProducts();
+      unsubscribeConfig();
+      unsubscribeOrders();
+    };
   }, []);
 
   // Public Catalog Security Sanitization:
@@ -104,36 +147,59 @@ export default function App() {
     [publicProducts]
   );
 
-  // Product mutations with instant LocalStorage save & Google Sheets sync
+  // Auth Actions
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      console.warn('Google Sign In dialog closed or not completed', err);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      setUser(null);
+      setUserPurchases([]);
+    } catch (err) {
+      console.warn('Sign out error', err);
+    }
+  };
+
+  // Product mutations with instant Firebase Firestore sync & Google Sheets sync
   const handleAddProduct = (newProduct: ProductItem) => {
     const updated = [newProduct, ...products];
     setProducts(updated);
+    saveProductToFirestore(newProduct).catch((err) => console.warn('Firestore add error', err));
     syncProductsToSheet(sheetsUrl, updated);
   };
 
   const handleUpdateProduct = (updatedProduct: ProductItem) => {
     const updated = products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p));
     setProducts(updated);
+    saveProductToFirestore(updatedProduct).catch((err) => console.warn('Firestore update error', err));
     syncProductsToSheet(sheetsUrl, updated);
   };
 
   const handleDeleteProduct = (id: string) => {
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
+    deleteProductFromFirestore(id).catch((err) => console.warn('Firestore delete error', err));
     syncProductsToSheet(sheetsUrl, updated);
   };
 
   const handleSyncProducts = async (urlOverride?: string) => {
     const targetUrl = urlOverride !== undefined ? urlOverride : sheetsUrl;
     if (targetUrl) {
-      // First try fetching latest from sheet
       const fetchRes = await fetchProductsFromSheet(targetUrl);
       if (fetchRes.items && fetchRes.items.length > 0) {
         setProducts(fetchRes.items);
+        for (const item of fetchRes.items) {
+          saveProductToFirestore(item).catch(() => {});
+        }
         return { success: true, message: `Synced ${fetchRes.items.length} items from Google Sheet.` };
       }
     }
-    // Otherwise push current products
     const pushRes = await syncProductsToSheet(targetUrl, products);
     return { success: pushRes.success, message: pushRes.message };
   };
@@ -146,16 +212,26 @@ export default function App() {
 
   const handleOrderSuccess = (newOrder: Order) => {
     setOrders((prev) => [newOrder, ...prev]);
+
+    // If user is authenticated and order is verified or has downloadUrl, update local vault list
+    if (user && newOrder.downloadUrl) {
+      const purchase: UserPurchase = {
+        id: newOrder.id,
+        productId: newOrder.productId || newOrder.id,
+        title: newOrder.itemName,
+        category: 'Plugin',
+        downloadUrl: newOrder.downloadUrl,
+        purchasedAt: newOrder.createdAt,
+        trxId: newOrder.trxId,
+      };
+      setUserPurchases((prev) => [purchase, ...prev.filter((p) => p.id !== purchase.id)]);
+    }
   };
 
   const handleDeleteOrder = (id: string) => {
     const updated = orders.filter((o) => o.id !== id);
     setOrders(updated);
-    try {
-      localStorage.setItem('mirrorbook_orders', JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
+    deleteOrderFromFirestore(id).catch(() => {});
   };
 
   const handleClearOrders = () => {
@@ -175,9 +251,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070707] text-white flex flex-col selection:bg-[#CCFF00] selection:text-black">
-      {/* 1. Header */}
-      <Header onStartProject={() => setIsStartProjectOpen(true)} />
+    <div className="min-h-screen bg-[#070707] text-white flex flex-col selection:bg-[#71B913] selection:text-black">
+      {/* 1. Header with Account & Vault Integration */}
+      <Header
+        onStartProject={() => setIsStartProjectOpen(true)}
+        user={user}
+        onOpenVault={() => setIsVaultOpen(true)}
+        onSignIn={handleSignIn}
+        purchaseCount={userPurchases.length}
+      />
 
       {/* Main Content Area */}
       <main className="flex-grow">
@@ -196,39 +278,19 @@ export default function App() {
           }
         />
 
-        {/* 3. Services with Modern High-Impact Copy & Video Thumbnail Previews */}
-        <Services
-          onPreviewVideo={(title, category) =>
-            setActiveVideo({
-              title: `${title} // Showcase Breakdown`,
-              software: category,
-              duration: '01:45',
-              description: `Deep-dive case study into ${title}. Discover timeline breakdown, custom node trees, kinetic typography easing curves, and conversion lift.`,
-              instructor: 'Lead Creative Specialist',
-            })
-          }
-        />
+        {/* 3. Services: Text-Only Minimal Capabilities */}
+        <Services />
 
-        {/* 4. Creative Vault & Video Showcases (New Video/Thumbnail Slot Section) */}
-        <ShowcasesVault
-          onSelectVideo={(showcase: ShowcaseItem) =>
-            setActiveVideo({
-              title: showcase.title,
-              software: showcase.category,
-              duration: showcase.duration,
-              description: showcase.description,
-              instructor: showcase.client,
-            })
-          }
-        />
+        {/* 4. Portfolio Showcase Button to external studio link */}
+        <ShowcasesVault />
 
-        {/* 5. Agency Packages (Glossy iPhone-style Pricing Cards) */}
+        {/* 5. Agency Packages */}
         <Packages
           packages={publicPackages}
           onSelectPackage={(item) => setCheckoutItem(item)}
         />
 
-        {/* 6. Plugin Store (Glossy Glass Panels & Software UI Thumbnails) */}
+        {/* 6. Plugin Store (Includes Easy Flow Plugin) */}
         <PluginStore
           plugins={publicPlugins}
           onBuyItem={(item) => setCheckoutItem(item)}
@@ -255,13 +317,26 @@ export default function App() {
       {/* 8. Footer & Admin View Link */}
       <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
 
-      {/* Multi-Method Payment Checkout Modal */}
+      {/* Multi-Method Payment Checkout Modal with Creator Vault auto-linking */}
       <CheckoutModal
         item={checkoutItem}
         onClose={() => setCheckoutItem(null)}
         onOrderSuccess={handleOrderSuccess}
         paymentConfig={paymentConfig}
         allProducts={products}
+        user={user}
+        onSignIn={handleSignIn}
+        onOpenVault={() => setIsVaultOpen(true)}
+      />
+
+      {/* User Digital Vault & Downloads Modal */}
+      <UserVaultModal
+        isOpen={isVaultOpen}
+        onClose={() => setIsVaultOpen(false)}
+        user={user}
+        purchases={userPurchases}
+        onSignOut={handleSignOut}
+        onBrowseStore={() => scrollToSection('plugins')}
       />
 
       {/* Video Player Modal for Showreels, Showcases, Services, and Tutorials */}
@@ -288,6 +363,7 @@ export default function App() {
         onSavePaymentConfig={(newCfg) => {
           savePaymentConfig(newCfg);
           setPaymentConfig(newCfg);
+          savePaymentConfigToFirestore(newCfg).catch((err) => console.warn('Firestore payment save error', err));
         }}
       />
 
@@ -300,4 +376,3 @@ export default function App() {
     </div>
   );
 }
-

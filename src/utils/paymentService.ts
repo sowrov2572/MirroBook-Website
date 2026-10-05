@@ -1,23 +1,42 @@
 import { PaymentConfig } from '../types';
 
 export const PAYMENT_CONFIG_STORAGE_KEY = 'mirrorbook_payment_config';
+export const ORDERS_STORAGE_KEY = 'mirrorbook_orders';
+
+export function saveOrderToStorage(order: unknown): void {
+  try {
+    const raw = localStorage.getItem(ORDERS_STORAGE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift(order);
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    // fallback
+  }
+}
 
 export const DEFAULT_PAYMENT_CONFIG: PaymentConfig = {
-  bKashNumber: '01878901234',
-  nagadNumber: '01712345678',
-  rocketNumber: '01911223344',
-  upayNumber: '01611223344',
+  bKashNumber: '01767079837',
+  nagadNumber: '01767079837',
+  rocketNumber: '01767079837',
+  upayNumber: '01767079837',
   bankDetails: {
-    bankName: 'City Bank PLC',
-    accountName: 'MirrorBook Studio Ltd',
-    accountNumber: '1502938472001',
-    branchName: 'Gulshan-2 Branch, Dhaka',
-    routingNumber: '225271890',
+    bankName: 'Islami Bank Bangladesh PLC (IBBL)',
+    accountName: 'MD SOUROV HOSEN',
+    accountNumber: '20507776702266262',
+    branchName: 'Main Branch / Local',
+    routingNumber: '125271890',
+  },
+  secondaryBankDetails: {
+    bankName: 'Dutch-Bangla Bank PLC (DBBL)',
+    accountName: 'MD SOUROV HOSEN',
+    accountNumber: '1641580109543',
+    branchName: 'Local Branch / Fast Track',
+    routingNumber: '090271890',
   },
   webAppUrl: '',
   telegramBotToken: '',
   telegramChatId: '',
-  whatsAppNumber: '8801878901234',
+  whatsAppNumber: '8801767079837',
 };
 
 export function loadPaymentConfig(): PaymentConfig {
@@ -207,7 +226,7 @@ function setupPaymentsSheet() {
   if (!sheet) {
     sheet = ss.insertSheet("Payments");
     sheet.appendRow(["Timestamp", "Gateway", "TrxID", "Amount", "Sender", "RawSMS", "Status"]);
-    sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#CCFF00").setFontColor("#000000");
+    sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#71B913").setFontColor("#000000");
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -322,7 +341,7 @@ function doPost(e) {
       
       var headers = ['id', 'type', 'category', 'title', 'description', 'price', 'priceDisplay', 'protectedUrl', 'thumbnailUrl', 'duration', 'instructor', 'createdAt'];
       prodSheet.appendRow(headers);
-      prodSheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#CCFF00").setFontColor("#000000");
+      prodSheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#71B913").setFontColor("#000000");
 
       var products = payload.products || [];
       for (var pIdx = 0; pIdx < products.length; pIdx++) {

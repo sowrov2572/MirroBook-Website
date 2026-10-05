@@ -87,6 +87,18 @@ export const SHOWCASES: ShowcaseItem[] = [
 export const INITIAL_PRODUCTS: ProductItem[] = [
   // Plugins
   {
+    id: 'plugin-easy-flow',
+    type: 'Plugin',
+    category: 'AE & Premiere Pro',
+    title: 'Easy Flow Plugin',
+    description: 'Quick-access workflows and one-click timeline shortcuts for Premiere Pro & After Effects.',
+    price: 20,
+    priceDisplay: '৳20',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
+    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
+    createdAt: '2026-10-05'
+  },
+  {
     id: 'plugin-autocut',
     type: 'Plugin',
     category: 'Premiere Pro',
@@ -94,6 +106,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     description: 'Automated silence, dead-time, and filler removal inside Premiere Pro.',
     price: 999,
     priceDisplay: '৳999',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80',
     protectedUrl: 'https://drive.google.com/drive/folders/1MB_AutoCut_Plugin_V2_Protected',
     createdAt: '2026-09-15'
   },
@@ -105,6 +118,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     description: 'Dynamic physics-based kinetic text animation and easing curves.',
     price: 1299,
     priceDisplay: '৳1,299',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
     protectedUrl: 'https://drive.google.com/drive/folders/1MB_MotionFX_AE_Protected',
     createdAt: '2026-09-18'
   },
@@ -116,6 +130,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     description: 'One-click AI skin texture balancing and high-frequency color separation.',
     price: 799,
     priceDisplay: '৳799',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
     protectedUrl: 'https://drive.google.com/drive/folders/1MB_NeuralRetouch_PS_Protected',
     createdAt: '2026-09-20'
   },
@@ -127,6 +142,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     description: 'Over 150+ transitions, SFX pairings, and LUTs for speed editors.',
     price: 499,
     priceDisplay: '৳499',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=800&q=80',
     protectedUrl: 'https://drive.google.com/drive/folders/1MB_CreatorPresetBundle_Protected',
     createdAt: '2026-09-22'
   },
@@ -287,32 +303,49 @@ export const PACKAGES: PackageItem[] = [
 
 export const PLUGINS: PluginItem[] = [
   {
+    id: 'plugin-easy-flow',
+    title: 'Easy Flow Plugin',
+    software: 'AE & Premiere Pro',
+    price: 20,
+    priceDisplay: '৳20',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
+    description: 'Quick-access workflows and one-click timeline shortcuts for Premiere Pro & After Effects.'
+  },
+  {
     id: 'plugin-autocut',
     title: 'AI AutoCut Plugin',
     software: 'Premiere Pro',
     price: 999,
-    priceDisplay: '৳999'
+    priceDisplay: '৳999',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80',
+    description: 'Automated silence, dead-time, and filler removal inside Premiere Pro.'
   },
   {
     id: 'plugin-motionfx',
     title: 'MotionFX AI Plugin',
     software: 'After Effects',
     price: 1299,
-    priceDisplay: '৳1,299'
+    priceDisplay: '৳1,299',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
+    description: 'Dynamic physics-based kinetic text animation and easing curves.'
   },
   {
     id: 'plugin-neuralretouch',
     title: 'Neural Retouch Plugin',
     software: 'Photoshop',
     price: 799,
-    priceDisplay: '৳799'
+    priceDisplay: '৳799',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+    description: 'One-click AI skin texture balancing and high-frequency color separation.'
   },
   {
     id: 'plugin-presetbundle',
     title: 'Creator Preset Bundle',
     software: 'Premiere Pro',
     price: 499,
-    priceDisplay: '৳499'
+    priceDisplay: '৳499',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=800&q=80',
+    description: 'Over 150+ transitions, SFX pairings, and LUTs for speed editors.'
   }
 ];
 
@@ -322,6 +355,7 @@ export const COURSES: CourseItem[] = [
     title: 'Video & Reels Editing Course',
     price: 1500,
     priceDisplay: '৳1,500',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=800&q=80',
     description: 'Pacing, sound design, color grade workflows, and viral hook framing.'
   },
   {
@@ -329,6 +363,7 @@ export const COURSES: CourseItem[] = [
     title: 'Graphic Design & AI Workflow Course',
     price: 1200,
     priceDisplay: '৳1,200',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
     description: 'Branding fundamentals, spatial grids, typography, and generative AI asset integration.'
   },
   {
@@ -336,6 +371,7 @@ export const COURSES: CourseItem[] = [
     title: 'AI Plugin & Software Creation Course',
     price: 2000,
     priceDisplay: '৳2,000',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80',
     description: 'Scripting Adobe extensions, CEP panels, and modern generative AI microservices.'
   }
 ];
@@ -383,34 +419,40 @@ export const PAYMENT_CONFIG = {
   mobileAccounts: {
     bKash: {
       type: 'Personal / Send Money',
-      number: '01878901234',
+      number: '01767079837',
       instructions: 'Send Money to this personal number and copy your Transaction ID (TrxID).'
     },
     Nagad: {
       type: 'Personal / Send Money',
-      number: '01712345678',
+      number: '01767079837',
       instructions: 'Send Money to this personal number and enter your Transaction ID (TrxID).'
     },
     Rocket: {
       type: 'Personal / Send Money',
-      number: '01911223344',
-      instructions: 'Send Money to this 12-digit number and enter your Transaction ID (TrxID).'
+      number: '01767079837',
+      instructions: 'Send Money to this personal number and enter your Transaction ID (TrxID).'
     },
     Upay: {
       type: 'Personal / Send Money',
-      number: '01611223344',
+      number: '01767079837',
       instructions: 'Send Money to this personal number and enter your Transaction ID (TrxID).'
     }
   },
   bankAccount: {
-    bankName: 'City Bank PLC',
-    accountName: 'MirrorBook Studio Ltd',
-    accountNumber: '1502938472001',
-    branchName: 'Gulshan-2 Branch, Dhaka',
-    routingNumber: '225271890',
-    swiftCode: 'CIBLBDDH'
+    bankName: 'Islami Bank Bangladesh PLC (IBBL)',
+    accountName: 'MD SOUROV HOSEN',
+    accountNumber: '20507776702266262',
+    branchName: 'Main Branch / Local',
+    routingNumber: '125271890',
   },
-  whatsAppNumber: '8801878901234'
+  secondaryBankAccount: {
+    bankName: 'Dutch-Bangla Bank PLC (DBBL)',
+    accountName: 'MD SOUROV HOSEN',
+    accountNumber: '1641580109543',
+    branchName: 'Local Branch / Fast Track',
+    routingNumber: '090271890',
+  },
+  whatsAppNumber: '8801767079837'
 };
 
 export const INITIAL_DEMO_ORDERS: Order[] = [

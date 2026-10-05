@@ -36,33 +36,30 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
   return (
     <section id="plugins" className="py-28 px-6 bg-[#070707] text-white bg-grid-subtle border-b border-white/[0.08] relative overflow-hidden">
       {/* Floating Ambient Light Orbs */}
-      <div className="absolute top-1/4 right-10 w-[500px] h-[500px] bg-[#CCFF00]/[0.06] rounded-full blur-[140px] pointer-events-none animate-float-slow" />
+      <div className="absolute top-1/4 right-10 w-[500px] h-[500px] bg-[#71B913]/[0.08] rounded-full blur-[140px] pointer-events-none animate-float-slow" />
       <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-white/[0.03] rounded-full blur-[120px] pointer-events-none animate-float-reverse" />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-6 border-b border-white/[0.08]">
+        {/* Section Header: Strictly "Plugin Store" */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-4 border-b border-white/[0.08]">
           <div>
-            <span className="text-xs uppercase tracking-[0.25em] text-[#CCFF00] font-mono font-semibold block mb-2">
-              Extensions
-            </span>
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight">
               Plugin Store
             </h2>
           </div>
 
           {/* Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 mt-6 md:mt-0">
+          <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
             {filterOptions.map((filter) => {
               const isActive = selectedFilter === filter;
               return (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`px-4 py-1.5 text-xs font-mono tracking-wide rounded-full transition-all cursor-pointer ${
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[#CCFF00] text-black font-semibold shadow-[0_0_20px_rgba(204,255,0,0.35)]'
-                      : 'matte-glass-dark text-[#888888] hover:text-white'
+                      ? 'bg-[#71B913] text-black shadow-[0_0_20px_rgba(113,185,19,0.35)]'
+                      : 'bg-white/5 border border-white/10 text-[#888888] hover:text-white'
                   }`}
                 >
                   {filter}
@@ -81,7 +78,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
             >
               <div>
                 {/* Visual Thumbnail / UI Preview */}
-                <div className="aspect-video w-full rounded-xl bg-[#111111] border border-white/[0.08] mb-5 overflow-hidden relative group-hover:border-[#CCFF00]/40 transition-colors flex flex-col justify-between p-3">
+                <div className="aspect-video w-full rounded-xl bg-[#111111] border border-white/[0.08] mb-5 overflow-hidden relative group-hover:border-[#71B913]/40 transition-colors flex flex-col justify-between p-3">
                   {plugin.thumbnailUrl ? (
                     <img
                       src={plugin.thumbnailUrl}
@@ -91,33 +88,33 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
                     />
                   ) : (
                     <>
-                      <div className="flex items-center justify-between text-[10px] font-mono text-[#777777]">
-                        <span className="flex items-center gap-1 text-[#CCFF00]">
+                      <div className="flex items-center justify-between text-[10px] text-[#777777]">
+                        <span className="flex items-center gap-1 text-[#71B913] font-medium">
                           <Terminal size={11} /> EXT
                         </span>
                         <span>{plugin.software}</span>
                       </div>
                       
                       <div className="py-2 text-center">
-                        <div className="w-9 h-9 rounded-lg bg-black/60 border border-white/10 mx-auto flex items-center justify-center text-[#CCFF00] shadow-inner mb-1">
+                        <div className="w-9 h-9 rounded-lg bg-black/60 border border-white/10 mx-auto flex items-center justify-center text-[#71B913] shadow-inner mb-1">
                           <Layers size={18} />
                         </div>
                       </div>
 
                       <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                        <div className="w-2/3 h-full bg-[#CCFF00]" />
+                        <div className="w-2/3 h-full bg-[#71B913]" />
                       </div>
                     </>
                   )}
                 </div>
 
                 {/* Software Tag */}
-                <div className="text-[11px] uppercase tracking-wider text-[#CCFF00] font-mono mb-1">
+                <div className="text-[11px] uppercase tracking-normal text-[#71B913] font-semibold mb-1">
                   {plugin.software}
                 </div>
 
                 {/* Title */}
-                <h3 className="font-display text-lg font-bold text-white group-hover:text-[#CCFF00] transition-colors mb-1.5">
+                <h3 className="font-display text-lg font-bold text-white group-hover:text-[#71B913] transition-colors mb-1.5">
                   {plugin.title}
                 </h3>
 
@@ -131,7 +128,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
 
               <div>
                 <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between mb-5">
-                  <span className="text-[11px] uppercase font-mono tracking-wider text-[#666666]">
+                  <span className="text-[11px] uppercase tracking-normal text-[#777777] font-medium">
                     Instant License
                   </span>
                   <span className="font-display text-xl font-bold text-white tabular-nums">
@@ -148,7 +145,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
                       category: `Plugin (${plugin.software})`,
                     })
                   }
-                  className="w-full py-3 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black shadow-[0_0_20px_rgba(204,255,0,0.25)] rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  className="w-full py-3 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black shadow-[0_0_20px_rgba(113,185,19,0.3)] rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <ShoppingBag size={14} />
                   <span>Buy</span>

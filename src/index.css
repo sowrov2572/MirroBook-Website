@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 @layer base {
+  * {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  
   body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: #070707;
     color: #FFFFFF;
     overflow-x: hidden;
@@ -10,12 +14,19 @@
 }
 
 .font-display {
-  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Matte Glass Utilities (Real Matte Frosted Glass, no glossy plastic) */
+/* Brand Palette from MirrorBook Logo: #71B913 */
+:root {
+  --brand-green: #71B913;
+  --brand-green-hover: #81cf17;
+  --brand-green-dark: #5e9b10;
+}
+
+/* Matte Glass Utilities */
 .matte-glass-dark {
-  background: rgba(14, 14, 14, 0.72);
+  background: rgba(14, 14, 14, 0.75);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -23,28 +34,28 @@
 }
 
 .matte-glass-dark:hover {
-  background: rgba(18, 18, 18, 0.85);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(18, 18, 18, 0.88);
+  border-color: rgba(113, 185, 19, 0.35);
   transform: translateY(-2px);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel {
-  background: rgba(14, 14, 14, 0.75);
+  background: rgba(14, 14, 14, 0.78);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-pill {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Matte Glass for Lemon Green Section */
-.matte-glass-lemon-card {
+/* Matte Glass for Brand Green Sections */
+.matte-glass-brand-card {
   background: rgba(10, 10, 10, 0.94);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -54,13 +65,13 @@
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.matte-glass-lemon-card:hover {
+.matte-glass-brand-card:hover {
   background: #000000;
   box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.4);
   transform: translateY(-3px);
 }
 
-/* Subtle background architectural grid */
+/* Background architectural grid */
 .bg-grid-subtle {
   background-image: 
     linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
@@ -68,10 +79,10 @@
   background-size: 40px 40px;
 }
 
-.bg-grid-lemon {
+.bg-grid-brand {
   background-image: 
-    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -111,7 +122,5 @@
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #333333;
+  background: #71B913;
 }
-
-

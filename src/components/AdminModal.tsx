@@ -116,6 +116,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [cfgAccNum, setCfgAccNum] = useState(paymentConfig.bankDetails.accountNumber);
   const [cfgBranch, setCfgBranch] = useState(paymentConfig.bankDetails.branchName);
   const [cfgRouting, setCfgRouting] = useState(paymentConfig.bankDetails.routingNumber);
+
+  // Secondary Bank (DBBL)
+  const [cfgBankName2, setCfgBankName2] = useState(paymentConfig.secondaryBankDetails?.bankName || 'Dutch-Bangla Bank PLC (DBBL)');
+  const [cfgAccName2, setCfgAccName2] = useState(paymentConfig.secondaryBankDetails?.accountName || 'MD SOUROV HOSEN');
+  const [cfgAccNum2, setCfgAccNum2] = useState(paymentConfig.secondaryBankDetails?.accountNumber || '1641580109543');
+  const [cfgBranch2, setCfgBranch2] = useState(paymentConfig.secondaryBankDetails?.branchName || 'Local Branch');
+  const [cfgRouting2, setCfgRouting2] = useState(paymentConfig.secondaryBankDetails?.routingNumber || '090271890');
+
   const [cfgWebAppUrl, setCfgWebAppUrl] = useState(paymentConfig.webAppUrl || sheetsUrl);
   const [cfgTgToken, setCfgTgToken] = useState(paymentConfig.telegramBotToken);
   const [cfgTgChatId, setCfgTgChatId] = useState(paymentConfig.telegramChatId);
@@ -140,6 +148,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setCfgAccNum(paymentConfig.bankDetails.accountNumber);
     setCfgBranch(paymentConfig.bankDetails.branchName);
     setCfgRouting(paymentConfig.bankDetails.routingNumber);
+    setCfgBankName2(paymentConfig.secondaryBankDetails?.bankName || 'Dutch-Bangla Bank PLC (DBBL)');
+    setCfgAccName2(paymentConfig.secondaryBankDetails?.accountName || 'MD SOUROV HOSEN');
+    setCfgAccNum2(paymentConfig.secondaryBankDetails?.accountNumber || '1641580109543');
+    setCfgBranch2(paymentConfig.secondaryBankDetails?.branchName || 'Local Branch');
+    setCfgRouting2(paymentConfig.secondaryBankDetails?.routingNumber || '090271890');
     setCfgWebAppUrl(paymentConfig.webAppUrl || sheetsUrl);
     setCfgTgToken(paymentConfig.telegramBotToken);
     setCfgTgChatId(paymentConfig.telegramChatId);
@@ -203,6 +216,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         accountNumber: cfgAccNum.trim(),
         branchName: cfgBranch.trim(),
         routingNumber: cfgRouting.trim(),
+      },
+      secondaryBankDetails: {
+        bankName: cfgBankName2.trim(),
+        accountName: cfgAccName2.trim(),
+        accountNumber: cfgAccNum2.trim(),
+        branchName: cfgBranch2.trim(),
+        routingNumber: cfgRouting2.trim(),
       },
       webAppUrl: cfgWebAppUrl.trim(),
       telegramBotToken: cfgTgToken.trim(),
@@ -429,8 +449,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         {/* Top Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-[#141414] shrink-0">
           <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-[#CCFF00] shadow-[0_0_8px_#CCFF00]" />
-            <span className="text-xs uppercase tracking-[0.2em] text-[#CCFF00] font-mono">
+            <span className="w-2 h-2 rounded-full bg-[#71B913] shadow-[0_0_8px_#71B913]" />
+            <span className="text-xs uppercase tracking-normal text-[#71B913] font-mono">
               Admin Portal
             </span>
             <span className="text-xs text-[#555555]">/</span>
@@ -449,7 +469,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         {/* PIN Authentication Gate */}
         {!isAuthenticated ? (
           <div className="p-12 max-w-md mx-auto text-center space-y-6">
-            <div className="w-12 h-12 rounded-full bg-[#181818] border border-white/10 text-[#CCFF00] mx-auto flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-[#181818] border border-white/10 text-[#71B913] mx-auto flex items-center justify-center">
               <Lock size={20} />
             </div>
 
@@ -473,7 +493,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 }}
                 placeholder="PIN"
                 autoFocus
-                className="w-full bg-[#121212] border border-white/15 focus:border-[#CCFF00] rounded-xl text-center text-2xl tracking-[0.4em] py-3 text-white focus:outline-none font-mono"
+                className="w-full bg-[#121212] border border-white/15 focus:border-[#71B913] rounded-xl text-center text-2xl tracking-[0.4em] py-3 text-white focus:outline-none font-mono"
               />
 
               {pinError && (
@@ -485,7 +505,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl transition-colors cursor-pointer"
+                className="w-full py-3 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl transition-colors cursor-pointer"
               >
                 Access Registry
               </button>
@@ -499,9 +519,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab('orders')}
-                  className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                  className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-normal transition-all border-b-2 cursor-pointer ${
                     activeTab === 'orders'
-                      ? 'border-[#CCFF00] text-white'
+                      ? 'border-[#71B913] text-white'
                       : 'border-transparent text-[#888888] hover:text-white'
                   }`}
                 >
@@ -513,9 +533,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                 <button
                   onClick={() => setActiveTab('products')}
-                  className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                  className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-normal transition-all border-b-2 cursor-pointer ${
                     activeTab === 'products'
-                      ? 'border-[#CCFF00] text-white'
+                      ? 'border-[#71B913] text-white'
                       : 'border-transparent text-[#888888] hover:text-white'
                   }`}
                 >
@@ -527,20 +547,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                 <button
                   onClick={() => setActiveTab('automation')}
-                  className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-normal transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
                     activeTab === 'automation'
-                      ? 'border-[#CCFF00] text-white'
+                      ? 'border-[#71B913] text-white'
                       : 'border-transparent text-[#888888] hover:text-white'
                   }`}
                 >
-                  <Settings size={13} className={activeTab === 'automation' ? 'text-[#CCFF00]' : ''} />
+                  <Settings size={13} className={activeTab === 'automation' ? 'text-[#71B913]' : ''} />
                   <span>Payment &amp; Automation Setup</span>
                 </button>
               </div>
 
               <button
                 onClick={() => setIsAuthenticated(false)}
-                className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider bg-[#1A1A1A] text-[#888888] hover:text-white border border-white/10 rounded-lg transition-colors cursor-pointer mb-2"
+                className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#1A1A1A] text-[#888888] hover:text-white border border-white/10 rounded-lg transition-colors cursor-pointer mb-2"
               >
                 Lock
               </button>
@@ -561,7 +581,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={orderSearchTerm}
                         onChange={(e) => setOrderSearchTerm(e.target.value)}
                         placeholder="Search by customer, item, or TrxID..."
-                        className="bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none w-72 transition-colors"
+                        className="bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none w-72 transition-colors"
                       />
                     </div>
                     <span className="text-xs text-[#777777] font-mono tabular-nums">
@@ -573,7 +593,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <button
                       onClick={exportCSV}
                       disabled={orders.length === 0}
-                      className="px-3.5 py-2 text-xs font-medium uppercase tracking-wider bg-[#141414] border border-white/10 hover:border-[#CCFF00] rounded-xl text-white disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-2 text-xs font-medium uppercase tracking-normal bg-[#141414] border border-white/10 hover:border-[#71B913] rounded-xl text-white disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Download size={14} />
                       <span>Export CSV</span>
@@ -582,7 +602,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <button
                       onClick={onClearOrders}
                       disabled={orders.length === 0}
-                      className="px-3.5 py-2 text-xs font-medium uppercase tracking-wider bg-[#141414] border border-red-950 text-red-400 hover:bg-red-950/30 rounded-xl disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-2 text-xs font-medium uppercase tracking-normal bg-[#141414] border border-red-950 text-red-400 hover:bg-red-950/30 rounded-xl disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Trash2 size={14} />
                       <span>Clear All</span>
@@ -592,7 +612,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                 <div className="border border-white/10 rounded-xl overflow-x-auto">
                   <table className="w-full text-left text-xs whitespace-nowrap">
-                    <thead className="bg-[#141414] border-b border-white/10 uppercase tracking-wider font-mono text-[#888888]">
+                    <thead className="bg-[#141414] border-b border-white/10 uppercase tracking-normal font-mono text-[#888888]">
                       <tr>
                         <th className="py-3 px-4 font-normal">Order ID</th>
                         <th className="py-3 px-4 font-normal">Status</th>
@@ -616,14 +636,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       ) : (
                         filteredOrders.map((order) => (
                           <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
-                            <td className="py-3 px-4 font-mono font-semibold text-[#CCFF00]">
+                            <td className="py-3 px-4 font-mono font-semibold text-[#71B913]">
                               {order.id}
                             </td>
                             <td className="py-3 px-4">
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-mono ${
                                   order.status === 'Verified'
-                                    ? 'bg-[#CCFF00]/15 text-[#CCFF00] border border-[#CCFF00]/30'
+                                    ? 'bg-[#71B913]/15 text-[#71B913] border border-[#71B913]/30'
                                     : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                                 }`}
                               >
@@ -647,7 +667,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             <td className="py-3 px-4 font-mono text-[#AAAAAA]">
                               {order.senderAccount}
                             </td>
-                            <td className="py-3 px-4 font-mono font-bold text-[#CCFF00]">
+                            <td className="py-3 px-4 font-mono font-bold text-[#71B913]">
                               {order.trxId}
                             </td>
                             <td className="py-3 px-4 text-[#777777] font-mono">{order.createdAt}</td>
@@ -681,7 +701,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           onClick={() => setProductTypeFilter(type)}
                           className={`px-3 py-1.5 text-xs font-medium tracking-wide rounded-lg transition-all cursor-pointer ${
                             productTypeFilter === type
-                              ? 'bg-[#CCFF00] text-black font-semibold'
+                              ? 'bg-[#71B913] text-black font-semibold'
                               : 'bg-[#141414] text-[#888888] hover:text-white border border-white/10'
                           }`}
                         >
@@ -702,13 +722,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={productSearchTerm}
                         onChange={(e) => setProductSearchTerm(e.target.value)}
                         placeholder="Search products..."
-                        className="bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl pl-9 pr-4 py-1.5 text-xs text-white focus:outline-none w-56 transition-colors"
+                        className="bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-4 py-1.5 text-xs text-white focus:outline-none w-56 transition-colors"
                       />
                     </div>
 
                     <button
                       onClick={openAddForm}
-                      className="px-4 py-2 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                      className="px-4 py-2 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <Plus size={14} />
                       <span>Add New Item</span>
@@ -719,7 +739,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 {isFormOpen && (
                   <div className="bg-[#131313] border border-white/15 rounded-2xl p-6 space-y-5">
                     <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                      <span className="text-xs uppercase tracking-wider text-[#CCFF00] font-mono">
+                      <span className="text-xs uppercase tracking-normal text-[#71B913] font-mono">
                         {editingProduct ? 'Update Product' : 'Add New Item'}
                       </span>
                       <button onClick={() => setIsFormOpen(false)} className="text-[#888888] hover:text-white">
@@ -743,7 +763,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           <select
                             value={formType}
                             onChange={(e) => setFormType(e.target.value as ProductType)}
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
                           >
                             <option value="Plugin">Plugin</option>
                             <option value="Course">Course</option>
@@ -762,7 +782,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formCategory}
                             onChange={(e) => setFormCategory(e.target.value)}
                             placeholder="e.g. Premiere Pro, After Effects"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
                           />
                         </div>
 
@@ -776,7 +796,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             disabled={formType === 'Free Tutorial'}
                             value={formType === 'Free Tutorial' ? 0 : formPrice}
                             onChange={(e) => setFormPrice(Number(e.target.value))}
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
                           />
                         </div>
                       </div>
@@ -792,7 +812,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formTitle}
                             onChange={(e) => setFormTitle(e.target.value)}
                             placeholder="e.g. AI AutoCut Plugin"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
                           />
                         </div>
 
@@ -806,7 +826,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formDescription}
                             onChange={(e) => setFormDescription(e.target.value)}
                             placeholder="Briefly describe item scope"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
                           />
                         </div>
                       </div>
@@ -821,12 +841,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formThumbnail}
                             onChange={(e) => setFormThumbnail(e.target.value)}
                             placeholder="https://..."
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-mono text-[#CCFF00] mb-1 flex items-center gap-1.5">
+                          <label className="block text-[11px] font-mono text-[#71B913] mb-1 flex items-center gap-1.5">
                             <Shield size={12} />
                             <span>Protected Download / Access URL *</span>
                           </label>
@@ -835,7 +855,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formProtectedUrl}
                             onChange={(e) => setFormProtectedUrl(e.target.value)}
                             placeholder="Google Drive or YouTube Unlisted link"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#CCFF00] rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono"
                           />
                         </div>
                       </div>
@@ -843,14 +863,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <div className="flex items-center gap-3 pt-2">
                         <button
                           type="submit"
-                          className="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-lg transition-colors cursor-pointer"
+                          className="px-6 py-2.5 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-lg transition-colors cursor-pointer"
                         >
                           {editingProduct ? 'Save Changes' : 'Add Item'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setIsFormOpen(false)}
-                          className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider bg-[#1A1A1A] text-[#888888] hover:text-white rounded-lg transition-colors cursor-pointer"
+                          className="px-4 py-2.5 text-xs font-medium uppercase tracking-normal bg-[#1A1A1A] text-[#888888] hover:text-white rounded-lg transition-colors cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -861,7 +881,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                 <div className="border border-white/10 rounded-xl overflow-x-auto">
                   <table className="w-full text-left text-xs whitespace-nowrap">
-                    <thead className="bg-[#141414] border-b border-white/10 uppercase tracking-wider font-mono text-[#888888]">
+                    <thead className="bg-[#141414] border-b border-white/10 uppercase tracking-normal font-mono text-[#888888]">
                       <tr>
                         <th className="py-3 px-4 font-normal">Type</th>
                         <th className="py-3 px-4 font-normal">Tag</th>
@@ -879,7 +899,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         return (
                           <tr key={product.id} className="hover:bg-white/[0.02] transition-colors">
                             <td className="py-3 px-4 font-mono text-white text-[11px]">{product.type}</td>
-                            <td className="py-3 px-4 text-xs font-mono text-[#CCFF00]">{product.category}</td>
+                            <td className="py-3 px-4 text-xs font-mono text-[#71B913]">{product.category}</td>
                             <td className="py-3 px-4 max-w-xs truncate">
                               <div className="font-semibold text-white">{product.title}</div>
                               <div className="text-[11px] text-[#777777] truncate">{product.description}</div>
@@ -896,11 +916,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                       if (e.key === 'Enter') handleSaveInlinePrice(product);
                                       if (e.key === 'Escape') setInlinePriceId(null);
                                     }}
-                                    className="w-20 bg-[#1A1A1A] border border-[#CCFF00] px-2 py-1 text-xs text-white focus:outline-none font-mono rounded"
+                                    className="w-20 bg-[#1A1A1A] border border-[#71B913] px-2 py-1 text-xs text-white focus:outline-none font-mono rounded"
                                   />
                                   <button
                                     onClick={() => handleSaveInlinePrice(product)}
-                                    className="p-1 text-[#CCFF00]"
+                                    className="p-1 text-[#71B913]"
                                   >
                                     <Check size={14} />
                                   </button>
@@ -918,7 +938,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                       setInlinePriceId(product.id);
                                       setInlinePriceValue(product.price.toString());
                                     }}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-[#666666] hover:text-[#CCFF00]"
+                                    className="opacity-0 group-hover:opacity-100 p-1 text-[#666666] hover:text-[#71B913]"
                                   >
                                     <Edit2 size={12} />
                                   </button>
@@ -941,9 +961,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleCopy(product.protectedUrl || '', `url-${product.id}`)}
-                                    className="p-1 text-[#888888] hover:text-[#CCFF00]"
+                                    className="p-1 text-[#888888] hover:text-[#71B913]"
                                   >
-                                    {copiedKey === `url-${product.id}` ? <Check size={13} className="text-[#CCFF00]" /> : <Copy size={13} />}
+                                    {copiedKey === `url-${product.id}` ? <Check size={13} className="text-[#71B913]" /> : <Copy size={13} />}
                                   </button>
                                 </div>
                               ) : (
@@ -981,7 +1001,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               <div className="p-6 md:p-8 space-y-8 overflow-y-auto flex-1">
                 {/* Save Success Toast Banner */}
                 {configSavedToast && (
-                  <div className="p-3 bg-[#CCFF00]/10 border border-[#CCFF00] rounded-xl text-xs text-[#CCFF00] flex items-center gap-2">
+                  <div className="p-3 bg-[#71B913]/10 border border-[#71B913] rounded-xl text-xs text-[#71B913] flex items-center gap-2">
                     <CheckCircle2 size={16} />
                     <span>Payment configuration &amp; endpoints saved successfully.</span>
                   </div>
@@ -990,7 +1010,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 {/* Section 1: Mobile Banking & Bank Accounts */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                    <Smartphone size={16} className="text-[#CCFF00]" />
+                    <Smartphone size={16} className="text-[#71B913]" />
                     <h5 className="font-display text-base font-bold text-white">
                       1. Payment Numbers &amp; Account Details
                     </h5>
@@ -1006,7 +1026,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgBkash}
                         onChange={(e) => setCfgBkash(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
                       />
                     </div>
                     <div>
@@ -1018,7 +1038,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgNagad}
                         onChange={(e) => setCfgNagad(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
                       />
                     </div>
                     <div>
@@ -1030,7 +1050,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgRocket}
                         onChange={(e) => setCfgRocket(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
                       />
                     </div>
                     <div>
@@ -1042,57 +1062,116 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgUpay}
                         onChange={(e) => setCfgUpay(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
                       />
                     </div>
                   </div>
 
-                  {/* Bank Details Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2">
-                    <div>
-                      <label className="block text-[10px] font-mono text-[#888888] mb-1">Bank Name</label>
-                      <input
-                        type="text"
-                        value={cfgBankName}
-                        onChange={(e) => setCfgBankName(e.target.value)}
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                      />
+                  {/* Primary Bank Details Grid (IBBL) */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-mono text-[#71B913] font-semibold block">
+                      Primary Bank (IBBL)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Bank Name</label>
+                        <input
+                          type="text"
+                          value={cfgBankName}
+                          onChange={(e) => setCfgBankName(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Name</label>
+                        <input
+                          type="text"
+                          value={cfgAccName}
+                          onChange={(e) => setCfgAccName(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Number</label>
+                        <input
+                          type="text"
+                          value={cfgAccNum}
+                          onChange={(e) => setCfgAccNum(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Branch Name</label>
+                        <input
+                          type="text"
+                          value={cfgBranch}
+                          onChange={(e) => setCfgBranch(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Routing Number</label>
+                        <input
+                          type="text"
+                          value={cfgRouting}
+                          onChange={(e) => setCfgRouting(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Name</label>
-                      <input
-                        type="text"
-                        value={cfgAccName}
-                        onChange={(e) => setCfgAccName(e.target.value)}
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Number</label>
-                      <input
-                        type="text"
-                        value={cfgAccNum}
-                        onChange={(e) => setCfgAccNum(e.target.value)}
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-mono text-[#888888] mb-1">Branch Name</label>
-                      <input
-                        type="text"
-                        value={cfgBranch}
-                        onChange={(e) => setCfgBranch(e.target.value)}
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-mono text-[#888888] mb-1">Routing Number</label>
-                      <input
-                        type="text"
-                        value={cfgRouting}
-                        onChange={(e) => setCfgRouting(e.target.value)}
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
-                      />
+                  </div>
+
+                  {/* Secondary Bank Details Grid (DBBL) */}
+                  <div className="space-y-1.5 pt-2">
+                    <span className="text-[11px] font-mono text-[#888888] font-semibold block">
+                      Secondary Bank (DBBL)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Bank Name</label>
+                        <input
+                          type="text"
+                          value={cfgBankName2}
+                          onChange={(e) => setCfgBankName2(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Name</label>
+                        <input
+                          type="text"
+                          value={cfgAccName2}
+                          onChange={(e) => setCfgAccName2(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Number</label>
+                        <input
+                          type="text"
+                          value={cfgAccNum2}
+                          onChange={(e) => setCfgAccNum2(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Branch Name</label>
+                        <input
+                          type="text"
+                          value={cfgBranch2}
+                          onChange={(e) => setCfgBranch2(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Routing Number</label>
+                        <input
+                          type="text"
+                          value={cfgRouting2}
+                          onChange={(e) => setCfgRouting2(e.target.value)}
+                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1101,7 +1180,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 <div className="space-y-4 pt-2">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2">
                     <div className="flex items-center gap-2">
-                      <Cloud size={16} className="text-[#CCFF00]" />
+                      <Cloud size={16} className="text-[#71B913]" />
                       <h5 className="font-display text-base font-bold text-white">
                         2. Google Sheet Automated Verification Endpoint
                       </h5>
@@ -1121,7 +1200,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleCopy(COMPLETE_PAYMENT_GOOGLE_APPS_SCRIPT, 'apps-script')}
-                        className="px-3.5 py-1.5 text-[11px] font-mono uppercase bg-[#CCFF00] hover:bg-[#b8e600] text-black font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        className="px-3.5 py-1.5 text-[11px] font-mono uppercase bg-[#71B913] hover:bg-[#81cf17] text-black font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm"
                       >
                         {copiedKey === 'apps-script' ? <Check size={13} /> : <Copy size={13} />}
                         <span>{copiedKey === 'apps-script' ? 'Script Copied!' : 'Copy Google Apps Script Code'}</span>
@@ -1138,7 +1217,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       value={cfgWebAppUrl}
                       onChange={(e) => setCfgWebAppUrl(e.target.value)}
                       placeholder="https://script.google.com/macros/s/.../exec"
-                      className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-mono"
+                      className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-mono"
                     />
                     <span className="text-[10px] text-[#777777] block mt-1">
                       The script automatically creates a &quot;Payments&quot; sheet, extracts TrxID &amp; Amount from SMS, verifies unused TrxIDs, and marks verified payments as USED.
@@ -1150,7 +1229,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 <div className="space-y-4 pt-2">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-[#CCFF00]" />
+                      <Bot size={16} className="text-[#71B913]" />
                       <h5 className="font-display text-base font-bold text-white">
                         3. Telegram Bot Notifications
                       </h5>
@@ -1160,7 +1239,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       type="button"
                       onClick={handleTestTelegram}
                       disabled={isTestingTelegram || !cfgTgToken || !cfgTgChatId}
-                      className="px-3.5 py-1.5 text-[11px] font-mono uppercase bg-white/10 hover:bg-[#CCFF00] hover:text-black border border-white/10 text-white rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors"
+                      className="px-3.5 py-1.5 text-[11px] font-mono uppercase bg-white/10 hover:bg-[#71B913] hover:text-black border border-white/10 text-white rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors"
                     >
                       <Send size={12} />
                       <span>{isTestingTelegram ? 'Sending...' : 'Test Telegram Notification'}</span>
@@ -1177,7 +1256,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgTgToken}
                         onChange={(e) => setCfgTgToken(e.target.value)}
                         placeholder="e.g. 7123456789:AAHq_..."
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
                       />
                     </div>
 
@@ -1190,14 +1269,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgTgChatId}
                         onChange={(e) => setCfgTgChatId(e.target.value)}
                         placeholder="e.g. 987654321 or -100..."
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#CCFF00] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
                       />
                     </div>
                   </div>
 
                   {telegramTestResult && (
                     <div className="p-2.5 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-[#AAAAAA]">
-                      Telegram Test: <span className="text-[#CCFF00]">{telegramTestResult}</span>
+                      Telegram Test: <span className="text-[#71B913]">{telegramTestResult}</span>
                     </div>
                   )}
                 </div>
@@ -1205,7 +1284,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 {/* Section 4: iPhone SMS Shortcut Guide & 1-Click Simulator */}
                 <div className="space-y-4 pt-2">
                   <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                    <Zap size={16} className="text-[#CCFF00]" />
+                    <Zap size={16} className="text-[#71B913]" />
                     <h5 className="font-display text-base font-bold text-white">
                       4. iPhone SMS Shortcut Automation &amp; 1-Click Simulator
                     </h5>
@@ -1226,7 +1305,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <div className="space-y-1">
                       <div className="text-xs font-semibold text-white">1-Click Test Payment Simulator</div>
                       <div className="text-[11px] text-[#777777]">
-                        Simulates an incoming bKash SMS with TrxID <code className="text-[#CCFF00]">{sampleSimTrxId}</code> (৳999) to verify automated recognition.
+                        Simulates an incoming bKash SMS with TrxID <code className="text-[#71B913]">{sampleSimTrxId}</code> (৳999) to verify automated recognition.
                       </div>
                     </div>
 
@@ -1242,7 +1321,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         type="button"
                         onClick={handleSimulateSMS}
                         disabled={isSimulatingSMS || !cfgWebAppUrl}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                        className="px-4 py-2 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
                       >
                         <Play size={12} className="fill-black" />
                         <span>{isSimulatingSMS ? 'Simulating...' : 'Simulate Test Payment SMS'}</span>
@@ -1252,7 +1331,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   {smsSimulationResult && (
                     <div className="p-2.5 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-[#AAAAAA]">
-                      Simulator: <span className="text-[#CCFF00]">{smsSimulationResult}</span>
+                      Simulator: <span className="text-[#71B913]">{smsSimulationResult}</span>
                     </div>
                   )}
                 </div>
@@ -1265,7 +1344,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSaveAllConfig()}
-                    className="px-6 py-3 text-xs font-semibold uppercase tracking-wider bg-[#CCFF00] hover:bg-[#b8e600] text-black rounded-xl shadow-[0_0_20px_rgba(204,255,0,0.3)] transition-all cursor-pointer"
+                    className="px-6 py-3 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] transition-all cursor-pointer"
                   >
                     Save All Settings
                   </button>
