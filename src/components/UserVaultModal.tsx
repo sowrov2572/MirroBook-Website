@@ -1,12 +1,11 @@
 import React from 'react';
 import { X, Download, ShieldCheck, ExternalLink, LogOut, Package, Sparkles, FolderDown } from 'lucide-react';
-import { User } from 'firebase/auth';
-import { UserPurchase } from '../types';
+import { UserPurchase, AppUser } from '../types';
 
 interface UserVaultModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: User | null;
+  user: AppUser | null;
   purchases: UserPurchase[];
   onSignOut: () => void;
   onBrowseStore: () => void;

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Menu, X, ArrowRight, User as UserIcon, FolderDown } from 'lucide-react';
-import { User } from 'firebase/auth';
+import { AppUser } from '../types';
 
 interface HeaderProps {
   onStartProject: () => void;
-  user: User | null;
+  user: AppUser | null;
   onOpenVault: () => void;
   onSignIn: () => void;
   purchaseCount: number;

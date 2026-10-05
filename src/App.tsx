@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { User } from 'firebase/auth';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Services } from './components/Services';
@@ -12,8 +11,9 @@ import { VideoPlayerModal, PlayableVideo } from './components/VideoPlayerModal';
 import { AdminModal } from './components/AdminModal';
 import { StartProjectModal } from './components/StartProjectModal';
 import { UserVaultModal } from './components/UserVaultModal';
+import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
-import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase } from './types';
+import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase, AppUser } from './types';
 import { INITIAL_PRODUCTS } from './data/content';
 import {
   loadPaymentConfig,
@@ -39,16 +39,26 @@ import {
   subscribeToUserPurchases,
 } from './utils/firebase';
 
+const ACTIVE_USER_STORAGE_KEY = 'mirrorbook_active_user';
+
 export default function App() {
   const [checkoutItem, setCheckoutItem] = useState<CheckoutItem | null>(null);
   const [activeVideo, setActiveVideo] = useState<PlayableVideo | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isStartProjectOpen, setIsStartProjectOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // User Auth & Personal Vault state
-  const [user, setUser] = useState<User | null>(null);
+  // User Auth & Personal Vault state (supports Google Auth & direct Creator Email login)
+  const [user, setUser] = useState<AppUser | null>(() => {
+    try {
+      const raw = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
 
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
@@ -58,10 +68,20 @@ export default function App() {
   const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
   const [sheetsUrl, setSheetsUrl] = useState<string>('');
 
-  // 1. Firebase Auth listener
+  // 1. Firebase Auth state listener
   useEffect(() => {
     const unsubscribeAuth = onAuthChange((currentUser) => {
-      setUser(currentUser);
+      if (currentUser) {
+        const appUser: AppUser = {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+          isGoogle: true,
+        };
+        setUser(appUser);
+        localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+      }
     });
 
     return () => {
@@ -76,8 +96,15 @@ export default function App() {
       return;
     }
 
-    const unsubscribePurchases = subscribeToUserPurchases(user.uid, (purchases) => {
-      setUserPurchases(purchases);
+    // Subscribe to cloud user purchases in Firestore
+    const unsubscribePurchases = subscribeToUserPurchases(user.uid, (cloudPurchases) => {
+      setUserPurchases((prev) => {
+        // Merge cloud purchases with existing, deduplicating by ID
+        const map = new Map<string, UserPurchase>();
+        prev.forEach((p) => map.set(p.id, p));
+        cloudPurchases.forEach((p) => map.set(p.id, p));
+        return Array.from(map.values());
+      });
     });
 
     return () => {
@@ -85,7 +112,42 @@ export default function App() {
     };
   }, [user]);
 
-  // 3. Real-time Firebase Firestore Global Synchronization
+  // 3. Auto-bind any orders matching current user's email into their Vault
+  useEffect(() => {
+    if (!user || !user.email) return;
+    const userEmail = user.email.toLowerCase().trim();
+
+    const matchingOrders = orders.filter(
+      (o) =>
+        (o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail) ||
+        (o.userId && o.userId === user.uid)
+    );
+
+    if (matchingOrders.length > 0) {
+      setUserPurchases((prev) => {
+        const map = new Map<string, UserPurchase>();
+        prev.forEach((p) => map.set(p.id, p));
+
+        matchingOrders.forEach((o) => {
+          if (o.downloadUrl) {
+            map.set(o.id, {
+              id: o.id,
+              productId: o.productId || o.id,
+              title: o.itemName,
+              category: 'Plugin',
+              downloadUrl: o.downloadUrl,
+              purchasedAt: o.createdAt,
+              trxId: o.trxId,
+            });
+          }
+        });
+
+        return Array.from(map.values());
+      });
+    }
+  }, [user, orders]);
+
+  // 4. Real-time Firebase Firestore Global Synchronization
   useEffect(() => {
     // Seed new Easy Flow Plugin directly to Firestore so it's live worldwide immediately
     const easyFlowProduct = INITIAL_PRODUCTS.find((p) => p.id === 'plugin-easy-flow');
@@ -147,23 +209,46 @@ export default function App() {
     [publicProducts]
   );
 
-  // Auth Actions
-  const handleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.warn('Google Sign In dialog closed or not completed', err);
-    }
+  // Auth Handlers
+  const handleGoogleSignIn = async () => {
+    const firebaseUser = await signInWithGoogle();
+    const appUser: AppUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      displayName: firebaseUser.displayName,
+      photoURL: firebaseUser.photoURL,
+      isGoogle: true,
+    };
+    setUser(appUser);
+    localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+    setIsVaultOpen(true);
+  };
+
+  const handleEmailSignIn = (email: string, name: string) => {
+    const cleanEmail = email.trim();
+    const cleanName = name.trim() || cleanEmail.split('@')[0];
+    const customUid = 'creator_' + btoa(cleanEmail.toLowerCase()).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+    const appUser: AppUser = {
+      uid: customUid,
+      email: cleanEmail,
+      displayName: cleanName,
+      photoURL: null,
+      isGoogle: false,
+    };
+    setUser(appUser);
+    localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+    setIsVaultOpen(true);
   };
 
   const handleSignOut = async () => {
     try {
       await signOutUser();
-      setUser(null);
-      setUserPurchases([]);
-    } catch (err) {
-      console.warn('Sign out error', err);
+    } catch {
+      // ignore
     }
+    setUser(null);
+    setUserPurchases([]);
+    localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
   };
 
   // Product mutations with instant Firebase Firestore sync & Google Sheets sync
@@ -257,7 +342,7 @@ export default function App() {
         onStartProject={() => setIsStartProjectOpen(true)}
         user={user}
         onOpenVault={() => setIsVaultOpen(true)}
-        onSignIn={handleSignIn}
+        onSignIn={() => setIsAuthModalOpen(true)}
         purchaseCount={userPurchases.length}
       />
 
@@ -317,6 +402,14 @@ export default function App() {
       {/* 8. Footer & Admin View Link */}
       <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
 
+      {/* Creator Authentication Modal (Opens instantly when clicking Sign In) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onGoogleSignIn={handleGoogleSignIn}
+        onEmailSignIn={handleEmailSignIn}
+      />
+
       {/* Multi-Method Payment Checkout Modal with Creator Vault auto-linking */}
       <CheckoutModal
         item={checkoutItem}
@@ -325,7 +418,7 @@ export default function App() {
         paymentConfig={paymentConfig}
         allProducts={products}
         user={user}
-        onSignIn={handleSignIn}
+        onSignIn={() => setIsAuthModalOpen(true)}
         onOpenVault={() => setIsVaultOpen(true)}
       />
 

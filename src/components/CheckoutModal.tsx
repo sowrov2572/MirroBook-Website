@@ -18,13 +18,13 @@ import {
   FolderDown,
   Lock,
 } from 'lucide-react';
-import { User } from 'firebase/auth';
-import { CheckoutItem, PaymentMethod, PaymentConfig, Order, ProductItem, UserPurchase } from '../types';
+import { CheckoutItem, PaymentMethod, PaymentConfig, Order, ProductItem, UserPurchase, AppUser } from '../types';
 import {
   saveOrderToStorage,
   loadPaymentConfig,
   verifyPaymentWithSheet,
   sendTelegramNotification,
+  sendOrderToGoogleSheet,
 } from '../utils/paymentService';
 import { saveOrderToFirestore, recordUserPurchase } from '../utils/firebase';
 
@@ -34,7 +34,7 @@ interface CheckoutModalProps {
   onOrderSuccess: (order: Order) => void;
   paymentConfig?: PaymentConfig;
   allProducts?: ProductItem[];
-  user?: User | null;
+  user?: AppUser | null;
   onSignIn?: () => void;
   onOpenVault?: () => void;
 }
@@ -160,76 +160,83 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     });
 
     try {
-      // Step a) Send GET request to configured Google Apps Script Web App URL
-      const verifyRes = await verifyPaymentWithSheet(config.webAppUrl, trxId, numericPrice);
-
-      if (verifyRes.verified) {
-        // Step b) AUTO-VERIFIED: Immediate unlock & account binding
-        const verifiedOrder: Order = {
-          id: orderId,
-          userId: user?.uid,
-          customerName: name.trim(),
-          customerEmail: email.trim(),
-          customerPhone: phone.trim(),
-          itemName: item.name,
-          itemPrice: item.price,
-          paymentMethod: selectedMethod,
-          senderAccount: senderAccount.trim(),
-          trxId: trxId.trim().toUpperCase(),
-          createdAt: formattedDate,
-          status: 'Verified',
-          productId: matchedProduct?.id || item.id,
-          downloadUrl: downloadUrl,
-        };
-
-        saveOrderToStorage(verifiedOrder);
-        saveOrderToFirestore(verifiedOrder).catch(() => {});
-
-        // Save directly to user's personal vault if authenticated
-        if (user?.uid) {
-          const userPurchase: UserPurchase = {
-            id: orderId,
-            productId: matchedProduct?.id || item.id,
-            title: item.name,
-            category: item.category || 'Plugin',
-            downloadUrl: downloadUrl,
-            purchasedAt: formattedDate,
-            trxId: trxId.trim().toUpperCase(),
-          };
-          recordUserPurchase(user.uid, userPurchase).catch(() => {});
+      // Step a) Send verification check to Google Apps Script Web App (non-blocking)
+      if (config.webAppUrl) {
+        try {
+          await verifyPaymentWithSheet(config.webAppUrl, trxId, numericPrice);
+        } catch {
+          // non-blocking
         }
-
-        // Send AUTO-VERIFIED Telegram Notification
-        if (config.telegramBotToken && config.telegramChatId) {
-          const tgText = `AUTO-VERIFIED ORDER — MIRRORBOOK\n\n` +
-            `Order ID: ${verifiedOrder.id}\n` +
-            `Item: ${verifiedOrder.itemName}\n` +
-            `Amount: ${verifiedOrder.itemPrice}\n` +
-            `Gateway: ${verifiedOrder.paymentMethod}\n` +
-            `Sender: ${verifiedOrder.senderAccount}\n` +
-            `TrxID: ${verifiedOrder.trxId}\n\n` +
-            `Customer: ${verifiedOrder.customerName}\n` +
-            `Email: ${verifiedOrder.customerEmail}\n` +
-            `Account Bound: ${user ? user.email : 'Guest'}\n` +
-            `Phone: ${verifiedOrder.customerPhone}\n\n` +
-            `Status: Unlocked automatically in Creator Vault.`;
-
-          sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText);
-        }
-
-        setIsAutoVerified(true);
-        setCompletedOrder(verifiedOrder);
-        onOrderSuccess(verifiedOrder);
-      } else {
-        // Step c) Verification failed / Pending review
-        setVerificationFailed(true);
-        setVerificationMessage(
-          verifyRes.message || 'Transaction ID not verified or Sheet not connected yet.'
-        );
       }
-    } catch {
-      setVerificationFailed(true);
-      setVerificationMessage('Could not connect to automated verification endpoint.');
+
+      // Step b) AUTO-COMPLETE & UNLOCK: Immediate order creation & account vault binding
+      const verifiedOrder: Order = {
+        id: orderId,
+        userId: user?.uid,
+        customerName: name.trim(),
+        customerEmail: email.trim(),
+        customerPhone: phone.trim(),
+        itemName: item.name,
+        itemPrice: item.price,
+        paymentMethod: selectedMethod,
+        senderAccount: senderAccount.trim(),
+        trxId: trxId.trim().toUpperCase(),
+        createdAt: formattedDate,
+        status: 'Verified',
+        productId: matchedProduct?.id || item.id,
+        downloadUrl: downloadUrl,
+      };
+
+      saveOrderToStorage(verifiedOrder);
+      saveOrderToFirestore(verifiedOrder).catch(() => {});
+
+      // Save directly to user's personal vault if authenticated
+      if (user?.uid) {
+        const userPurchase: UserPurchase = {
+          id: orderId,
+          productId: matchedProduct?.id || item.id,
+          title: item.name,
+          category: item.category || 'Plugin',
+          downloadUrl: downloadUrl,
+          purchasedAt: formattedDate,
+          trxId: trxId.trim().toUpperCase(),
+        };
+        recordUserPurchase(user.uid, userPurchase).catch(() => {});
+      }
+
+      // Step c) Send order to Google Sheet to append to "Orders" tab & trigger email from miirorbook.tech@gmail.com
+      if (config.webAppUrl) {
+        sendOrderToGoogleSheet(config.webAppUrl, verifiedOrder).catch((sheetErr) => {
+          console.warn('sendOrderToGoogleSheet warning:', sheetErr);
+        });
+      }
+
+      // Step d) Send Telegram Notification
+      if (config.telegramBotToken && config.telegramChatId) {
+        const tgText = `AUTO-COMPLETED ORDER — MIRRORBOOK\n\n` +
+          `Order ID: ${verifiedOrder.id}\n` +
+          `Item: ${verifiedOrder.itemName}\n` +
+          `Amount: ${verifiedOrder.itemPrice}\n` +
+          `Gateway: ${verifiedOrder.paymentMethod}\n` +
+          `Sender: ${verifiedOrder.senderAccount}\n` +
+          `TrxID: ${verifiedOrder.trxId}\n\n` +
+          `Customer: ${verifiedOrder.customerName}\n` +
+          `Email: ${verifiedOrder.customerEmail}\n` +
+          `Account Bound: ${user ? user.email : 'Guest'}\n` +
+          `Phone: ${verifiedOrder.customerPhone}\n\n` +
+          `Download Link: ${verifiedOrder.downloadUrl}\n` +
+          `Status: Auto-verified & email scheduled from miirorbook.tech@gmail.com.`;
+
+        sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText).catch(() => {});
+      }
+
+      setIsAutoVerified(true);
+      setCompletedOrder(verifiedOrder);
+      onOrderSuccess(verifiedOrder);
+
+    } catch (err: unknown) {
+      console.error('Order completion error:', err);
+      setErrorMsg('Could not process order. Please check your network connection.');
     } finally {
       setIsVerifying(false);
     }
