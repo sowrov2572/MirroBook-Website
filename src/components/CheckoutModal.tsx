@@ -361,16 +361,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl text-left overflow-hidden my-6">
+      <div className="relative w-full max-w-md glossy-card border border-white/20 text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.08] bg-[#070707]">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.1] bg-white/[0.04]">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#71B913]" />
-            <h3 className="font-display text-xs font-semibold tracking-normal uppercase text-white">
-              Checkout
+            <span className="w-2.5 h-2.5 rounded-full bg-[#71B913] shadow-[0_0_10px_#71B913]" />
+            <h3 className="font-display text-xs font-bold tracking-normal uppercase text-white">
+              Instant Checkout
             </h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-7 h-7 rounded-lg hover:bg-white/10 text-[#888888] hover:text-white transition-colors flex items-center justify-center cursor-pointer"
             aria-label="Close"
@@ -430,8 +431,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   className="w-full py-3 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <Download size={15} />
-                  <span>Download / Install Now</span>
+                  <span>Download / Install Now (Google Drive)</span>
                 </a>
+
+                {/* Email Confirmation Notice */}
+                <div className="p-3 bg-[#71B913]/10 border border-[#71B913]/30 rounded-xl text-left space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#71B913]">
+                    <CheckCircle size={14} />
+                    <span>Download Link Sent to Your Email!</span>
+                  </div>
+                  <p className="text-[11px] text-[#AAAAAA] leading-relaxed">
+                    A confirmation email containing the official download folder link has been automatically dispatched to{' '}
+                    <strong className="text-white">{completedOrder.customerEmail}</strong> from{' '}
+                    <strong className="text-[#71B913]">miirorbook.tech@gmail.com</strong>.
+                  </p>
+                </div>
 
                 {onOpenVault && user && (
                   <button
@@ -764,11 +778,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <button
                   type="submit"
                   disabled={isVerifying}
-                  className="w-full py-2.5 sm:py-3 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.99] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.25)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-2.5 sm:py-3 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isVerifying ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={14} className="animate-spin text-black" />
                       <span>Verifying Payment...</span>
                     </>
                   ) : (

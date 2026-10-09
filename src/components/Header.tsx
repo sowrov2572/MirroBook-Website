@@ -99,6 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           ) : (
             <button
+              type="button"
               onClick={onSignIn}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-[#CCCCCC] hover:text-white transition-all cursor-pointer"
             >
@@ -128,6 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           ) : (
             <button
+              type="button"
               onClick={onSignIn}
               className="p-1.5 rounded-full bg-white/5 text-[#CCCCCC]"
               title="Sign In"
@@ -176,11 +178,12 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onSignIn();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-white bg-white/10 rounded-xl flex items-center justify-center gap-2"
+                className="w-full py-2.5 text-center text-xs font-semibold text-white bg-white/10 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UserIcon size={14} className="text-[#71B913]" />
                 <span>Sign In to Creator Account</span>

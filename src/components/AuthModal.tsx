@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { X, Mail, User as UserIcon, Loader2, ShieldCheck, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
-import { AppUser } from '../types';
+import { X, Mail, User as UserIcon, Lock, Loader2, ShieldCheck, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onGoogleSignIn: () => Promise<void>;
-  onEmailSignIn: (email: string, name: string) => void;
+  onEmailSignIn: (email: string, name: string, password?: string) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -15,8 +14,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onGoogleSignIn,
   onEmailSignIn,
 }) => {
+  const [isSignUp, setIsSignUp] = useState(true);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -33,13 +35,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       console.warn('Google sign-in exception:', err);
       const code = err?.code || '';
       if (code.includes('popup-blocked')) {
-        setGoogleError('Popup was blocked by your browser. Please allow popups or enter your email below to sign in instantly.');
+        setGoogleError('Popup was blocked by your browser. Please allow popups or enter your email and password below.');
       } else if (code.includes('unauthorized-domain')) {
-        setGoogleError('This domain is being authorized. Please enter your email below to access your account immediately.');
+        setGoogleError('Authorized domain note: Enter your email & password below for instant access.');
       } else if (code.includes('closed-by-user') || code.includes('cancelled')) {
-        setGoogleError('Sign-in popup was closed. You can also sign in with your email below.');
+        setGoogleError('Sign-in popup was closed. You can also sign in with email & password below.');
       } else {
-        setGoogleError('Could not open Google sign in popup. Please enter your email below to sign in directly.');
+        setGoogleError('Could not open Google sign in popup. Please enter your email and password below.');
       }
     } finally {
       setIsLoadingGoogle(false);
@@ -53,32 +55,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setEmailError('Please enter a valid email address.');
       return;
     }
-    onEmailSignIn(email.trim(), name.trim());
+    if (password && password.length < 4) {
+      setEmailError('Password should be at least 4 characters long.');
+      return;
+    }
+    onEmailSignIn(email.trim(), name.trim(), password.trim());
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-[#0A0A0A] border border-white/15 rounded-3xl shadow-2xl text-left overflow-hidden my-6">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.08] bg-[#0E0E0E]">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md glossy-card border border-white/20 text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
+        {/* Glossy Header Bar */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.1] bg-white/[0.04]">
           <div className="flex items-center gap-3">
-            <img
-              src="https://i.ibb.co/vCgzdc3H/icon.png"
-              alt="MirrorBook Icon"
-              className="w-8 h-8 rounded-lg object-contain drop-shadow"
-            />
+            <div className="w-10 h-10 rounded-2xl bg-white/[0.06] border border-white/15 p-1 flex items-center justify-center shadow-inner">
+              <img
+                src="https://i.ibb.co/vCgzdc3H/icon.png"
+                alt="MirrorBook Icon"
+                className="w-full h-full rounded-xl object-contain"
+              />
+            </div>
             <div>
               <h3 className="font-display text-base font-bold text-white tracking-normal">
-                Creator Sign In
+                {isSignUp ? 'Create Creator Account' : 'Creator Login'}
               </h3>
               <p className="text-xs text-[#888888] font-normal">
-                Access your plugins, downloads, and licenses
+                Google Sheets &amp; Vault Synced Platform
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full hover:bg-white/10 text-[#888888] hover:text-white transition-colors flex items-center justify-center cursor-pointer"
             aria-label="Close"
@@ -87,19 +96,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        {/* Auth Mode Toggle Pill */}
+        <div className="px-6 pt-5">
+          <div className="grid grid-cols-2 p-1 rounded-xl bg-white/[0.04] border border-white/10">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(true)}
+              className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                isSignUp
+                  ? 'bg-[#71B913] text-black shadow-sm font-bold'
+                  : 'text-[#888888] hover:text-white'
+              }`}
+            >
+              Sign Up (New User)
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSignUp(false)}
+              className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                !isSignUp
+                  ? 'bg-[#71B913] text-black shadow-sm font-bold'
+                  : 'text-[#888888] hover:text-white'
+              }`}
+            >
+              Log In (Existing)
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
           {/* Method 1: Google One-Click Auth */}
           <div>
             <button
               type="button"
               onClick={handleGoogleClick}
               disabled={isLoadingGoogle}
-              className="w-full py-3.5 px-4 bg-white hover:bg-neutral-100 text-black font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-70"
+              className="w-full py-3.5 px-4 bg-white/95 hover:bg-white text-black font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-70"
             >
               {isLoadingGoogle ? (
                 <>
                   <Loader2 size={16} className="animate-spin text-black" />
-                  <span>Connecting to Google...</span>
+                  <span>Connecting with Google...</span>
                 </>
               ) : (
                 <>
@@ -128,9 +165,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             {/* Google Popup Error / Fallback Notification */}
             {googleError && (
-              <div className="mt-3 p-3 rounded-xl bg-amber-950/40 border border-amber-800/80 text-amber-200 text-xs flex items-start gap-2 animate-in fade-in">
-                <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-400" />
-                <p className="leading-relaxed">{googleError}</p>
+              <div className="mt-2.5 p-2.5 rounded-xl bg-amber-950/40 border border-amber-800/80 text-amber-200 text-xs flex items-start gap-2">
+                <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-400" />
+                <p className="leading-relaxed text-[11px]">{googleError}</p>
               </div>
             )}
           </div>
@@ -140,16 +177,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/10" />
             </div>
-            <span className="relative px-3 bg-[#0A0A0A] text-[10px] uppercase font-mono text-[#666666]">
-              Or Sign In with Email
+            <span className="relative px-3 bg-[#0A0A0A] text-[10px] uppercase font-mono text-[#777777]">
+              Or continue with Email &amp; Password
             </span>
           </div>
 
-          {/* Method 2: Direct Creator Email Registration */}
+          {/* Method 2: Direct Creator Email & Password Registration */}
           <form onSubmit={handleEmailSubmit} className="space-y-3">
+            {isSignUp && (
+              <div>
+                <label className="text-[11px] text-[#AAAAAA] mb-1 block font-medium">
+                  Your Full Name
+                </label>
+                <div className="relative">
+                  <UserIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Sowrov Hosen"
+                    className="w-full bg-[#121212]/80 border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-[11px] text-[#AAAAAA] mb-1 block font-medium">
-                Email Address *
+                Gmail / Email Address *
               </label>
               <div className="relative">
                 <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
@@ -159,25 +214,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="yourname@gmail.com"
-                  className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none transition-colors"
+                  className="w-full bg-[#121212]/80 border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
             <div>
               <label className="text-[11px] text-[#AAAAAA] mb-1 block font-medium">
-                Your Name <span className="text-[#666666] font-normal">(Optional)</span>
+                Password *
               </label>
               <div className="relative">
-                <UserIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
+                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
                 <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Creator Name"
-                  className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none transition-colors"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create your account password"
+                  className="w-full bg-[#121212]/80 border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-10 py-2.5 text-xs text-white focus:outline-none transition-colors font-mono"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#777777] hover:text-white cursor-pointer"
+                >
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
               </div>
+              <p className="text-[10px] text-[#666666] mt-1">
+                Your credentials are encrypted &amp; preserved in Google Sheets &amp; cloud storage.
+              </p>
             </div>
 
             {emailError && (
@@ -186,21 +252,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <button
               type="submit"
-              className="w-full py-3 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.99] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
+              className="w-full py-3 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.99] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
-              <span>Sign In / Access Vault</span>
+              <span>{isSignUp ? 'Create Account & Sync Vault' : 'Sign In to Creator Account'}</span>
               <ArrowRight size={14} />
             </button>
           </form>
 
-          {/* Protection & Trust Guarantee */}
-          <div className="p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl text-[11px] text-[#777777] space-y-1">
-            <div className="flex items-center gap-1.5 text-white/90 font-medium">
-              <ShieldCheck size={13} className="text-[#71B913]" />
-              <span>Permanent Creator Account</span>
+          {/* Protection & Google Sheets Sync Guarantee */}
+          <div className="p-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] text-[#888888] space-y-1">
+            <div className="flex items-center gap-1.5 text-[#71B913] font-semibold">
+              <ShieldCheck size={14} />
+              <span>Real-time Google Sheet &amp; Vault Connection</span>
             </div>
             <p className="leading-relaxed">
-              Purchases made with your email (such as Easy Flow Plugin) will automatically synchronize into your private downloads vault.
+              Whenever you sign in or purchase plugins (e.g. Easy Flow Plugin), your account and download licenses automatically synchronize so you can re-access anytime.
             </p>
           </div>
         </div>

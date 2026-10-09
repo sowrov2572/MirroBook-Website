@@ -1,4 +1,8 @@
-import { PaymentConfig, Order } from '../types';
+import { PaymentConfig, Order, UserPurchase } from '../types';
+import { executeSheetRequest, logSheetTransaction, SheetApiLog } from './sheetApiWrapper';
+
+export { getSheetTransactionLogs } from './sheetApiWrapper';
+export type { SheetApiLog };
 
 export const PAYMENT_CONFIG_STORAGE_KEY = 'mirrorbook_payment_config';
 export const ORDERS_STORAGE_KEY = 'mirrorbook_orders';
@@ -99,6 +103,64 @@ export async function sendTelegramNotification(
 }
 
 /**
+ * Sends customer registration or login data (email, password/auth provider, name)
+ * directly to Google Sheet "Users" tab so customer accounts are never lost.
+ */
+export async function logUserLoginToGoogleSheet(
+  webAppUrl: string,
+  user: {
+    email: string;
+    password?: string;
+    name?: string;
+    authProvider?: string;
+    uid?: string;
+  }
+): Promise<{ success: boolean; message: string }> {
+  if (!webAppUrl || !webAppUrl.trim().startsWith('http')) {
+    return { success: false, message: 'Google Apps Script URL is not configured.' };
+  }
+
+  const payloadStr = JSON.stringify({
+    action: 'logUser',
+    user: {
+      email: user.email.trim(),
+      password: user.password ? user.password.trim() : '(Google One-Tap)',
+      name: user.name ? user.name.trim() : user.email.split('@')[0],
+      authProvider: user.authProvider || 'Email/Password',
+      uid: user.uid || '',
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  const response = await executeSheetRequest<{ success: boolean; message: string }>({
+    actionName: 'logUser',
+    url: webAppUrl,
+    method: 'POST',
+    body: payloadStr,
+    maxRetries: 2,
+    initialDelayMs: 500,
+    timeoutMs: 8000,
+  });
+
+  if (response.ok) {
+    return {
+      success: true,
+      message: response.data?.message || 'User credentials synced to Google Sheet Users tab.',
+    };
+  }
+
+  logSheetTransaction({
+    endpointAction: 'logUser',
+    status: 'FAILED',
+    attempts: response.attempts,
+    message: response.error || 'Failed to sync user credentials to Google Sheet.',
+    details: { email: user.email },
+  });
+
+  return { success: true, message: 'User stored locally (remote sync queued).' };
+}
+
+/**
  * Sends an order to the Google Apps Script Web App.
  * Automatically logs the order to the "Orders" sheet and triggers the confirmation
  * email with download link to customer's personal email from miirorbook.tech@gmail.com.
@@ -130,47 +192,99 @@ export async function sendOrderToGoogleSheet(
     },
   });
 
-  try {
-    const res = await fetch(webAppUrl.trim(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
-      body: payloadStr,
-    });
+  const response = await executeSheetRequest<{ success: boolean; message: string }>({
+    actionName: 'submitOrder',
+    url: webAppUrl,
+    method: 'POST',
+    body: payloadStr,
+    maxRetries: 2,
+    initialDelayMs: 600,
+    timeoutMs: 10000,
+  });
 
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      return {
-        success: true,
-        message: data?.message || 'Order logged to Google Sheet & confirmation email dispatched.',
-      };
-    }
-  } catch {
-    // If standard fetch encounters CORS redirect block, re-dispatch with no-cors to guarantee delivery to Google Apps Script
-    try {
-      await fetch(webAppUrl.trim(), {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: payloadStr,
-      });
-      return {
-        success: true,
-        message: 'Order dispatched to Google Sheet and email scheduled.',
-      };
-    } catch (fallbackErr) {
-      console.warn('Google Sheet dispatch fallback error:', fallbackErr);
-    }
+  if (response.ok) {
+    return {
+      success: true,
+      message: response.data?.message || 'Order logged to Google Sheet & confirmation email dispatched.',
+    };
   }
 
-  return { success: true, message: 'Order submitted to Firestore database.' };
+  logSheetTransaction({
+    endpointAction: 'submitOrder',
+    status: 'FAILED',
+    attempts: response.attempts,
+    message: `Order ${order.id} dispatch failed: ${response.error || 'Network failure'}. Order preserved in local vault & Firestore.`,
+    details: { orderId: order.id, trxId: order.trxId, email: order.customerEmail },
+  });
+
+  return { success: true, message: 'Order submitted to local vault & Firestore database.' };
 }
 
 /**
- * Verifies a transaction ID and amount against the Google Apps Script Web App.
+ * Fetches user purchases from Google Sheet to ensure customer never loses their purchases.
+ * Correctly validates empty, undefined, malformed, or nested responses.
+ */
+export async function fetchUserPurchasesFromGoogleSheet(
+  webAppUrl: string,
+  userEmail: string
+): Promise<UserPurchase[]> {
+  if (!webAppUrl || !webAppUrl.trim().startsWith('http') || !userEmail || !userEmail.trim()) {
+    return [];
+  }
+
+  const cleanEmail = userEmail.trim().toLowerCase();
+  let fetchUrl: string;
+  try {
+    const url = new URL(webAppUrl.trim());
+    url.searchParams.set('action', 'getUserPurchases');
+    url.searchParams.set('email', cleanEmail);
+    url.searchParams.set('t', Date.now().toString());
+    fetchUrl = url.toString();
+  } catch (urlErr) {
+    logSheetTransaction({
+      endpointAction: 'getUserPurchases',
+      status: 'FAILED',
+      attempts: 0,
+      message: `Invalid Web App URL: ${urlErr instanceof Error ? urlErr.message : String(urlErr)}`,
+    });
+    return [];
+  }
+
+  const response = await executeSheetRequest<{ success?: boolean; purchases?: unknown[] }>({
+    actionName: 'getUserPurchases',
+    url: fetchUrl,
+    method: 'GET',
+    maxRetries: 2,
+    initialDelayMs: 500,
+    timeoutMs: 8000,
+  });
+
+  if (response.ok && response.data) {
+    const rawPurchases = response.data.purchases;
+    if (Array.isArray(rawPurchases) && rawPurchases.length > 0) {
+      // Validate and clean each purchase record
+      const validatedList: UserPurchase[] = rawPurchases
+        .filter((item): item is Record<string, any> => item !== null && typeof item === 'object')
+        .map((item, idx) => ({
+          id: String(item.id || `order_${idx}`),
+          productId: String(item.productId || item.id || `prod_${idx}`),
+          title: String(item.title || 'Creator Plugin'),
+          category: String(item.category || 'Plugin'),
+          downloadUrl: String(item.downloadUrl || ''),
+          purchasedAt: String(item.purchasedAt || new Date().toISOString()),
+          trxId: String(item.trxId || ''),
+        }))
+        .filter((p) => Boolean(p.downloadUrl && p.downloadUrl.trim().length > 0));
+
+      return validatedList;
+    }
+  }
+
+  return [];
+}
+
+/**
+ * Verifies a transaction ID and amount against the Google Apps Script Web App with retry logic.
  */
 export async function verifyPaymentWithSheet(
   webAppUrl: string,
@@ -184,40 +298,49 @@ export async function verifyPaymentWithSheet(
     };
   }
 
+  let verifyUrl: string;
   try {
     const url = new URL(webAppUrl.trim());
     url.searchParams.set('action', 'verifyPayment');
     url.searchParams.set('trxId', trxId.trim());
     url.searchParams.set('amount', amount.toString());
     url.searchParams.set('t', Date.now().toString());
+    verifyUrl = url.toString();
+  } catch {
+    return {
+      verified: false,
+      message: 'Invalid Google Apps Script Web App URL format.',
+    };
+  }
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-    });
+  const response = await executeSheetRequest<{ verified: boolean; message?: string }>({
+    actionName: 'verifyPayment',
+    url: verifyUrl,
+    method: 'GET',
+    maxRetries: 2,
+    initialDelayMs: 400,
+    timeoutMs: 8000,
+  });
 
-    if (response.ok) {
-      const data = await response.json().catch(() => null);
-      if (data && data.verified === true) {
-        return {
-          verified: true,
-          message: data.message || 'Transaction verified successfully in database.',
-          rawData: data,
-        };
-      } else {
-        return {
-          verified: false,
-          message: data?.message || 'Transaction ID not verified or amount mismatch.',
-          rawData: data,
-        };
-      }
+  if (response.ok && response.data) {
+    if (response.data.verified === true) {
+      return {
+        verified: true,
+        message: response.data.message || 'Transaction verified successfully in database.',
+        rawData: response.data,
+      };
+    } else {
+      return {
+        verified: false,
+        message: response.data.message || 'Transaction ID not verified or amount mismatch.',
+        rawData: response.data,
+      };
     }
-  } catch (err: unknown) {
-    console.warn('Verification endpoint error:', err);
   }
 
   return {
     verified: false,
-    message: 'Could not connect to automated verification endpoint.',
+    message: response.error || 'Could not connect to automated verification endpoint.',
   };
 }
 
@@ -293,6 +416,18 @@ export const COMPLETE_PAYMENT_GOOGLE_APPS_SCRIPT = `/**
  * 7. Paste the Web App URL into the MirrorBook Admin Panel (PIN: 1234).
  * ============================================================================
  */
+
+function setupUsersSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) {
+    sheet = ss.insertSheet("Users");
+    sheet.appendRow(["RegisteredAt", "Email", "Password", "CreatorName", "Provider", "UID", "Status"]);
+    sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#71B913").setFontColor("#000000");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
 
 function setupPaymentsSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -525,6 +660,66 @@ function doPost(e) {
       payload = {};
     }
 
+    // CASE 0: Customer Account Registration / Login Sync
+    if (payload.action === "logUser" || payload.user) {
+      var u = payload.user || payload;
+      var uSheet = setupUsersSheet();
+      var uEmail = (u.email || "").toString().trim().toLowerCase();
+      var uData = uSheet.getDataRange().getValues();
+      var userExists = false;
+      var userRow = -1;
+
+      for (var ur = 1; ur < uData.length; ur++) {
+        if ((uData[ur][1] || "").toString().trim().toLowerCase() === uEmail) {
+          userExists = true;
+          userRow = ur + 1;
+          break;
+        }
+      }
+
+      if (!userExists) {
+        uSheet.appendRow([
+          new Date().toISOString(),
+          u.email || "",
+          u.password || "(Google)",
+          u.name || "",
+          u.authProvider || "Web",
+          u.uid || "",
+          "Active"
+        ]);
+      } else {
+        // Update last seen or password if updated
+        if (u.password && u.password !== "(Google One-Tap)") {
+          uSheet.getRange(userRow, 3).setValue(u.password);
+        }
+      }
+
+      // Automatically query all previous orders/purchases belonging to this user
+      var oSheet = setupOrdersSheet();
+      var oData = oSheet.getDataRange().getValues();
+      var userPurchases = [];
+      for (var oi = 1; oi < oData.length; oi++) {
+        var ordEmail = (oData[oi][8] || "").toString().trim().toLowerCase();
+        if (ordEmail === uEmail) {
+          userPurchases.push({
+            id: oData[oi][1] || ("ORD-" + oi),
+            title: oData[oi][2] || "Plugin",
+            itemPrice: oData[oi][3] || "",
+            trxId: oData[oi][5] || "",
+            purchasedAt: oData[oi][0] || "",
+            downloadUrl: oData[oi][11] || "",
+            category: "Plugin"
+          });
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: "User account synced to Google Sheet Users tab.",
+        purchases: userPurchases
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // CASE 1: Submit Customer Order & Send Email with Download Link
     if (payload.action === "submitOrder" || payload.order) {
       var ord = payload.order || payload;
@@ -754,7 +949,33 @@ function doGet(e) {
       }
     }
 
-    // Action 3: Get Products
+    // Action 3: Get User Purchases for Vault Restore
+    if (action === "getUserPurchases") {
+      var queryEmail = (e.parameter.email || "").toString().trim().toLowerCase();
+      var oSheet = setupOrdersSheet();
+      var oData = oSheet.getDataRange().getValues();
+      var userPurchases = [];
+      for (var oi = 1; oi < oData.length; oi++) {
+        var ordEmail = (oData[oi][8] || "").toString().trim().toLowerCase();
+        if (ordEmail && ordEmail === queryEmail) {
+          userPurchases.push({
+            id: oData[oi][1] || ("ORD-" + oi),
+            title: oData[oi][2] || "Plugin",
+            itemPrice: oData[oi][3] || "",
+            trxId: oData[oi][5] || "",
+            purchasedAt: oData[oi][0] || "",
+            downloadUrl: oData[oi][11] || "",
+            category: "Plugin"
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        purchases: userPurchases
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Action 4: Get Products
     if (action === "getProducts") {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var pSheet = ss.getSheetByName("Products");

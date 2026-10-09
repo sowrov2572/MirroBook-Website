@@ -69,16 +69,16 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
           </div>
         </div>
 
-        {/* Filterable Grid: Strictly Title + Subtitle */}
+        {/* Filterable Grid: Glossy Minimal Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredPlugins.map((plugin) => (
             <div
               key={plugin.id}
-              className="matte-glass-dark rounded-2xl p-6 flex flex-col justify-between group"
+              className="glossy-card glossy-card-hover p-6 flex flex-col justify-between group"
             >
               <div>
                 {/* Visual Thumbnail / UI Preview */}
-                <div className="aspect-video w-full rounded-xl bg-[#111111] border border-white/[0.08] mb-5 overflow-hidden relative group-hover:border-[#71B913]/40 transition-colors flex flex-col justify-between p-3">
+                <div className="aspect-video w-full rounded-xl bg-black/60 border border-white/10 mb-5 overflow-hidden relative group-hover:border-[#71B913]/50 transition-colors flex flex-col justify-between p-3 shadow-inner">
                   {plugin.thumbnailUrl ? (
                     <img
                       src={plugin.thumbnailUrl}
@@ -127,7 +127,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
               </div>
 
               <div>
-                <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between mb-5">
+                <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between mb-5">
                   <span className="text-[11px] uppercase tracking-normal text-[#777777] font-medium">
                     Instant License
                   </span>
@@ -137,6 +137,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
                 </div>
 
                 <button
+                  type="button"
                   onClick={() =>
                     onBuyItem({
                       id: plugin.id,
@@ -145,10 +146,10 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
                       category: `Plugin (${plugin.software})`,
                     })
                   }
-                  className="w-full py-3 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black shadow-[0_0_20px_rgba(113,185,19,0.3)] rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  className="w-full py-3 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <ShoppingBag size={14} />
-                  <span>Buy</span>
+                  <span>Buy Now</span>
                 </button>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { ProductItem } from '../types';
+import { executeSheetRequest, logSheetTransaction } from './sheetApiWrapper';
 
 export const SHEETS_URL_KEY = 'mirrorbook_sheets_url';
 export const PRODUCTS_STORAGE_KEY = 'mirrorbook_products';
@@ -27,7 +28,7 @@ export function sanitizeProductsForPublic(products: ProductItem[]): ProductItem[
 }
 
 /**
- * Pushes updated product list to Google Sheet Web App URL if configured, with graceful fallback.
+ * Pushes updated product list to Google Sheet Web App URL with retry mechanism and fallback to localStorage.
  */
 export async function syncProductsToSheet(
   sheetUrl: string,
@@ -49,48 +50,48 @@ export async function syncProductsToSheet(
     };
   }
 
-  try {
-    const response = await fetch(sheetUrl.trim(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
-      body: JSON.stringify({
-        action: 'saveProducts',
-        timestamp: new Date().toISOString(),
-        products,
-      }),
-    });
+  const payloadStr = JSON.stringify({
+    action: 'saveProducts',
+    timestamp: new Date().toISOString(),
+    products,
+  });
 
-    if (response.ok) {
-      const data = await response.json().catch(() => null);
-      return {
-        success: true,
-        message: data?.message || 'Synced successfully with Google Sheet Web App.',
-        source: 'google-sheets',
-        items: products,
-      };
-    } else {
-      return {
-        success: true,
-        message: 'Saved to local storage (Google Sheet returned status ' + response.status + ').',
-        source: 'local-storage',
-        items: products,
-      };
-    }
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : 'Network error';
+  const response = await executeSheetRequest<{ success: boolean; message: string }>({
+    actionName: 'saveProducts',
+    url: sheetUrl,
+    method: 'POST',
+    body: payloadStr,
+    maxRetries: 2,
+    initialDelayMs: 600,
+    timeoutMs: 10000,
+  });
+
+  if (response.ok) {
     return {
       success: true,
-      message: `Saved locally. Remote sync error: ${errorMsg}`,
-      source: 'local-storage',
+      message: response.data?.message || 'Synced successfully with Google Sheet Web App.',
+      source: 'google-sheets',
       items: products,
     };
   }
+
+  logSheetTransaction({
+    endpointAction: 'saveProducts',
+    status: 'FAILED',
+    attempts: response.attempts,
+    message: `Product sync to Google Sheet encountered: ${response.error || 'Network failure'}. Safe locally.`,
+  });
+
+  return {
+    success: true,
+    message: `Saved locally. Remote sync: ${response.error || 'Network error'}`,
+    source: 'local-storage',
+    items: products,
+  };
 }
 
 /**
- * Fetches products from Google Sheet Web App URL if configured, falling back to localStorage.
+ * Fetches products from Google Sheet Web App URL with retry mechanism, verifying and safely handling empty responses.
  */
 export async function fetchProductsFromSheet(sheetUrl: string): Promise<SyncResult> {
   const localRaw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
@@ -105,42 +106,55 @@ export async function fetchProductsFromSheet(sheetUrl: string): Promise<SyncResu
     };
   }
 
+  let fetchUrl: string;
   try {
-    const fetchUrl = new URL(sheetUrl.trim());
-    fetchUrl.searchParams.set('action', 'getProducts');
-    fetchUrl.searchParams.set('t', Date.now().toString());
-
-    const response = await fetch(fetchUrl.toString(), {
-      method: 'GET',
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(data));
-        return {
-          success: true,
-          message: `Loaded ${data.length} products from Google Sheet.`,
-          source: 'google-sheets',
-          items: data,
-        };
-      } else if (Array.isArray(data.products) && data.products.length > 0) {
-        localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(data.products));
-        return {
-          success: true,
-          message: `Loaded ${data.products.length} products from Google Sheet.`,
-          source: 'google-sheets',
-          items: data.products,
-        };
-      }
-    }
-  } catch (err) {
-    console.warn('Could not fetch from Google Sheet URL, fallback to local storage', err);
+    const url = new URL(sheetUrl.trim());
+    url.searchParams.set('action', 'getProducts');
+    url.searchParams.set('t', Date.now().toString());
+    fetchUrl = url.toString();
+  } catch {
+    return {
+      success: true,
+      message: 'Loaded from local storage (invalid URL).',
+      source: 'local-storage',
+      items: localProducts,
+    };
   }
 
+  const response = await executeSheetRequest<any>({
+    actionName: 'getProducts',
+    url: fetchUrl,
+    method: 'GET',
+    maxRetries: 2,
+    initialDelayMs: 500,
+    timeoutMs: 8000,
+  });
+
+  if (response.ok && response.data) {
+    const data = response.data;
+    if (Array.isArray(data) && data.length > 0) {
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(data));
+      return {
+        success: true,
+        message: `Loaded ${data.length} products from Google Sheet.`,
+        source: 'google-sheets',
+        items: data,
+      };
+    } else if (Array.isArray(data.products) && data.products.length > 0) {
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(data.products));
+      return {
+        success: true,
+        message: `Loaded ${data.products.length} products from Google Sheet.`,
+        source: 'google-sheets',
+        items: data.products,
+      };
+    }
+  }
+
+  // Handle empty or error response gracefully
   return {
     success: true,
-    message: 'Loaded from local storage fallback.',
+    message: response.ok ? 'Google Sheet returned 0 items; loaded local cache.' : `Remote fetch failed (${response.error || 'Transient issue'}); loaded local cache.`,
     source: 'local-storage',
     items: localProducts,
   };
