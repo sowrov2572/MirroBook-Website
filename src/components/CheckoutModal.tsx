@@ -25,6 +25,7 @@ import {
   verifyPaymentWithSheet,
   sendTelegramNotification,
   sendOrderToGoogleSheet,
+  isTrxIdAlreadyUsedLocally,
 } from '../utils/paymentService';
 import { saveOrderToFirestore, recordUserPurchase } from '../utils/firebase';
 
@@ -37,6 +38,7 @@ interface CheckoutModalProps {
   user?: AppUser | null;
   onSignIn?: () => void;
   onOpenVault?: () => void;
+  onSelectDownload?: (target: { title: string; category?: string; downloadUrl: string; orderId?: string }) => void;
 }
 
 // Payment method icons component
@@ -78,6 +80,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   user = null,
   onSignIn,
   onOpenVault,
+  onSelectDownload,
 }) => {
   const config = passedConfig || loadPaymentConfig();
 
@@ -135,15 +138,42 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     return digits;
   };
 
-  // 1. Primary Action: "Verify & Complete Order"
+  // 1. Primary Action: "Verify & Complete Order" (STRICT ANTI-CHEAT VERIFICATION)
   const handleVerifyAndComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setVerificationFailed(false);
     setVerificationMessage('');
 
-    if (!name.trim() || !email.trim() || !phone.trim() || !senderAccount.trim() || !trxId.trim()) {
-      setErrorMsg('Please complete all required fields.');
+    const customerEmail = (user?.email || email || '').trim();
+    if (!customerEmail || !customerEmail.includes('@')) {
+      setErrorMsg('সঠিক ইমেইল এড্রেস দিন (লাইসেন্স ও গুগল ড্রাইভ এক্সেসের জন্য)।');
+      return;
+    }
+
+    const cleanPhone = phone.trim();
+    const cleanTrx = trxId.trim().toUpperCase();
+
+    if (!cleanPhone || !cleanTrx) {
+      setErrorMsg('আপনার ফোন নম্বর এবং বিকাশ/নগদ ট্রানজিশন আইডি (TrxID) দিন।');
+      return;
+    }
+
+    if (cleanTrx.length < 6) {
+      setErrorMsg('সঠিক ট্রানজিশন আইডি লিখুন (কমপক্ষে ৬-১৬ অক্ষর)।');
+      return;
+    }
+
+    // Anti-Cheat Step 1: Reject duplicate TrxID locally if already redeemed in this browser
+    const localCheck = isTrxIdAlreadyUsedLocally(cleanTrx);
+    if (localCheck.used && localCheck.order) {
+      setErrorMsg(
+        `এই Transaction ID (${cleanTrx}) টি পূর্বে Order #${localCheck.order.id} (${localCheck.order.itemName})-এ ব্যবহার করা হয়েছে! একই TrxID একাধিকবার ব্যবহার করা যাবে না।`
+      );
+      setVerificationFailed(true);
+      setVerificationMessage(
+        'একই TrxID দিয়ে একাধিকবার প্রোডাক্ট আনলক করার চেষ্টা ব্লক করা হয়েছে। প্রতিটি ক্রয়ের জন্য আলাদা পেমেন্ট প্রয়োজন।'
+      );
       return;
     }
 
@@ -160,27 +190,68 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     });
 
     try {
-      // Step a) Send verification check to Google Apps Script Web App (non-blocking)
-      if (config.webAppUrl) {
-        try {
-          await verifyPaymentWithSheet(config.webAppUrl, trxId, numericPrice);
-        } catch {
-          // non-blocking
-        }
+      // Anti-Cheat Step 2: Strict Verification against Google Apps Script Web App
+      if (!config.webAppUrl || !config.webAppUrl.trim().startsWith('http')) {
+        setIsVerifying(false);
+        setVerificationFailed(true);
+        setVerificationMessage(
+          'অটোমেটেড পেমেন্ট ভেরিফিকেশন সার্ভার যুক্ত নেই। নিচে "Submit for Manual Review" বাটনে ক্লিক করুন, এডমিন যাচাই করে লাইসেন্স অ্যাক্টিভ করবেন।'
+        );
+        return;
       }
 
-      // Step b) AUTO-COMPLETE & UNLOCK: Immediate order creation & account vault binding
+      const verifyResult = await verifyPaymentWithSheet(
+        config.webAppUrl,
+        cleanTrx,
+        numericPrice,
+        orderId,
+        customerEmail
+      );
+
+      // BLOCK UNLOCK IF NOT VERIFIED
+      if (!verifyResult.verified) {
+        setIsVerifying(false);
+        setVerificationFailed(true);
+
+        if (verifyResult.alreadyUsed) {
+          setVerificationMessage(
+            verifyResult.message ||
+              `এই Transaction ID (${cleanTrx}) টি ইতিমধ্যে ব্যবহার করা হয়ে গেছে। একটি TrxID দিয়ে শুধুমাত্র একবারই প্লাগইন আনলক করা যাবে।`
+          );
+          setErrorMsg('Transaction ID ইতিমধ্যে ব্যবহার করা হয়েছে। ডুপ্লিকেট TrxID গ্রহণযোগ্য নয়।');
+        } else if (verifyResult.amountMismatch) {
+          setVerificationMessage(
+            verifyResult.message ||
+              `পেমেন্ট অ্যামাউন্ট মেলেনি! প্রোডাক্টের মূল্য ৳${verifyResult.requiredAmount || numericPrice} কিন্তু শিটে পাওয়া গেছে ৳${verifyResult.receivedAmount}।`
+          );
+          setErrorMsg(`পেমেন্ট অ্যামাউন্ট কম এসেছে (প্রয়োজন ৳${verifyResult.requiredAmount || numericPrice})`);
+        } else if (verifyResult.notFound) {
+          setVerificationMessage(
+            verifyResult.message ||
+              `Transaction ID (${cleanTrx}) টি পেমেন্ট শিটে খুঁজে পাওয়া যায়নি। আপনি কি নিশ্চিত যে বিকাশ থেকে ৳${numericPrice} সেন্ড মানি করেছেন? অনুগ্রহ করে সঠিক TrxID দিন বা ১-২ মিনিট পর আবার 'Verify' দিন।`
+          );
+          setErrorMsg('পেমেন্ট রেকর্ড পাওয়া যায়নি। সঠিক TrxID লিখুন।');
+        } else {
+          setVerificationMessage(
+            verifyResult.message || 'পেমেন্ট যাচাই করা যায়নি। আপনি ম্যানুয়াল পর্যালোচনার জন্য জমা দিতে পারেন।'
+          );
+          setErrorMsg('পেমেন্ট যাচাই ব্যর্থ হয়েছে।');
+        }
+        return; // CRITICAL: Stop execution, do not unlock!
+      }
+
+      // ONLY REACHED ON VERIFIED SUCCESS: Unlock product, bind license, send email
       const verifiedOrder: Order = {
         id: orderId,
         userId: user?.uid,
-        customerName: name.trim(),
-        customerEmail: email.trim(),
-        customerPhone: phone.trim(),
+        customerName: name.trim() || user?.displayName || customerEmail.split('@')[0],
+        customerEmail: customerEmail,
+        customerPhone: cleanPhone,
         itemName: item.name,
         itemPrice: item.price,
         paymentMethod: selectedMethod,
-        senderAccount: senderAccount.trim(),
-        trxId: trxId.trim().toUpperCase(),
+        senderAccount: senderAccount.trim() || cleanPhone,
+        trxId: cleanTrx,
         createdAt: formattedDate,
         status: 'Verified',
         productId: matchedProduct?.id || item.id,
@@ -199,21 +270,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           category: item.category || 'Plugin',
           downloadUrl: downloadUrl,
           purchasedAt: formattedDate,
-          trxId: trxId.trim().toUpperCase(),
+          trxId: cleanTrx,
         };
         recordUserPurchase(user.uid, userPurchase).catch(() => {});
       }
 
-      // Step c) Send order to Google Sheet to append to "Orders" tab & trigger email from miirorbook.tech@gmail.com
-      if (config.webAppUrl) {
-        sendOrderToGoogleSheet(config.webAppUrl, verifiedOrder).catch((sheetErr) => {
-          console.warn('sendOrderToGoogleSheet warning:', sheetErr);
-        });
-      }
+      // Send order to Google Sheet -> Logs order, marks TrxID USED, grants Drive viewer access, and dispatches email
+      sendOrderToGoogleSheet(config.webAppUrl, verifiedOrder).catch((sheetErr) => {
+        console.warn('sendOrderToGoogleSheet warning:', sheetErr);
+      });
 
-      // Step d) Send Telegram Notification
+      // Send Telegram Notification to Studio Owner
       if (config.telegramBotToken && config.telegramChatId) {
-        const tgText = `AUTO-COMPLETED ORDER — MIRRORBOOK\n\n` +
+        const tgText = `AUTO-VERIFIED ORDER — MIRRORBOOK\n\n` +
           `Order ID: ${verifiedOrder.id}\n` +
           `Item: ${verifiedOrder.itemName}\n` +
           `Amount: ${verifiedOrder.itemPrice}\n` +
@@ -224,8 +293,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           `Email: ${verifiedOrder.customerEmail}\n` +
           `Account Bound: ${user ? user.email : 'Guest'}\n` +
           `Phone: ${verifiedOrder.customerPhone}\n\n` +
-          `Download Link: ${verifiedOrder.downloadUrl}\n` +
-          `Status: Auto-verified & email scheduled from miirorbook.tech@gmail.com.`;
+          `Download: ${verifiedOrder.downloadUrl}\n` +
+          `Status: Auto-verified & email dispatched from miirorbook.tech@gmail.com.`;
 
         sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText).catch(() => {});
       }
@@ -236,13 +305,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     } catch (err: unknown) {
       console.error('Order completion error:', err);
-      setErrorMsg('Could not process order. Please check your network connection.');
+      setErrorMsg('সার্ভারে সংযোগ করা সম্ভব হয়নি। অনুগ্রহ করে ইন্টারনেট কানেকশন চেক করুন।');
     } finally {
       setIsVerifying(false);
     }
   };
 
-  // 2. Fallback Action: "Submit for Manual Review"
+  // 2. Fallback Action: "Submit for Manual Review" (No Instant Download Until Approved)
   const handleSubmitManualReview = async () => {
     setIsSubmittingManual(true);
 
@@ -259,35 +328,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     const manualOrder: Order = {
       id: orderId,
       userId: user?.uid,
-      customerName: name.trim(),
-      customerEmail: email.trim(),
+      customerName: name.trim() || user?.displayName || (user?.email || email || '').split('@')[0],
+      customerEmail: (user?.email || email || '').trim(),
       customerPhone: phone.trim(),
       itemName: item.name,
       itemPrice: item.price,
       paymentMethod: selectedMethod,
-      senderAccount: senderAccount.trim(),
+      senderAccount: senderAccount.trim() || phone.trim(),
       trxId: trxId.trim().toUpperCase(),
       createdAt: formattedDate,
       status: 'Pending',
       productId: matchedProduct?.id || item.id,
-      downloadUrl: downloadUrl,
+      downloadUrl: '', // DO NOT reveal download URL until owner approves
     };
 
     saveOrderToStorage(manualOrder);
     saveOrderToFirestore(manualOrder).catch(() => {});
 
-    // Save to user vault as pending purchase
-    if (user?.uid) {
-      const userPurchase: UserPurchase = {
-        id: orderId,
-        productId: matchedProduct?.id || item.id,
-        title: item.name,
-        category: item.category || 'Plugin',
-        downloadUrl: downloadUrl,
-        purchasedAt: formattedDate,
-        trxId: trxId.trim().toUpperCase(),
-      };
-      recordUserPurchase(user.uid, userPurchase).catch(() => {});
+    // Send order to Google Sheet with Pending status
+    if (config.webAppUrl) {
+      sendOrderToGoogleSheet(config.webAppUrl, manualOrder).catch(() => {});
     }
 
     // Send Telegram Notification with direct WhatsApp link
@@ -296,7 +356,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         `Hi ${manualOrder.customerName}, regarding your MirrorBook order ${manualOrder.id} (${manualOrder.itemName}):`
       )}`;
 
-      const tgText = `NEW ORDER PENDING REVIEW — MIRRORBOOK\n\n` +
+      const tgText = `NEW ORDER PENDING MANUAL REVIEW — MIRRORBOOK\n\n` +
         `Order ID: ${manualOrder.id}\n` +
         `Item: ${manualOrder.itemName}\n` +
         `Amount: ${manualOrder.itemPrice}\n` +
@@ -308,7 +368,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         `Phone: ${manualOrder.customerPhone}\n\n` +
         `WhatsApp Customer: ${waLink}`;
 
-      sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText);
+      sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText).catch(() => {});
     }
 
     setIsAutoVerified(false);
@@ -424,15 +484,25 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {/* Auto-Verified: Direct Unlock Link & Vault Binding */}
             {isAutoVerified && (
               <div className="space-y-2">
-                <a
-                  href={completedOrder.downloadUrl || downloadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] flex items-center justify-center gap-2 cursor-pointer transition-all"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSelectDownload) {
+                      onSelectDownload({
+                        title: completedOrder.itemName,
+                        downloadUrl: completedOrder.downloadUrl || downloadUrl,
+                        orderId: completedOrder.id,
+                        category: 'Plugin',
+                      });
+                    } else {
+                      window.open(completedOrder.downloadUrl || downloadUrl, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                  className="w-full py-3.5 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <Download size={15} />
-                  <span>Download / Install Now (Google Drive)</span>
-                </a>
+                  <span>Secure Download &amp; Install Now (Google Drive)</span>
+                </button>
 
                 {/* Email Confirmation Notice */}
                 <div className="p-3 bg-[#71B913]/10 border border-[#71B913]/30 rounded-xl text-left space-y-1">
@@ -465,6 +535,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <Lock size={12} className="text-[#71B913] shrink-0" />
                   <span>License is bound to your account ({completedOrder.customerEmail}). You can re-download anytime by logging into your vault.</span>
                 </div>
+              </div>
+            )}
+
+            {/* Manual Review Pending Notice */}
+            {!isAutoVerified && (
+              <div className="p-3.5 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+                  <AlertCircle size={14} />
+                  <span>ম্যানুয়াল ভেরিফিকেশনের জন্য জমা হয়েছে</span>
+                </div>
+                <p className="text-[11px] text-[#AAAAAA] leading-relaxed">
+                  আপনার TrxID এবং পেমেন্ট এডমিন দ্বারা সরাসরি যাচাই করার পর লাইসেন্স ও গুগল ড্রাইভ এক্সেস সক্রিয় করা হবে। দ্রুত অ্যাক্টিভেশনের জন্য নিচের বাটনে ক্লিক করে সরাসরি WhatsApp-এ মেসেজ দিন।
+                </p>
               </div>
             )}
 
@@ -695,82 +778,85 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </div>
             )}
 
-            {/* Minimal Input Fields */}
-            <form onSubmit={handleVerifyAndComplete} className="space-y-2.5">
+            {/* Streamlined 1-Click Purchase Form */}
+            <form onSubmit={handleVerifyAndComplete} className="space-y-3">
+              {/* If user is not logged in, collect email for licensing, otherwise prefilled */}
+              {!user && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#888888] mb-1 block">
+                      Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your Name"
+                      className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#888888] mb-1 block">
+                      License Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="yourname@gmail.com"
+                      className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-[#888888] mb-1 block">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your Name"
-                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-[#888888] mb-1 block">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@email.com"
-                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-[#888888] mb-1 block">
-                    Phone *
+                  <label className="text-[10px] text-[#888888] mb-1 block font-medium">
+                    Your {selectedMethod} / Phone Number *
                   </label>
                   <input
                     type="tel"
                     required
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPhone(val);
+                      if (!senderAccount) setSenderAccount(val);
+                    }}
                     placeholder="01XXXXXXXXX"
-                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-[#888888] mb-1 block">
-                    Sender Number *
+                  <label className="text-[10px] text-[#888888] mb-1 block font-medium">
+                    bKash / Bank TrxID *
                   </label>
                   <input
                     type="text"
                     required
-                    value={senderAccount}
-                    onChange={(e) => setSenderAccount(e.target.value)}
-                    placeholder="Last 4 digits or Number"
-                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    value={trxId}
+                    onChange={(e) => {
+                      setTrxId(e.target.value);
+                      setVerificationFailed(false);
+                    }}
+                    placeholder="e.g. BL92XK9P1Q"
+                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-semibold font-mono uppercase"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] text-[#888888] mb-1 block">
-                  TrxID *
-                </label>
+              <div className="p-2 rounded-lg bg-white/[0.02] border border-white/5 text-[10px] text-[#888888] flex items-center justify-between">
+                <span>Payment Sent From:</span>
                 <input
                   type="text"
-                  required
-                  value={trxId}
-                  onChange={(e) => {
-                    setTrxId(e.target.value);
-                    setVerificationFailed(false);
-                  }}
-                  placeholder="e.g. BL92XK9P1Q"
-                  className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-semibold uppercase"
+                  value={senderAccount}
+                  onChange={(e) => setSenderAccount(e.target.value)}
+                  placeholder="Last 4 digits or Number"
+                  className="bg-transparent border-b border-white/10 focus:border-[#71B913] text-right text-[11px] text-[#71B913] focus:outline-none font-mono max-w-[150px]"
                 />
               </div>
 

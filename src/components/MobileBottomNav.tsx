@@ -22,8 +22,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenCartOrStore,
 }) => {
   return (
-    <div className="md:hidden fixed bottom-3 left-3 right-3 z-50">
-      <nav className="glossy-glass-dock rounded-2xl px-2 py-2 flex items-center justify-around shadow-[0_15px_35px_rgba(0,0,0,0.85)] border border-white/15">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none p-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+      <nav className="pointer-events-auto glossy-glass-dock rounded-2xl px-2 py-2 flex items-center justify-around shadow-[0_15px_35px_rgba(0,0,0,0.85)] border border-white/15 max-w-md mx-auto">
         {/* Home */}
         <button
           type="button"

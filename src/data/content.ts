@@ -182,6 +182,56 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     createdAt: '2026-09-28'
   },
 
+  // PC & Phone Software
+  {
+    id: 'software-mirrorflow-studio',
+    type: 'Software',
+    category: 'PC & Mac',
+    title: 'MirrorFlow Creator Studio (PC & Mac)',
+    description: 'Standalone desktop production suite with GPU accelerated timeline, timeline batch render, and offline AI captioning.',
+    price: 1999,
+    priceDisplay: '৳1,999',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
+    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
+    createdAt: '2026-10-10'
+  },
+  {
+    id: 'software-reelsync-mobile',
+    type: 'Software',
+    category: 'Android & iOS',
+    title: 'ReelSync Pro Mobile Engine (Phone)',
+    description: 'High-speed viral reels generator for Android & iPhone with instant beat-sync, trending fonts, and lossless 4K export.',
+    price: 499,
+    priceDisplay: '৳499',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80',
+    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
+    createdAt: '2026-10-11'
+  },
+  {
+    id: 'software-audiosculpt-pc',
+    type: 'Software',
+    category: 'PC & Mac',
+    title: 'AudioSculpt AI Denoiser & Enhancer (PC)',
+    description: 'Clean room vocal isolator and studio-grade audio mastering tool for podcasters and editors.',
+    price: 899,
+    priceDisplay: '৳899',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80',
+    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
+    createdAt: '2026-10-12'
+  },
+  {
+    id: 'software-lensvault-mobile',
+    type: 'Software',
+    category: 'Android & iOS',
+    title: 'LensVault Mobile Cinema LUT Camera',
+    description: 'Real-time cinema log recording app with custom 3D LUT preview on iPhone & Android flagships.',
+    price: 350,
+    priceDisplay: '৳350',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=800&q=80',
+    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
+    createdAt: '2026-10-13'
+  },
+
   // Free Tutorials
   {
     id: 'tut-premiere-cuts',

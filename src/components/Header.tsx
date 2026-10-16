@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Menu, X, ArrowRight, User as UserIcon, FolderDown } from 'lucide-react';
-import { AppUser } from '../types';
+import { Menu, X, ArrowRight, User as UserIcon, FolderDown, ShieldAlert } from 'lucide-react';
+import { AppUser, isStudioOwner } from '../types';
 
 interface HeaderProps {
   onStartProject: () => void;
@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenVault: () => void;
   onSignIn: () => void;
   purchaseCount: number;
+  onOpenAdmin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,14 +17,17 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenVault,
   onSignIn,
   purchaseCount,
+  onOpenAdmin,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isOwner = isStudioOwner(user?.email);
 
   const navLinks = [
     { name: 'Services', href: '#services' },
     { name: 'Portfolio', href: '#portfolio' },
     { name: 'Packages', href: '#packages' },
     { name: 'Plugin Store', href: '#plugins' },
+    { name: 'Software', href: '#software' },
     { name: 'Courses', href: '#courses' },
   ];
 
@@ -70,6 +74,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Buttons & User Account Lockup */}
         <div className="hidden md:flex items-center gap-3">
+          {/* Studio Owner Console Access (Google AI Studio Verified) */}
+          {isOwner && onOpenAdmin && (
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-xs font-semibold text-yellow-300 transition-all cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.25)]"
+              title="Studio Owner Console (Google AI Studio Verified)"
+            >
+              <ShieldAlert size={13} className="text-yellow-400" />
+              <span>Studio Console</span>
+            </button>
+          )}
+
           {/* Creator Account / Vault Button */}
           {user ? (
             <button
@@ -165,6 +182,20 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="pt-4 border-t border-white/[0.08] space-y-2">
+            {isOwner && onOpenAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAdmin();
+                }}
+                className="w-full py-2.5 text-center text-xs font-semibold text-yellow-300 bg-yellow-500/15 border border-yellow-500/30 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.2)]"
+              >
+                <ShieldAlert size={14} className="text-yellow-400" />
+                <span>Studio Owner Console</span>
+              </button>
+            )}
+
             {user ? (
               <button
                 onClick={() => {

@@ -1,11 +1,6 @@
 import React from 'react';
-import { Lock } from 'lucide-react';
 
-interface FooterProps {
-  onOpenAdmin: () => void;
-}
-
-export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
+export const Footer: React.FC = () => {
   return (
     <footer className="bg-[#080808] border-t border-[#1A1A1A] py-16 px-6">
       <div className="max-w-7xl mx-auto">
@@ -107,7 +102,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
           </div>
         </div>
 
-        {/* Bottom Bar with Discreet Admin Link */}
+        {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#555555] gap-4">
           <p>© 2026 MirrorBook Studio. All rights reserved.</p>
 
@@ -116,15 +111,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
               Privacy &amp; Licensing
             </a>
             <span className="text-[#333333]">·</span>
-            {/* Discreet Admin Link */}
-            <button
-              onClick={onOpenAdmin}
-              className="text-[#444444] hover:text-[#71B913] transition-colors flex items-center gap-1.5 cursor-pointer text-xs"
-              title="Admin Registry Portal"
-            >
-              <Lock size={12} />
-              <span>Admin</span>
-            </button>
+            <span className="text-[#444444] text-[11px]">
+              Encrypted Single-User Vault System
+            </span>
           </div>
         </div>
       </div>

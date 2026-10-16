@@ -1,6 +1,6 @@
-export type Category = 'All' | 'Premiere Pro' | 'After Effects' | 'Photoshop';
+export type Category = 'All' | 'Premiere Pro' | 'After Effects' | 'Photoshop' | 'PC & Mac' | 'Android & iOS';
 
-export type ProductType = 'Plugin' | 'Course' | 'Free Tutorial' | 'Agency Package';
+export type ProductType = 'Plugin' | 'Course' | 'Software' | 'Free Tutorial' | 'Agency Package';
 
 export interface ProductItem {
   id: string;
@@ -99,6 +99,7 @@ export interface PaymentConfig {
   bankDetails: BankDetails;
   secondaryBankDetails?: BankDetails;
   webAppUrl: string;
+  spreadsheetUrl?: string;
   telegramBotToken: string;
   telegramChatId: string;
   whatsAppNumber: string;
@@ -144,5 +145,25 @@ export interface CheckoutItem {
   name: string;
   price: string;
   category?: string;
+}
+
+export interface SheetPaymentLog {
+  timestamp: string;
+  gateway: string;
+  trxId: string;
+  amount: number;
+  sender: string;
+  status: string;
+}
+
+export const OWNER_EMAILS: string[] = [
+  'khansaheb2572@gmail.com',
+  'miirorbook.tech@gmail.com',
+];
+
+export function isStudioOwner(email?: string | null): boolean {
+  if (!email) return false;
+  const clean = email.toLowerCase().trim();
+  return OWNER_EMAILS.some((owner) => owner.toLowerCase() === clean);
 }
 

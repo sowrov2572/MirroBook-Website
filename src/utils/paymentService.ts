@@ -1,4 +1,4 @@
-import { PaymentConfig, Order, UserPurchase } from '../types';
+import { PaymentConfig, Order, UserPurchase, SheetPaymentLog } from '../types';
 import { executeSheetRequest, logSheetTransaction, SheetApiLog } from './sheetApiWrapper';
 
 export { getSheetTransactionLogs } from './sheetApiWrapper';
@@ -38,6 +38,7 @@ export const DEFAULT_PAYMENT_CONFIG: PaymentConfig = {
     routingNumber: '090271890',
   },
   webAppUrl: '',
+  spreadsheetUrl: '',
   telegramBotToken: '',
   telegramChatId: '',
   whatsAppNumber: '8801767079837',
@@ -284,17 +285,135 @@ export async function fetchUserPurchasesFromGoogleSheet(
 }
 
 /**
+ * Fetches all orders from Google Sheet "Orders" tab so the owner can view all customer
+ * purchases, phone numbers, and payment status directly in the Admin Panel.
+ */
+export async function fetchGoogleSheetOrders(webAppUrl: string): Promise<Order[]> {
+  if (!webAppUrl || !webAppUrl.trim().startsWith('http')) return [];
+  try {
+    const url = new URL(webAppUrl.trim());
+    url.searchParams.set('action', 'getAllOrders');
+    url.searchParams.set('t', Date.now().toString());
+
+    const response = await executeSheetRequest<{ success?: boolean; orders?: unknown[] }>({
+      actionName: 'getAllOrders',
+      url: url.toString(),
+      method: 'GET',
+      maxRetries: 2,
+      initialDelayMs: 400,
+      timeoutMs: 8000,
+    });
+
+    if (response.ok && response.data?.orders && Array.isArray(response.data.orders)) {
+      return response.data.orders
+        .filter((o): o is Record<string, any> => o !== null && typeof o === 'object')
+        .map((o) => ({
+          id: String(o.id || `ORD-${Math.random().toString(36).substr(2, 6)}`),
+          customerName: String(o.customerName || 'Customer'),
+          customerEmail: String(o.customerEmail || ''),
+          customerPhone: String(o.customerPhone || ''),
+          itemName: String(o.itemName || 'Plugin Item'),
+          itemPrice: String(o.itemPrice || ''),
+          paymentMethod: (o.paymentMethod || 'bKash') as any,
+          senderAccount: String(o.senderAccount || ''),
+          trxId: String(o.trxId || ''),
+          createdAt: String(o.createdAt || new Date().toISOString()),
+          status: (o.status || 'Verified') as any,
+          downloadUrl: String(o.downloadUrl || ''),
+        }));
+    }
+  } catch (err) {
+    console.warn('fetchGoogleSheetOrders warning:', err);
+  }
+  return [];
+}
+
+/**
+ * Fetches all incoming payments from Google Sheet "Payments" tab (forwarded from iPhone SMS automation).
+ */
+export async function fetchGoogleSheetPayments(webAppUrl: string): Promise<SheetPaymentLog[]> {
+  if (!webAppUrl || !webAppUrl.trim().startsWith('http')) return [];
+  try {
+    const url = new URL(webAppUrl.trim());
+    url.searchParams.set('action', 'getAllPayments');
+    url.searchParams.set('t', Date.now().toString());
+
+    const response = await executeSheetRequest<{ success?: boolean; payments?: unknown[] }>({
+      actionName: 'getAllPayments',
+      url: url.toString(),
+      method: 'GET',
+      maxRetries: 2,
+      initialDelayMs: 400,
+      timeoutMs: 8000,
+    });
+
+    if (response.ok && response.data?.payments && Array.isArray(response.data.payments)) {
+      return response.data.payments
+        .filter((p): p is Record<string, any> => p !== null && typeof p === 'object')
+        .map((p) => ({
+          timestamp: String(p.timestamp || ''),
+          gateway: String(p.gateway || 'bKash'),
+          trxId: String(p.trxId || ''),
+          amount: parseFloat(p.amount) || 0,
+          sender: String(p.sender || ''),
+          status: String(p.status || 'UNUSED'),
+        }));
+    }
+  } catch (err) {
+    console.warn('fetchGoogleSheetPayments warning:', err);
+  }
+  return [];
+}
+
+export interface VerifyPaymentResult {
+  verified: boolean;
+  message: string;
+  alreadyUsed?: boolean;
+  amountMismatch?: boolean;
+  receivedAmount?: number;
+  requiredAmount?: number;
+  notFound?: boolean;
+  sender?: string;
+  rawData?: unknown;
+}
+
+/**
+ * Checks if a TrxID has already been used locally in this browser for an approved order.
+ */
+export function isTrxIdAlreadyUsedLocally(trxId: string): { used: boolean; order?: Order } {
+  if (!trxId || !trxId.trim()) return { used: false };
+  try {
+    const raw = localStorage.getItem(ORDERS_STORAGE_KEY);
+    if (!raw) return { used: false };
+    const list: Order[] = JSON.parse(raw);
+    const clean = trxId.trim().toUpperCase();
+    const found = list.find(
+      (o) => o.trxId && o.trxId.trim().toUpperCase() === clean && (o.status === 'Verified' || o.status === 'Completed')
+    );
+    if (found) {
+      return { used: true, order: found };
+    }
+  } catch {
+    // fallback
+  }
+  return { used: false };
+}
+
+/**
  * Verifies a transaction ID and amount against the Google Apps Script Web App with retry logic.
+ * Checks for SMS record, validates amount against website price, and rejects already used TrxIDs.
  */
 export async function verifyPaymentWithSheet(
   webAppUrl: string,
   trxId: string,
-  amount: number
-): Promise<{ verified: boolean; message: string; rawData?: unknown }> {
+  amount: number,
+  orderId?: string,
+  email?: string
+): Promise<VerifyPaymentResult> {
   if (!webAppUrl || !webAppUrl.trim().startsWith('http')) {
     return {
       verified: false,
-      message: 'Google Apps Script Web App URL is not configured.',
+      message: 'Google Apps Script Web App URL is not configured in Admin Settings.',
     };
   }
 
@@ -302,8 +421,10 @@ export async function verifyPaymentWithSheet(
   try {
     const url = new URL(webAppUrl.trim());
     url.searchParams.set('action', 'verifyPayment');
-    url.searchParams.set('trxId', trxId.trim());
+    url.searchParams.set('trxId', trxId.trim().toUpperCase());
     url.searchParams.set('amount', amount.toString());
+    if (orderId) url.searchParams.set('orderId', orderId);
+    if (email) url.searchParams.set('email', email.trim().toLowerCase());
     url.searchParams.set('t', Date.now().toString());
     verifyUrl = url.toString();
   } catch {
@@ -313,25 +434,42 @@ export async function verifyPaymentWithSheet(
     };
   }
 
-  const response = await executeSheetRequest<{ verified: boolean; message?: string }>({
+  const response = await executeSheetRequest<{
+    verified: boolean;
+    message?: string;
+    alreadyUsed?: boolean;
+    amountMismatch?: boolean;
+    receivedAmount?: number;
+    requiredAmount?: number;
+    notFound?: boolean;
+    amount?: number;
+    sender?: string;
+  }>({
     actionName: 'verifyPayment',
     url: verifyUrl,
     method: 'GET',
     maxRetries: 2,
     initialDelayMs: 400,
-    timeoutMs: 8000,
+    timeoutMs: 9000,
   });
 
   if (response.ok && response.data) {
     if (response.data.verified === true) {
       return {
         verified: true,
-        message: response.data.message || 'Transaction verified successfully in database.',
+        message: response.data.message || `Payment of ৳${amount} verified successfully.`,
+        receivedAmount: response.data.amount || amount,
+        sender: response.data.sender || '',
         rawData: response.data,
       };
     } else {
       return {
         verified: false,
+        alreadyUsed: response.data.alreadyUsed,
+        amountMismatch: response.data.amountMismatch,
+        receivedAmount: response.data.receivedAmount,
+        requiredAmount: response.data.requiredAmount || amount,
+        notFound: response.data.notFound,
         message: response.data.message || 'Transaction ID not verified or amount mismatch.',
         rawData: response.data,
       };
@@ -359,7 +497,7 @@ export async function simulatePaymentSMS(
     };
   }
 
-  const sampleSMS = `You have received Tk ${amount.toLocaleString()}.00 from 01712984512. Fee Tk 0.00. Balance Tk 45,210.00. TrxID ${sampleTrxId} at 05/10/2026 15:42`;
+  const sampleSMS = `You have received Tk ${amount.toLocaleString()}.00 from 01712984512. Fee Tk 0.00. Balance Tk 45,210.00. TrxID ${sampleTrxId.toUpperCase()} at ${new Date().toLocaleDateString('en-GB')}`;
 
   try {
     const response = await fetch(webAppUrl.trim(), {
@@ -370,6 +508,10 @@ export async function simulatePaymentSMS(
       body: JSON.stringify({
         text: sampleSMS,
         action: 'incomingSMS',
+        trxId: sampleTrxId.toUpperCase(),
+        amount: amount,
+        sender: '01712984512',
+        gateway: 'bKash',
         timestamp: new Date().toISOString(),
       }),
     });
@@ -392,28 +534,29 @@ export async function simulatePaymentSMS(
 /**
  * The complete Google Apps Script code to copy and paste into Google Sheets.
  * Automatically handles:
- * - Auto-creating "Payments" and "Orders" sheets
- * - Parsing incoming SMS from iPhone Shortcuts (POST, GET, JSON, Form, Plain text)
- * - Verifying TrxID and Amount
- * - Sending confirmation email with download link to customer's personal email from miirorbook.tech@gmail.com
- * - Syncing Products catalog
+ * - Auto-creating "Payments", "Orders", and "Users" sheets
+ * - Parsing incoming SMS from iPhone Shortcuts Pro (POST, GET, JSON, Form, Plain text)
+ * - Anti-Cheat: Strictly verifying TrxID and matching exact Price
+ * - Single-Use: Once a TrxID is redeemed, it is marked as USED and CANNOT be reused
+ * - Sending confirmation email with download link from miirorbook.tech@gmail.com
+ * - Google Drive single-account security: Granting viewer permission to customer's Google account
  */
 export const COMPLETE_PAYMENT_GOOGLE_APPS_SCRIPT = `/**
  * ============================================================================
- * MIRRORBOOK AUTOMATED PAYMENT, ORDERS & EMAIL DISPATCH SYSTEM
+ * MIRRORBOOK AUTOMATED PAYMENT, ANTI-CHEAT VERIFICATION & EMAIL DISPATCH SYSTEM
  * ============================================================================
  * Official Sender: MirrorBook Studio <miirorbook.tech@gmail.com>
  *
  * Instructions:
  * 1. Open your Google Sheet.
  * 2. Extensions -> Apps Script.
- * 3. Delete existing code, paste this entire file, and click 'Save' (Ctrl+S / Cmd+S).
+ * 3. Delete any existing code, paste this entire file, and click 'Save' (Ctrl+S).
  * 4. Click 'Deploy' -> 'New deployment'.
  * 5. Type: 'Web app'
  *    - Execute as: Me (your Google account miirorbook.tech@gmail.com)
  *    - Who has access: Anyone
  * 6. Click 'Deploy' and copy the Web App URL.
- * 7. Paste the Web App URL into the MirrorBook Admin Panel (PIN: 1234).
+ * 7. Paste the Web App URL into the MirrorBook Admin Panel.
  * ============================================================================
  */
 
@@ -434,8 +577,8 @@ function setupPaymentsSheet() {
   var sheet = ss.getSheetByName("Payments");
   if (!sheet) {
     sheet = ss.insertSheet("Payments");
-    sheet.appendRow(["Timestamp", "Gateway", "TrxID", "Amount", "Sender", "RawSMS", "Status"]);
-    sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#71B913").setFontColor("#000000");
+    sheet.appendRow(["Timestamp", "Gateway", "TrxID", "Amount", "Sender", "RawSMS", "Status", "UsedByOrder", "UsedByEmail"]);
+    sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#71B913").setFontColor("#000000");
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -454,8 +597,8 @@ function setupOrdersSheet() {
 }
 
 /**
- * Universal SMS Parser for iPhone Shortcuts & Android Forwarders
- * Supports bKash, Nagad, Rocket, Upay, Bank SMS variants
+ * Universal Intelligent SMS Parser for iPhone Shortcuts & bKash/Nagad/Rocket
+ * Accurately extracts Gateway, TrxID, Received Amount, and Sender Number
  */
 function parseSMS(text) {
   if (!text) return null;
@@ -465,27 +608,30 @@ function parseSMS(text) {
   var amount = 0;
   var sender = "";
 
-  // 1. bKash Patterns (Personal Send Money, Payment, Cash In)
-  var bkashTrx = str.match(/(?:TrxID|Trx\\s*ID)[:\\s#=\\-]*([A-Za-z0-9]+)/i);
-  var bkashAmt = str.match(/(?:Tk|Amount|BDT)[:\\s#=\\-]*([0-9,]+(?:\\.[0-9]+)?)/i);
-  var bkashSender = str.match(/(?:from|by|sender)[:\\s#=\\-]*([0-9+]+)/i);
+  // 1. bKash Patterns (Send Money, Payment, Cash In, Merchant)
+  // "You have received Tk 200.00 from 01767079837... TrxID CKL82910AK"
+  var bkashTrx = str.match(/(?:TrxID|Trx\\s*ID|TxnID)[:\\s#=\\-]*([A-Za-z0-9]{6,16})/i);
+  var bkashAmt = str.match(/(?:received|received\\s+payment|received\\s+Tk|Cash\\s+In\\s+Tk|Amount:?\\s*Tk)\\s*(?:Tk\\.?|BDT)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)/i) ||
+                 str.match(/(?:Tk\\.?|BDT)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)(?!\\s*(?:Fee|Balance))/i);
+  var bkashSender = str.match(/(?:from|by|sender)[:\\s#=\\-]*([0-9+]{11,15})/i);
 
   // 2. Nagad Patterns
-  var nagadTrx = str.match(/(?:TxnID|Txn\\s*ID|TrxID)[:\\s#=\\-]*([A-Za-z0-9]+)/i);
-  var nagadAmt = str.match(/(?:Amount|Tk|BDT)[:\\s#=\\-]*(?:Tk)?\\s*([0-9,]+(?:\\.[0-9]+)?)/i);
-  var nagadSender = str.match(/(?:Sender|from)[:\\s#=\\-]*([0-9+]+)/i);
+  // "Payment Received. Amount: Tk 200.00. Sender: 017... TxnID: 729104BA"
+  var nagadTrx = str.match(/(?:TxnID|Txn\\s*ID|TrxID)[:\\s#=\\-]*([A-Za-z0-9]{6,16})/i);
+  var nagadAmt = str.match(/(?:Amount|Tk|BDT)[:\\s#=\\-]*(?:Tk)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)/i);
+  var nagadSender = str.match(/(?:Sender|from)[:\\s#=\\-]*([0-9+]{11,15})/i);
 
   // 3. Rocket / Upay / General Bank
-  var genericTrx = str.match(/(?:TrxID|TxnId|TxnID|Ref|Transaction\\s*ID)[:\\s#=\\-]*([A-Za-z0-9]+)/i);
-  var genericAmt = str.match(/(?:Tk|BDT|Amount|Amt)[:\\s#=\\-]*([0-9,]+(?:\\.[0-9]+)?)/i);
-  var genericSender = str.match(/(?:from|by|Sender|A\\/C)[:\\s#=\\-]*([0-9+]+)/i);
+  var genericTrx = str.match(/(?:TrxID|TxnId|TxnID|Ref|Transaction\\s*ID)[:\\s#=\\-]*([A-Za-z0-9]{6,16})/i);
+  var genericAmt = str.match(/(?:Tk|BDT|Amount|Amt)[:\\s#=\\-]*(?:Tk)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)/i);
+  var genericSender = str.match(/(?:from|by|Sender|A\\/C)[:\\s#=\\-]*([0-9+]{11,15})/i);
 
-  if (bkashTrx && (str.toLowerCase().indexOf("bkash") !== -1 || str.toLowerCase().indexOf("balance") !== -1)) {
+  if (bkashTrx && (str.toLowerCase().indexOf("bkash") !== -1 || str.toLowerCase().indexOf("balance") !== -1 || str.toLowerCase().indexOf("fee") !== -1)) {
     gateway = "bKash";
     trxId = bkashTrx[1];
     amount = bkashAmt ? parseFloat(bkashAmt[1].replace(/,/g, "")) : 0;
     sender = bkashSender ? bkashSender[1] : "";
-  } else if (nagadTrx && (str.toLowerCase().indexOf("nagad") !== -1 || str.toLowerCase().indexOf("fee") !== -1)) {
+  } else if (nagadTrx && (str.toLowerCase().indexOf("nagad") !== -1 || str.toLowerCase().indexOf("payment received") !== -1)) {
     gateway = "Nagad";
     trxId = nagadTrx[1];
     amount = nagadAmt ? parseFloat(nagadAmt[1].replace(/,/g, "")) : 0;
@@ -496,9 +642,8 @@ function parseSMS(text) {
     amount = genericAmt ? parseFloat(genericAmt[1].replace(/,/g, "")) : 0;
     sender = genericSender ? genericSender[1] : "";
   } else {
-    // Direct TrxID token fallback (e.g. user or shortcut sends only the 7-12 character code)
     var rawClean = str.trim().toUpperCase();
-    if (/^[A-Z0-9]{7,15}$/.test(rawClean)) {
+    if (/^[A-Z0-9]{6,16}$/.test(rawClean)) {
       gateway = "Direct";
       trxId = rawClean;
       amount = 0;
@@ -518,7 +663,7 @@ function parseSMS(text) {
 }
 
 /**
- * Robust SMS text extractor from iPhone Shortcuts (GET, POST JSON, Form, or Plain)
+ * Extracts SMS content from iPhone Shortcuts (GET, POST JSON, Form, or Plain)
  */
 function extractSMSFromRequest(e) {
   if (!e) return "";
@@ -544,11 +689,11 @@ function extractSMSFromRequest(e) {
         if (json.body) return json.body;
         if (json.content) return json.content;
         if (json.raw) return json.raw;
+        if (json.trxId) return "TrxID " + json.trxId + (json.amount ? " Tk " + json.amount : "");
         if (typeof json === "string") return json;
       }
     } catch (ignore) {}
 
-    // Form-urlencoded format: text=... or body=...
     if (raw.indexOf("=") !== -1) {
       try {
         var parts = raw.split("&");
@@ -570,56 +715,102 @@ function extractSMSFromRequest(e) {
 }
 
 /**
- * Sends a premium branded HTML email to the customer with their download link.
- * Sent from miirorbook.tech@gmail.com
+ * Sends a minimal, ultra-clean, professional HTML email to the customer with their download link.
+ * Sent from MirrorBook Studio <miirorbook.tech@gmail.com>
  */
 function sendCustomerEmail(order) {
   if (!order || !order.customerEmail) return false;
 
   var toEmail = order.customerEmail.toString().trim();
-  var itemName = order.itemName || "Easy Flow Plugin";
-  var downloadUrl = order.downloadUrl || "https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link";
+  var itemName = order.itemName || "Creator Plugin";
+  var downloadUrl = order.downloadUrl || "https://drive.google.com";
+  var orderId = order.id || ("MB-" + Math.floor(1000 + Math.random() * 9000));
+  var trxId = order.trxId || "N/A";
+  var itemPrice = order.itemPrice || "৳200";
+  var customerName = order.customerName || "Creator";
 
-  var subject = "Your MirrorBook Download — " + itemName;
+  var subject = "Your Order is Active: " + itemName + " — MirrorBook";
 
   var htmlBody = ""
-    + "<div style='font-family: Arial, -apple-system, BlinkMacSystemFont, sans-serif; background-color: #070707; color: #ffffff; padding: 40px 20px; text-align: left;'>"
-    + "  <div style='max-width: 580px; margin: 0 auto; background: #0E0E0E; border: 1px solid #222222; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.8);'>"
-    + "    <div style='background: #141414; padding: 28px; border-bottom: 1px solid #222222; text-align: center;'>"
-    + "      <h1 style='color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;'>MirrorBook</h1>"
-    + "      <p style='color: #71B913; margin: 6px 0 0; font-size: 13px; font-weight: 600;'>Reflecting Creativity</p>"
-    + "    </div>"
-    + "    <div style='padding: 30px;'>"
-    + "      <h2 style='color: #71B913; font-size: 21px; margin-top: 0;'>Thank you, " + (order.customerName || "Creator") + "!</h2>"
-    + "      <p style='color: #CCCCCC; font-size: 14px; line-height: 1.6; margin-bottom: 24px;'>"
-    + "        Your order has been successfully recorded. Below is your official Google Drive download link and installation files for <strong>" + itemName + "</strong>."
-    + "      </p>"
-    + "      <div style='text-align: center; margin: 32px 0;'>"
-    + "        <a href='" + downloadUrl + "' target='_blank' style='display: inline-block; background-color: #71B913; color: #000000; font-weight: bold; text-decoration: none; padding: 16px 36px; border-radius: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 20px rgba(113, 185, 19, 0.4);'>"
-    + "          Download &amp; Install from Google Drive ↗"
-    + "        </a>"
-    + "      </div>"
-    + "      <div style='background: #121212; border: 1px solid #1E1E1E; border-radius: 12px; padding: 18px; margin-top: 25px;'>"
-    + "        <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>"
-    + "          <tr><td style='color: #888888; padding: 6px 0;'>Order ID:</td><td style='color: #FFFFFF; font-weight: bold; text-align: right;'>" + (order.id || "N/A") + "</td></tr>"
-    + "          <tr><td style='color: #888888; padding: 6px 0;'>Item:</td><td style='color: #FFFFFF; text-align: right;'>" + itemName + "</td></tr>"
-    + "          <tr><td style='color: #888888; padding: 6px 0;'>Price:</td><td style='color: #71B913; font-weight: bold; text-align: right;'>" + (order.itemPrice || "৳20") + "</td></tr>"
-    + "          <tr><td style='color: #888888; padding: 6px 0;'>Gateway:</td><td style='color: #FFFFFF; text-align: right;'>" + (order.paymentMethod || "bKash") + "</td></tr>"
-    + "          <tr><td style='color: #888888; padding: 6px 0;'>TrxID:</td><td style='color: #FFFFFF; font-family: monospace; text-align: right;'>" + (order.trxId || "N/A") + "</td></tr>"
-    + "          <tr><td style='color: #888888; padding: 6px 0;'>Status:</td><td style='color: #71B913; font-weight: bold; text-align: right;'>Verified &amp; Active</td></tr>"
+    + "<!DOCTYPE html>"
+    + "<html>"
+    + "<head><meta charset='utf-8'></head>"
+    + "<body style='margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #FFFFFF;'>"
+    + "  <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #0A0A0A; padding: 40px 16px;'>"
+    + "    <tr>"
+    + "      <td align='center'>"
+    + "        <table width='100%' max-width='540' cellpadding='0' cellspacing='0' style='max-width: 540px; background-color: #121212; border: 1px solid #222222; border-radius: 16px; overflow: hidden; text-align: left;'>"
+    + "          <!-- Minimal Header -->"
+    + "          <tr>"
+    + "            <td style='padding: 24px 30px; border-bottom: 1px solid #1E1E1E; background-color: #161616;'>"
+    + "              <table width='100%' cellpadding='0' cellspacing='0'>"
+    + "                <tr>"
+    + "                  <td>"
+    + "                    <span style='font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #FFFFFF;'>MIRRORBOOK</span>"
+    + "                    <span style='display: block; font-size: 11px; color: #71B913; font-weight: 600; text-transform: uppercase; margin-top: 2px;'>Reflecting Creativity</span>"
+    + "                  </td>"
+    + "                  <td align='right'>"
+    + "                    <span style='display: inline-block; padding: 4px 10px; background-color: rgba(113, 185, 19, 0.15); border: 1px solid #71B913; border-radius: 20px; font-size: 11px; font-weight: 700; color: #71B913;'>VERIFIED ORDER</span>"
+    + "                  </td>"
+    + "                </tr>"
+    + "              </table>"
+    + "            </td>"
+    + "          </tr>"
+    + "          <!-- Main Content -->"
+    + "          <tr>"
+    + "            <td style='padding: 30px;'>"
+    + "              <h2 style='margin: 0 0 12px; font-size: 19px; font-weight: 700; color: #FFFFFF;'>"
+    + "                Thank you, " + customerName + "!"
+    + "              </h2>"
+    + "              <p style='margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #CCCCCC;'>"
+    + "                আপনার পেমেন্ট সফলভাবে যাচাই হয়েছে এবং <strong>" + itemName + "</strong> এর অফিশিয়াল লাইসেন্স আপনার অ্যাকাউন্টে সক্রিয় করা হয়েছে। নিচের বাটনে ক্লিক করে সরাসরি অফিসিয়াল গুগল ড্রাইভ থেকে ফাইল ডাউনলোড করুন:"
+    + "              </p>"
+    + "              <!-- Big Action Button -->"
+    + "              <table width='100%' cellpadding='0' cellspacing='0' style='margin: 28px 0;'>"
+    + "                <tr>"
+    + "                  <td align='center'>"
+    + "                    <a href='" + downloadUrl + "' target='_blank' style='display: inline-block; background-color: #71B913; color: #000000; font-weight: 800; font-size: 14px; text-decoration: none; padding: 15px 32px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 20px rgba(113, 185, 19, 0.35);'>"
+    + "                      Download Now from Google Drive ↗"
+    + "                    </a>"
+    + "                  </td>"
+    + "                </tr>"
+    + "              </table>"
+    + "              <!-- Receipt Card -->"
+    + "              <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #171717; border: 1px solid #242424; border-radius: 12px; margin-bottom: 22px;'>"
+    + "                <tr>"
+    + "                  <td style='padding: 16px 20px;'>"
+    + "                    <table width='100%' cellpadding='0' cellspacing='0' style='font-size: 13px;'>"
+    + "                      <tr><td style='padding: 5px 0; color: #777777;'>Item:</td><td style='padding: 5px 0; text-align: right; color: #FFFFFF; font-weight: 600;'>" + itemName + "</td></tr>"
+    + "                      <tr><td style='padding: 5px 0; color: #777777;'>Amount Paid:</td><td style='padding: 5px 0; text-align: right; color: #71B913; font-weight: 700;'>" + itemPrice + "</td></tr>"
+    + "                      <tr><td style='padding: 5px 0; color: #777777;'>Transaction ID:</td><td style='padding: 5px 0; text-align: right; font-family: monospace; color: #FFFFFF;'>" + trxId + "</td></tr>"
+    + "                      <tr><td style='padding: 5px 0; color: #777777;'>Order ID:</td><td style='padding: 5px 0; text-align: right; font-family: monospace; color: #888888;'>" + orderId + "</td></tr>"
+    + "                      <tr><td style='padding: 5px 0; color: #777777;'>License Holder:</td><td style='padding: 5px 0; text-align: right; color: #AAAAAA;'>" + toEmail + "</td></tr>"
+    + "                    </table>"
+    + "                  </td>"
+    + "                </tr>"
+    + "              </table>"
+    + "              <!-- Security & Single User Lock Box -->"
+    + "              <div style='background-color: rgba(113, 185, 19, 0.08); border-left: 3px solid #71B913; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 24px; font-size: 12px; color: #BBBBBB; line-height: 1.5;'>"
+    + "                🔒 <strong>গুগল ড্রাইভ সিকিউরিটি:</strong> আপনার গুগল অ্যাকাউন্ট (" + toEmail + ")-এ এই ফাইলের ভিউ এক্সেস যুক্ত করা হয়েছে। লিংকটি অন্য কাউকে দিলে গুগল ড্রাইভ এক্সেস ব্লক করবে। ভবিষ্যতে যেকোনো সময় মিরর বুকে গিয়ে লগইন করলেই My Vault থেকে ফাইলটি আবার ডাউনলোড করতে পারবেন।"
+    + "              </div>"
+    + "              <p style='margin: 0; font-size: 13px; color: #888888; line-height: 1.5; text-align: center;'>"
+    + "                Thank you for purchasing from MirrorBook Studio. Keep creating extraordinary edits!"
+    + "              </p>"
+    + "            </td>"
+    + "          </tr>"
+    + "          <!-- Minimal Footer -->"
+    + "          <tr>"
+    + "            <td style='padding: 18px 30px; background-color: #0E0E0E; border-top: 1px solid #1E1E1E; text-align: center; font-size: 11px; color: #666666;'>"
+    + "              MirrorBook Studio • Official Support: <a href='mailto:miirorbook.tech@gmail.com' style='color: #71B913; text-decoration: none;'>miirorbook.tech@gmail.com</a> • WhatsApp: +8801767079837"
+    + "            </td>"
+    + "          </tr>"
     + "        </table>"
-    + "      </div>"
-    + "      <div style='background: #101010; border-left: 3px solid #71B913; padding: 12px 16px; margin-top: 20px; font-size: 12px; color: #AAAAAA; line-height: 1.5;'>"
-    + "        <strong>Creator Account Vault:</strong> This license is permanently linked to your email (" + toEmail + "). You can visit MirrorBook anytime, click 'Sign In' with this email, and access your downloads from your personal Creator Vault."
-    + "      </div>"
-    + "    </div>"
-    + "    <div style='background: #141414; padding: 18px 28px; border-top: 1px solid #222222; text-align: center; font-size: 12px; color: #777777;'>"
-    + "      Questions? Contact us at <a href='mailto:miirorbook.tech@gmail.com' style='color: #71B913; text-decoration: none;'>miirorbook.tech@gmail.com</a> or WhatsApp (+8801767079837)."
-    + "    </div>"
-    + "  </div>"
-    + "</div>";
+    + "      </td>"
+    + "    </tr>"
+    + "  </table>"
+    + "</body>"
+    + "</html>";
 
-  // Try GmailApp first (sends directly from miirorbook.tech@gmail.com)
   try {
     if (typeof GmailApp !== "undefined") {
       GmailApp.sendEmail(toEmail, subject, "Your MirrorBook Download: " + downloadUrl, {
@@ -633,7 +824,6 @@ function sendCustomerEmail(order) {
     Logger.log("GmailApp error: " + gErr.toString());
   }
 
-  // Fallback to MailApp
   try {
     MailApp.sendEmail({
       to: toEmail,
@@ -688,13 +878,11 @@ function doPost(e) {
           "Active"
         ]);
       } else {
-        // Update last seen or password if updated
         if (u.password && u.password !== "(Google One-Tap)") {
           uSheet.getRange(userRow, 3).setValue(u.password);
         }
       }
 
-      // Automatically query all previous orders/purchases belonging to this user
       var oSheet = setupOrdersSheet();
       var oData = oSheet.getDataRange().getValues();
       var userPurchases = [];
@@ -740,7 +928,7 @@ function doPost(e) {
         ord.downloadUrl || ""
       ]);
 
-      // If TrxID is in Payments sheet, mark as USED
+      // Atomically mark TrxID as USED in Payments sheet
       try {
         var pSheet = setupPaymentsSheet();
         var pData = pSheet.getDataRange().getValues();
@@ -748,10 +936,31 @@ function doPost(e) {
         for (var r = 1; r < pData.length; r++) {
           if ((pData[r][2] || "").toString().trim().toUpperCase() === targetTrx) {
             pSheet.getRange(r + 1, 7).setValue("USED");
+            pSheet.getRange(r + 1, 8).setValue(ord.id || "");
+            pSheet.getRange(r + 1, 9).setValue(ord.customerEmail || "");
             break;
           }
         }
-      } catch (pErr) {}
+      } catch (pErr) {
+        Logger.log("Mark USED error: " + pErr.toString());
+      }
+
+      // Google Drive Security: Grant Viewer permission to customer's Google email
+      try {
+        var dUrl = (ord.downloadUrl || "").toString();
+        var driveMatch = dUrl.match(/[-\\w]{25,}/);
+        if (driveMatch && driveMatch[0] && ord.customerEmail) {
+          try {
+            DriveApp.getFileById(driveMatch[0]).addViewer(ord.customerEmail);
+          } catch(fErr) {
+            try {
+              DriveApp.getFolderById(driveMatch[0]).addViewer(ord.customerEmail);
+            } catch(foErr) {}
+          }
+        }
+      } catch(dErr) {
+        Logger.log("Drive anti-piracy share notice: " + dErr.toString());
+      }
 
       // Automatically dispatch email to customer from miirorbook.tech@gmail.com
       var emailSent = sendCustomerEmail(ord);
@@ -764,17 +973,29 @@ function doPost(e) {
     }
 
     // CASE 2: Incoming SMS from iPhone Shortcuts or Android automation
+    var directTrx = payload.trxId ? payload.trxId.toString().trim().toUpperCase() : "";
+    var directAmt = payload.amount ? parseFloat(payload.amount) : 0;
+    var directSender = payload.sender ? payload.sender.toString().trim() : "";
+    var directGateway = payload.gateway ? payload.gateway.toString().trim() : "bKash";
+
     var smsText = extractSMSFromRequest(e);
-    if (smsText || payload.action === "incomingSMS" || payload.text) {
+    if (directTrx || smsText || payload.action === "incomingSMS" || payload.text) {
       var targetText = smsText || payload.text || "";
-      var parsed = parseSMS(targetText);
+      var parsed = directTrx ? {
+        gateway: directGateway,
+        trxId: directTrx,
+        amount: directAmt,
+        sender: directSender || "N/A",
+        raw: targetText || ("Direct TrxID " + directTrx)
+      } : parseSMS(targetText);
+
       var pSheet = setupPaymentsSheet();
 
-      if (parsed) {
+      if (parsed && parsed.trxId) {
         var data = pSheet.getDataRange().getValues();
         var exists = false;
         for (var i = 1; i < data.length; i++) {
-          if (data[i][2] && data[i][2].toString().toUpperCase() === parsed.trxId) {
+          if (data[i][2] && data[i][2].toString().trim().toUpperCase() === parsed.trxId) {
             exists = true;
             break;
           }
@@ -788,19 +1009,10 @@ function doPost(e) {
             parsed.amount,
             parsed.sender,
             parsed.raw,
-            "UNUSED"
+            "UNUSED",
+            "",
+            ""
           ]);
-
-          // Check if there is an order in Orders sheet waiting for this TrxID
-          try {
-            var oSheet = setupOrdersSheet();
-            var oData = oSheet.getDataRange().getValues();
-            for (var oi = 1; oi < oData.length; oi++) {
-              if ((oData[oi][5] || "").toString().trim().toUpperCase() === parsed.trxId) {
-                oSheet.getRange(oi + 1, 11).setValue("Verified");
-              }
-            }
-          } catch (oErr) {}
         }
 
         return ContentService.createTextOutput(JSON.stringify({
@@ -809,7 +1021,7 @@ function doPost(e) {
           parsed: parsed
         })).setMimeType(ContentService.MimeType.JSON);
       } else {
-        pSheet.appendRow([new Date().toISOString(), "Unknown", "N/A", 0, "N/A", targetText, "UNPARSED"]);
+        pSheet.appendRow([new Date().toISOString(), "Unknown", "N/A", 0, "N/A", targetText, "UNPARSED", "", ""]);
         return ContentService.createTextOutput(JSON.stringify({
           success: false,
           message: "SMS logged as unparsed."
@@ -869,63 +1081,106 @@ function doGet(e) {
   try {
     var action = e && e.parameter ? e.parameter.action : "";
 
-    // Action 1: Verify Payment
+    // Action 1: Strict Anti-Cheat Payment Verification
     if (action === "verifyPayment") {
       var queryTrxId = (e.parameter.trxId || "").toString().trim().toUpperCase();
       var requiredAmount = parseFloat(e.parameter.amount || "0");
-      var sheet = setupPaymentsSheet();
-      var data = sheet.getDataRange().getValues();
+      var orderId = (e.parameter.orderId || "").toString().trim();
+      var customerEmail = (e.parameter.email || "").toString().trim().toLowerCase();
 
-      for (var r = 1; r < data.length; r++) {
-        var rowTrx = (data[r][2] || "").toString().trim().toUpperCase();
-        var rowAmount = parseFloat(data[r][3] || "0");
-        var rowStatus = (data[r][6] || "").toString().trim().toUpperCase();
+      var pSheet = setupPaymentsSheet();
+      var pData = pSheet.getDataRange().getValues();
+
+      // Search in Payments Sheet
+      for (var r = 1; r < pData.length; r++) {
+        var rowTrx = (pData[r][2] || "").toString().trim().toUpperCase();
+        var rowAmount = parseFloat(pData[r][3] || "0");
+        var rowStatus = (pData[r][6] || "").toString().trim().toUpperCase();
 
         if (rowTrx === queryTrxId) {
+          // CRITICAL ANTI-CHEAT: Reject if already USED
           if (rowStatus === "USED") {
+            var usedByOrder = pData[r][7] || "পূর্ববর্তী অর্ডার";
             return ContentService.createTextOutput(JSON.stringify({
-              verified: true,
-              message: "Payment successfully verified for ৳" + rowAmount,
+              verified: false,
+              alreadyUsed: true,
+              message: "এই Transaction ID (" + queryTrxId + ") টি ইতিমধ্যে ব্যবহার করা হয়ে গেছে (" + usedByOrder + ")। একটি TrxID দিয়ে একাধিক প্রোডাক্ট আনলক করা যাবে না।",
               trxId: rowTrx,
-              amount: rowAmount,
-              sender: data[r][4] || ""
+              amount: rowAmount
             })).setMimeType(ContentService.MimeType.JSON);
           }
 
-          if (rowAmount >= requiredAmount || requiredAmount === 0) {
-            sheet.getRange(r + 1, 7).setValue("USED");
-            return ContentService.createTextOutput(JSON.stringify({
-              verified: true,
-              message: "Payment successfully verified for ৳" + rowAmount,
-              trxId: rowTrx,
-              amount: rowAmount,
-              sender: data[r][4] || ""
-            })).setMimeType(ContentService.MimeType.JSON);
-          } else {
+          // PRICE MATCHING: Compare received amount against website price
+          if (requiredAmount > 0 && rowAmount < (requiredAmount - 0.5)) {
             return ContentService.createTextOutput(JSON.stringify({
               verified: false,
-              message: "Payment amount (৳" + rowAmount + ") is less than required price (৳" + requiredAmount + ")."
+              amountMismatch: true,
+              receivedAmount: rowAmount,
+              requiredAmount: requiredAmount,
+              message: "পেমেন্ট অ্যামাউন্ট কম এসেছে। প্রোডাক্টের মূল্য ৳" + requiredAmount + " কিন্তু পেমেন্ট এসেছে ৳" + rowAmount + "।",
+              trxId: rowTrx
             })).setMimeType(ContentService.MimeType.JSON);
           }
+
+          // VERIFIED & UNUSED: Atomically mark as USED and bind to order & email
+          pSheet.getRange(r + 1, 7).setValue("USED");
+          if (orderId) pSheet.getRange(r + 1, 8).setValue(orderId);
+          if (customerEmail) pSheet.getRange(r + 1, 9).setValue(customerEmail);
+
+          return ContentService.createTextOutput(JSON.stringify({
+            verified: true,
+            message: "পেমেন্ট সফলভাবে যাচাই হয়েছে (৳" + rowAmount + ")।",
+            trxId: rowTrx,
+            amount: rowAmount,
+            sender: pData[r][4] || ""
+          })).setMimeType(ContentService.MimeType.JSON);
         }
       }
 
+      // Check if it was already recorded in Orders sheet
+      var oSheet = setupOrdersSheet();
+      var oData = oSheet.getDataRange().getValues();
+      for (var oi = 1; oi < oData.length; oi++) {
+        var ordTrx = (oData[oi][5] || "").toString().trim().toUpperCase();
+        if (ordTrx === queryTrxId) {
+          return ContentService.createTextOutput(JSON.stringify({
+            verified: false,
+            alreadyUsed: true,
+            message: "এই Transaction ID (" + queryTrxId + ") টি ইতিমধ্যে Order #" + (oData[oi][1] || oi) + "-এ ব্যবহৃত হয়েছে।"
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+
+      // Not found anywhere
       return ContentService.createTextOutput(JSON.stringify({
         verified: false,
-        message: "Transaction ID not found in automated payments record."
+        notFound: true,
+        message: "Transaction ID (" + queryTrxId + ") টি শিটের পেমেন্ট রেকর্ডে খুঁজে পাওয়া যায়নি। অনুগ্রহ করে বিকাশ/নগদ থেকে সঠিক TrxID দিন বা ১-২ মিনিট পর আবার চেষ্টা করুন।"
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // Action 2: Incoming SMS via GET (support iPhone Shortcuts sending GET requests)
     var smsCandidate = extractSMSFromRequest(e);
-    if (action === "incomingSMS" || smsCandidate) {
+    var getTrx = (e.parameter.trxId || "").toString().trim().toUpperCase();
+    var getAmount = parseFloat(e.parameter.amount || "0");
+    var getSender = (e.parameter.sender || "").toString().trim();
+    var getGateway = (e.parameter.gateway || "bKash").toString().trim();
+
+    if (action === "incomingSMS" || smsCandidate || getTrx) {
       var pSheet = setupPaymentsSheet();
-      var parsed = parseSMS(smsCandidate);
-      if (parsed) {
+      var parsed = getTrx ? {
+        gateway: getGateway,
+        trxId: getTrx,
+        amount: getAmount,
+        sender: getSender || "N/A",
+        raw: smsCandidate || ("Direct GET TrxID " + getTrx)
+      } : parseSMS(smsCandidate);
+
+      if (parsed && parsed.trxId) {
         var data = pSheet.getDataRange().getValues();
         var exists = false;
         for (var i = 1; i < data.length; i++) {
-          if (data[i][2] && data[i][2].toString().toUpperCase() === parsed.trxId) {
+          if (data[i][2] && data[i][2].toString().trim().toUpperCase() === parsed.trxId) {
             exists = true;
             break;
           }
@@ -938,7 +1193,9 @@ function doGet(e) {
             parsed.amount,
             parsed.sender,
             parsed.raw,
-            "UNUSED"
+            "UNUSED",
+            "",
+            ""
           ]);
         }
         return ContentService.createTextOutput(JSON.stringify({
@@ -1000,6 +1257,60 @@ function doGet(e) {
       }
       return ContentService.createTextOutput(JSON.stringify({ products: list }))
         .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Action 5: Get All Orders (for Studio Owner Dashboard)
+    if (action === "getAllOrders") {
+      var oSheet = setupOrdersSheet();
+      var oData = oSheet.getDataRange().getValues();
+      var allOrders = [];
+      for (var oi = 1; oi < oData.length; oi++) {
+        var row = oData[oi];
+        if (row[1] || row[5] || row[8]) {
+          allOrders.push({
+            id: String(row[1] || ("ORD-" + oi)),
+            createdAt: String(row[0] || ""),
+            itemName: String(row[2] || ""),
+            itemPrice: String(row[3] || ""),
+            paymentMethod: String(row[4] || "bKash"),
+            trxId: String(row[5] || ""),
+            senderAccount: String(row[6] || ""),
+            customerName: String(row[7] || ""),
+            customerEmail: String(row[8] || ""),
+            customerPhone: String(row[9] || ""),
+            status: String(row[10] || "Verified"),
+            downloadUrl: String(row[11] || "")
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        orders: allOrders
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Action 6: Get All Incoming SMS Payments (forwarded from iPhone Shortcuts)
+    if (action === "getAllPayments") {
+      var pSheet = setupPaymentsSheet();
+      var pData = pSheet.getDataRange().getValues();
+      var allPayments = [];
+      for (var pi = 1; pi < pData.length; pi++) {
+        var pRow = pData[pi];
+        if (pRow[2] || pRow[3]) {
+          allPayments.push({
+            timestamp: String(pRow[0] || ""),
+            gateway: String(pRow[1] || "bKash"),
+            trxId: String(pRow[2] || ""),
+            amount: parseFloat(pRow[3] || "0"),
+            sender: String(pRow[4] || ""),
+            status: String(pRow[6] || "UNUSED")
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        payments: allPayments
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     return ContentService.createTextOutput(JSON.stringify({

@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, Download, ShieldCheck, ExternalLink, LogOut, Package, Sparkles, FolderDown } from 'lucide-react';
-import { UserPurchase, AppUser } from '../types';
+import { X, Download, ShieldCheck, LogOut, Package, Sparkles, FolderDown, ShieldAlert } from 'lucide-react';
+import { UserPurchase, AppUser, isStudioOwner } from '../types';
 
 interface UserVaultModalProps {
   isOpen: boolean;
@@ -9,6 +9,8 @@ interface UserVaultModalProps {
   purchases: UserPurchase[];
   onSignOut: () => void;
   onBrowseStore: () => void;
+  onOpenAdmin?: () => void;
+  onSelectDownload?: (purchase: UserPurchase) => void;
 }
 
 export const UserVaultModal: React.FC<UserVaultModalProps> = ({
@@ -18,8 +20,12 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
   purchases,
   onSignOut,
   onBrowseStore,
+  onOpenAdmin,
+  onSelectDownload,
 }) => {
   if (!isOpen) return null;
+
+  const isOwner = isStudioOwner(user?.email);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
@@ -77,16 +83,32 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              onSignOut();
-              onClose();
-            }}
-            className="px-3 py-1.5 text-xs text-[#999999] hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <LogOut size={13} />
-            <span>Sign Out</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {isOwner && onOpenAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAdmin();
+                }}
+                className="px-3 py-1.5 text-xs text-yellow-300 hover:text-yellow-200 bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/30 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-semibold shadow-[0_0_15px_rgba(234,179,8,0.2)]"
+              >
+                <ShieldAlert size={13} className="text-yellow-400" />
+                <span>Studio Owner Console</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                onSignOut();
+                onClose();
+              }}
+              className="px-3 py-1.5 text-xs text-[#999999] hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogOut size={13} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
 
         {/* Content Body */}
@@ -150,16 +172,20 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={purchase.downloadUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onSelectDownload) {
+                          onSelectDownload(purchase);
+                        } else {
+                          window.open(purchase.downloadUrl, '_blank', 'noopener,noreferrer');
+                        }
+                      }}
                       className="px-5 py-2.5 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] active:scale-95 text-black rounded-xl shadow-[0_0_15px_rgba(113,185,19,0.25)] transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Download size={14} />
-                      <span>Download &amp; Install</span>
-                      <ExternalLink size={12} />
-                    </a>
+                      <span>Secure Download</span>
+                    </button>
                   </div>
                 </div>
               ))}

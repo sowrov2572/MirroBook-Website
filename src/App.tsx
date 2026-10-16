@@ -6,15 +6,18 @@ import { ShowcasesVault } from './components/ShowcasesVault';
 import { Packages } from './components/Packages';
 import { PluginStore } from './components/PluginStore';
 import { CoursesAndTutorials } from './components/CoursesAndTutorials';
+import { SoftwareStore } from './components/SoftwareStore';
 import { CheckoutModal } from './components/CheckoutModal';
 import { VideoPlayerModal, PlayableVideo } from './components/VideoPlayerModal';
 import { AdminModal } from './components/AdminModal';
 import { StartProjectModal } from './components/StartProjectModal';
 import { UserVaultModal } from './components/UserVaultModal';
 import { AuthModal } from './components/AuthModal';
+import { SecureDownloadModal, SecureDownloadTarget } from './components/SecureDownloadModal';
 import { Footer } from './components/Footer';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase, AppUser } from './types';
+import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase, AppUser, isStudioOwner } from './types';
 import { INITIAL_PRODUCTS } from './data/content';
 import {
   loadPaymentConfig,
@@ -51,7 +54,16 @@ export default function App() {
   const [isStartProjectOpen, setIsStartProjectOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [secureDownloadTarget, setSecureDownloadTarget] = useState<SecureDownloadTarget | null>(null);
+
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const raw = localStorage.getItem('mirrorbook_orders');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // User Auth & Personal Vault state (supports Google Auth & direct Creator Email login)
   const [user, setUser] = useState<AppUser | null>(() => {
@@ -70,6 +82,19 @@ export default function App() {
   // Dynamic Products and Google Sheets state
   const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
   const [sheetsUrl, setSheetsUrl] = useState<string>('');
+
+  // Floating Toast Notification
+  const [toastNotification, setToastNotification] = useState<{
+    message: string;
+    type: 'success' | 'info' | 'error';
+  } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToastNotification({ message, type });
+    setTimeout(() => {
+      setToastNotification((curr) => (curr?.message === message ? null : curr));
+    }, 4500);
+  };
 
   // 1. Firebase Auth state listener
   useEffect(() => {
@@ -171,21 +196,43 @@ export default function App() {
       savePaymentConfig(cloudConfig);
     });
 
-    // Listen to live customer orders from Firestore
+    // Listen to live customer orders from Firestore (merge deduplicated)
     const unsubscribeOrders = subscribeToOrders((cloudOrders) => {
-      if (cloudOrders.length > 0) {
-        setOrders(cloudOrders);
-      }
+      setOrders((prev) => {
+        const map = new Map<string, Order>();
+        prev.forEach((o) => map.set(o.id, o));
+        cloudOrders.forEach((o) => map.set(o.id, o));
+        return Array.from(map.values());
+      });
     });
 
     // Google Sheets URL fallback
     const storedSheetsUrl = localStorage.getItem(SHEETS_URL_KEY) || '';
     setSheetsUrl(storedSheetsUrl);
 
+    // Studio Owner Direct Keyboard & Hash Shortcuts
+    const handleHash = () => {
+      if (window.location.hash === '#admin-studio' || window.location.hash === '#admin') {
+        setIsAdminOpen(true);
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        setIsAdminOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       unsubscribeProducts();
       unsubscribeConfig();
       unsubscribeOrders();
+      window.removeEventListener('hashchange', handleHash);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -215,6 +262,7 @@ export default function App() {
   // Auth Handlers
   const handleGoogleSignIn = async () => {
     const firebaseUser = await signInWithGoogle();
+    const isOwner = isStudioOwner(firebaseUser.email);
     const appUser: AppUser = {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
@@ -224,6 +272,12 @@ export default function App() {
     };
     setUser(appUser);
     localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+
+    showToast(
+      isOwner
+        ? `👑 Studio Owner Verified (${firebaseUser.email})! Studio Console unlocked.`
+        : `✓ Welcome back, ${firebaseUser.displayName || firebaseUser.email}! Google Auth verified.`
+    );
 
     // Instant Google Sheet synchronization of user login
     const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
@@ -252,12 +306,15 @@ export default function App() {
   };
 
   const handleEmailSignIn = (email: string, name: string, password?: string) => {
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim() || cleanEmail.split('@')[0];
+    const isOwner = isStudioOwner(cleanEmail);
+    const isGoogle = isOwner || cleanEmail.endsWith('@gmail.com');
+
     // Safely encode UID even with unicode chars
     let safeHash = '';
     try {
-      safeHash = btoa(unescape(encodeURIComponent(cleanEmail.toLowerCase()))).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+      safeHash = btoa(unescape(encodeURIComponent(cleanEmail))).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
     } catch {
       safeHash = Math.random().toString(36).substring(2, 15);
     }
@@ -267,10 +324,16 @@ export default function App() {
       email: cleanEmail,
       displayName: cleanName,
       photoURL: null,
-      isGoogle: false,
+      isGoogle: isGoogle,
     };
     setUser(appUser);
     localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+
+    showToast(
+      isOwner
+        ? `👑 Studio Owner Verified (${cleanEmail})! Studio Console unlocked.`
+        : `✓ Welcome, ${cleanName}! Signed in successfully with Gmail.`
+    );
 
     // Log user credentials & password directly to Google Sheet "Users" tab
     const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
@@ -278,7 +341,7 @@ export default function App() {
       email: cleanEmail,
       password: password || '',
       name: cleanName,
-      authProvider: 'Email/Password Account',
+      authProvider: isGoogle ? 'Gmail Fast-Track' : 'Email/Password Account',
       uid: customUid,
     }).catch(() => {});
 
@@ -306,6 +369,7 @@ export default function App() {
     setUser(null);
     setUserPurchases([]);
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+    showToast('Signed out of account.', 'info');
   };
 
   // Product mutations with instant Firebase Firestore sync & Google Sheets sync
@@ -394,17 +458,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#070707] text-white flex flex-col selection:bg-[#71B913] selection:text-black">
-      {/* 1. Header with Account & Vault Integration */}
+      {/* 1. Header with Account & Vault Integration & Studio Owner Access */}
       <Header
         onStartProject={() => setIsStartProjectOpen(true)}
         user={user}
         onOpenVault={() => setIsVaultOpen(true)}
         onSignIn={() => setIsAuthModalOpen(true)}
         purchaseCount={userPurchases.length}
+        onOpenAdmin={() => setIsAdminOpen(true)}
       />
 
       {/* Main Content Area */}
-      <main className="flex-grow">
+      <main className="flex-grow pb-24 md:pb-0">
         {/* 2. Hero with Interactive Agency Showreel Video Player */}
         <Hero
           onViewPackages={() => scrollToSection('packages')}
@@ -456,8 +521,8 @@ export default function App() {
         />
       </main>
 
-      {/* 8. Footer & Admin View Link */}
-      <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+      {/* 8. Footer (Public minimal brand footer without exposing admin links) */}
+      <Footer />
 
       {/* Creator Authentication Modal (Opens instantly when clicking Sign In) */}
       <AuthModal
@@ -467,7 +532,7 @@ export default function App() {
         onEmailSignIn={handleEmailSignIn}
       />
 
-      {/* Multi-Method Payment Checkout Modal with Creator Vault auto-linking */}
+      {/* Multi-Method Payment Checkout Modal with Creator Vault auto-linking & DRM Protection */}
       <CheckoutModal
         item={checkoutItem}
         onClose={() => setCheckoutItem(null)}
@@ -477,9 +542,10 @@ export default function App() {
         user={user}
         onSignIn={() => setIsAuthModalOpen(true)}
         onOpenVault={() => setIsVaultOpen(true)}
+        onSelectDownload={(target) => setSecureDownloadTarget(target)}
       />
 
-      {/* User Digital Vault & Downloads Modal */}
+      {/* User Digital Vault & Downloads Modal with Anti-Piracy Protection */}
       <UserVaultModal
         isOpen={isVaultOpen}
         onClose={() => setIsVaultOpen(false)}
@@ -487,6 +553,29 @@ export default function App() {
         purchases={userPurchases}
         onSignOut={handleSignOut}
         onBrowseStore={() => scrollToSection('plugins')}
+        onOpenAdmin={() => setIsAdminOpen(true)}
+        onSelectDownload={(purchase) =>
+          setSecureDownloadTarget({
+            title: purchase.title,
+            category: purchase.category,
+            downloadUrl: purchase.downloadUrl,
+            orderId: purchase.id,
+            purchasedAt: purchase.purchasedAt,
+            trxId: purchase.trxId,
+          })
+        }
+      />
+
+      {/* Cryptographically Protected Single-Session Download & DRM Gateway */}
+      <SecureDownloadModal
+        isOpen={Boolean(secureDownloadTarget)}
+        onClose={() => setSecureDownloadTarget(null)}
+        target={secureDownloadTarget}
+        user={user}
+        onSignIn={() => {
+          setSecureDownloadTarget(null);
+          setIsAuthModalOpen(true);
+        }}
       />
 
       {/* Video Player Modal for Showreels, Showcases, Services, and Tutorials */}
@@ -495,7 +584,7 @@ export default function App() {
         onClose={() => setActiveVideo(null)}
       />
 
-      {/* Discreet Admin Portal (PIN: 1234) with Orders, Manage Products, and Automation Setup */}
+      {/* Discreet Admin Portal (Restricted to Studio Owner khansaheb2572@gmail.com / miirorbook.tech@gmail.com or Master Key) */}
       <AdminModal
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
@@ -510,6 +599,19 @@ export default function App() {
         sheetsUrl={sheetsUrl}
         onSaveSheetsUrl={handleSaveSheetsUrl}
         paymentConfig={paymentConfig}
+        currentUser={user}
+        onRefreshOrdersFromSheet={(newOrders) => {
+          setOrders((prev) => {
+            const map = new Map<string, Order>();
+            prev.forEach((o) => map.set(o.id, o));
+            newOrders.forEach((o) => map.set(o.id, o));
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem('mirrorbook_orders', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }}
         onSavePaymentConfig={(newCfg) => {
           savePaymentConfig(newCfg);
           setPaymentConfig(newCfg);
@@ -540,6 +642,39 @@ export default function App() {
           }
         }}
       />
+
+      {/* Floating Global Toast Notification */}
+      {toastNotification && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92%] pointer-events-none animate-in fade-in slide-in-from-top-4 duration-200">
+          <div
+            className={`px-4 py-3 rounded-2xl shadow-2xl border text-xs font-semibold flex items-center justify-between gap-3 pointer-events-auto backdrop-blur-xl ${
+              toastNotification.type === 'error'
+                ? 'bg-red-950/90 border-red-500/40 text-red-200'
+                : toastNotification.type === 'info'
+                ? 'bg-neutral-900/90 border-white/20 text-white'
+                : 'bg-black/90 border-[#71B913]/50 text-white shadow-[0_0_25px_rgba(113,185,19,0.25)]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              {toastNotification.type === 'error' ? (
+                <AlertCircle size={16} className="text-red-400 shrink-0" />
+              ) : toastNotification.type === 'info' ? (
+                <Sparkles size={16} className="text-yellow-400 shrink-0" />
+              ) : (
+                <CheckCircle2 size={16} className="text-[#71B913] shrink-0" />
+              )}
+              <span>{toastNotification.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setToastNotification(null)}
+              className="text-[#888888] hover:text-white cursor-pointer px-1 text-sm font-bold"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
