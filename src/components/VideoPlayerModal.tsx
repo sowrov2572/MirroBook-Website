@@ -34,7 +34,7 @@ export function getYouTubeEmbedUrl(url?: string, title?: string): string | null 
     }
   }
   if (id) {
-    return `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
+    return `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&rel=0`;
   }
   return null;
 }
@@ -111,7 +111,6 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ video, onClo
               title={video.title}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
             />
           ) : (

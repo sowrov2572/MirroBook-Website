@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { COURSES, TUTORIALS } from '../data/content';
 import { CheckoutItem, TutorialItem, ProductItem } from '../types';
-import { Play, Clock, ArrowRight, Video, ExternalLink, Sparkles } from 'lucide-react';
+import { Play, Clock, ArrowRight, Video, ExternalLink, Sparkles, Maximize2, X } from 'lucide-react';
 
 interface CoursesAndTutorialsProps {
   onEnrollCourse: (item: CheckoutItem) => void;
   onSelectTutorial: (tutorial: TutorialItem) => void;
   courses?: ProductItem[];
   tutorials?: ProductItem[];
+}
+
+function extractYouTubeId(url?: string): string {
+  if (!url) return '';
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/))([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : '';
 }
 
 export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
@@ -18,6 +24,8 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
 }) => {
   // Default to 'tutorials' so the 4 free YouTube video masterclasses are immediately visible!
   const [activeTab, setActiveTab] = useState<'tutorials' | 'courses' | 'all'>('tutorials');
+  // Track which tutorial is currently playing inline directly inside its card
+  const [inlinePlayingId, setInlinePlayingId] = useState<string | null>(null);
 
   // Sync tab with URL hash if visited directly via #tutorials or #courses
   useEffect(() => {
@@ -138,70 +146,112 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
               </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {displayTutorials.map((tutorial) => (
-                <div
-                  key={tutorial.id}
-                  onClick={() => onSelectTutorial(tutorial)}
-                  className="matte-glass-brand-card rounded-2xl p-5 flex flex-col justify-between cursor-pointer group hover:scale-[1.02] transition-transform"
-                >
-                  <div>
-                    {/* Video Thumbnail with YouTube 4K Preview */}
-                    <div className="aspect-video rounded-xl bg-[#141414] border border-white/10 mb-4 flex items-center justify-center relative overflow-hidden group-hover:border-[#71B913]/50 transition-colors">
-                      {tutorial.thumbnailUrl ? (
-                        <img
-                          src={tutorial.thumbnailUrl}
-                          alt={`${tutorial.title} – Free ${tutorial.software} Masterclass Tutorial`}
-                          loading="lazy"
-                          decoding="async"
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            const ytMatch = tutorial.videoUrl?.match(/(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]+)/);
-                            if (ytMatch && ytMatch[1]) {
-                              e.currentTarget.src = `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-                            }
-                          }}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+              {displayTutorials.map((tutorial) => {
+                const isPlaying = inlinePlayingId === tutorial.id;
+                const ytId = extractYouTubeId(tutorial.videoUrl);
+
+                return (
+                  <div
+                    key={tutorial.id}
+                    className="matte-glass-brand-card rounded-2xl p-5 flex flex-col justify-between group hover:scale-[1.01] transition-transform"
+                  >
+                    <div>
+                      {/* Video Player Display: Inline YouTube or Interactive 4K Thumbnail */}
+                      {isPlaying ? (
+                        <div className="aspect-video rounded-xl bg-black border-2 border-[#71B913] mb-4 overflow-hidden relative shadow-[0_0_25px_rgba(113,185,19,0.4)]">
+                          <iframe
+                            src={`https://www.youtube.com/embed/${ytId}?autoplay=1&playsinline=1&rel=0`}
+                            title={tutorial.title}
+                            className="w-full h-full border-0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setInlinePlayingId(null)}
+                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center transition-colors cursor-pointer z-10"
+                            title="Close inline player"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                       ) : (
-                        <div className="absolute inset-0 bg-gradient-to-tr from-black via-[#161616] to-[#121A0F] group-hover:scale-105 transition-transform duration-500" />
+                        <div
+                          onClick={() => setInlinePlayingId(tutorial.id)}
+                          className="aspect-video rounded-xl bg-[#141414] border border-white/10 mb-4 flex items-center justify-center relative overflow-hidden group-hover:border-[#71B913]/50 transition-colors cursor-pointer"
+                          title="Click to play video on website"
+                        >
+                          {tutorial.thumbnailUrl ? (
+                            <img
+                              src={tutorial.thumbnailUrl}
+                              alt={`${tutorial.title} – Free ${tutorial.software} Masterclass Tutorial`}
+                              loading="lazy"
+                              decoding="async"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                if (ytId) {
+                                  e.currentTarget.src = `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
+                                }
+                              }}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-to-tr from-black via-[#161616] to-[#121A0F] group-hover:scale-105 transition-transform duration-500" />
+                          )}
+
+                          <div className="absolute inset-0 bg-black/35 flex items-center justify-center group-hover:bg-black/20 transition-colors">
+                            <div className="w-13 h-13 rounded-full bg-[#71B913] text-black flex items-center justify-center shadow-[0_0_25px_rgba(113,185,19,0.6)] group-hover:scale-115 active:scale-95 transition-all">
+                              <Play size={18} className="ml-0.5 fill-black" />
+                            </div>
+                          </div>
+
+                          <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 bg-black/85 backdrop-blur-md rounded text-[10px] text-[#DDDDDD] font-medium border border-white/10">
+                            {tutorial.duration}
+                          </div>
+                        </div>
                       )}
 
-                      <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-[#71B913] text-black flex items-center justify-center shadow-[0_0_25px_rgba(113,185,19,0.5)] group-hover:scale-115 active:scale-95 transition-all">
-                          <Play size={18} className="ml-0.5 fill-black" />
-                        </div>
-                      </div>
-
-                      <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 bg-black/85 backdrop-blur-md rounded text-[10px] text-[#DDDDDD] font-medium border border-white/10">
-                        {tutorial.duration}
-                      </div>
+                      {/* Title */}
+                      <h3
+                        onClick={() => onSelectTutorial(tutorial)}
+                        className="font-display text-base font-bold text-white hover:text-[#71B913] transition-colors mb-3 line-clamp-2 leading-snug cursor-pointer"
+                        title="Click to view tutorial in modal"
+                      >
+                        {tutorial.title}
+                      </h3>
                     </div>
 
-                    {/* Title */}
-                    <h3 className="font-display text-base font-bold text-white group-hover:text-[#71B913] transition-colors mb-3 line-clamp-2 leading-snug">
-                      {tutorial.title}
-                    </h3>
+                    <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-[#888888] gap-2">
+                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#AAAAAA]">
+                        <Clock size={12} className="text-[#71B913]" />
+                        {tutorial.duration}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onSelectTutorial(tutorial)}
+                          className="text-[#AAAAAA] hover:text-white font-medium text-[11px] inline-flex items-center gap-1 py-1 px-2 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 transition-all cursor-pointer"
+                          title="Open in fullscreen modal player"
+                        >
+                          <Maximize2 size={11} className="text-[#71B913]" />
+                          <span>Modal</span>
+                        </button>
+                        <a
+                          href={tutorial.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-black bg-[#71B913] hover:bg-[#81cf17] font-bold text-[11px] inline-flex items-center gap-1 py-1 px-2.5 rounded-lg transition-all cursor-pointer shadow-[0_0_12px_rgba(113,185,19,0.3)]"
+                          title="Watch directly on YouTube"
+                        >
+                          <span>Stream Free</span>
+                          <ExternalLink size={11} />
+                        </a>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-[#888888]">
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#AAAAAA]">
-                      <Clock size={12} className="text-[#71B913]" />
-                      {tutorial.duration}
-                    </span>
-                    <a
-                      href={tutorial.videoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-white hover:text-[#71B913] font-semibold text-[11px] inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-black/50 hover:bg-black/90 border border-white/15 hover:border-[#71B913]/50 transition-all cursor-pointer shadow-sm"
-                      title="Watch directly on YouTube"
-                    >
-                      <span>Stream Free</span>
-                      <ExternalLink size={11} className="text-[#71B913]" />
-                    </a>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
