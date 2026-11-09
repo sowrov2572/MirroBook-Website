@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
     { name: 'Packages', href: '#packages' },
     { name: 'Plugin Store', href: '#plugins' },
     { name: 'Software', href: '#software' },
-    { name: 'Courses', href: '#courses' },
+    { name: 'Courses & Tutorials', href: '#tutorials' },
   ];
 
   return (

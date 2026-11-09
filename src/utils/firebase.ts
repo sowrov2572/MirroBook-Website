@@ -141,22 +141,28 @@ export function subscribeToProducts(
       if (!snapshot.empty) {
         const cloudList: ProductItem[] = [];
         snapshot.forEach((docSnap) => {
+          if (OBSOLETE_PRODUCT_IDS.has(docSnap.id)) {
+            deleteDoc(docSnap.ref).catch(() => {});
+            return;
+          }
           cloudList.push(docSnap.data() as ProductItem);
         });
 
+        const filteredCloudList = cloudList.filter((cp) => !OBSOLETE_PRODUCT_IDS.has(cp.id));
+
         // Intelligently merge with localStorage so recent local admin edits are never lost
-        let mergedList = [...cloudList];
+        let mergedList = [...filteredCloudList];
         try {
           const localRaw = localStorage.getItem('mirrorbook_products');
           if (localRaw) {
             const localProducts: ProductItem[] = JSON.parse(localRaw);
+            const filteredLocal = localProducts.filter((lp) => !OBSOLETE_PRODUCT_IDS.has(lp.id));
             const localMap = new Map<string, ProductItem>();
-            localProducts.forEach((lp) => localMap.set(lp.id, lp));
+            filteredLocal.forEach((lp) => localMap.set(lp.id, lp));
 
-            mergedList = cloudList.map((cp) => {
+            mergedList = filteredCloudList.map((cp) => {
               const lp = localMap.get(cp.id);
               if (lp && lp.updatedAt && (!cp.updatedAt || lp.updatedAt > cp.updatedAt)) {
-                // Local version is newer than cloud snapshot, keep local and re-sync
                 saveProductToFirestore(lp).catch(() => {});
                 return lp;
               }
@@ -164,15 +170,19 @@ export function subscribeToProducts(
             });
 
             // Retain any items existing locally that are not yet in Firestore
-            localProducts.forEach((lp) => {
+            filteredLocal.forEach((lp) => {
               if (!mergedList.some((p) => p.id === lp.id)) {
                 mergedList.push(lp);
                 saveProductToFirestore(lp).catch(() => {});
               }
             });
+
+            try {
+              localStorage.setItem('mirrorbook_products', JSON.stringify(mergedList));
+            } catch {}
           }
         } catch {
-          // fallback to cloudList
+          // fallback to filteredCloudList
         }
 
         onUpdate(mergedList);
@@ -184,10 +194,20 @@ export function subscribeToProducts(
   );
 }
 
+export const OBSOLETE_PRODUCT_IDS = new Set([
+  'tut-ae-kinetic',
+  'tut-ai-automation',
+  'tut-premiere-cuts',
+  'tut-ps-colorgrade',
+]);
+
 /**
  * Saves or updates a single product in Firestore.
  */
 export async function saveProductToFirestore(product: ProductItem): Promise<void> {
+  if (OBSOLETE_PRODUCT_IDS.has(product.id)) {
+    return;
+  }
   const docPath = `${PRODUCTS_COLLECTION}/${product.id}`;
   try {
     const docRef = doc(db, PRODUCTS_COLLECTION, product.id);

@@ -205,9 +205,13 @@ export default function App() {
     // Listen to live products from Firestore (shared worldwide)
     const unsubscribeProducts = subscribeToProducts((cloudProducts) => {
       if (cloudProducts.length > 0) {
-        setProducts(cloudProducts);
+        const hasTutorials = cloudProducts.some((p) => p.type === 'Free Tutorial');
+        const finalProducts = hasTutorials
+          ? cloudProducts
+          : [...cloudProducts, ...INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial')];
+        setProducts(finalProducts);
         try {
-          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(cloudProducts));
+          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(finalProducts));
         } catch {}
       }
     });
