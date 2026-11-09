@@ -4,32 +4,32 @@ export const SERVICES: ServiceItem[] = [
   {
     id: 'video-editing',
     title: 'Cinematic Video Editing',
-    subtitle: 'High-retention commercial cuts, Hollywood color grading, and dynamic audio design.'
+    subtitle: 'Professional video editing services in Bangladesh delivering high-retention commercial cuts, Hollywood color grading, and dynamic audio design.'
   },
   {
     id: 'reels-editing',
     title: 'Reels & Short-Form Video',
-    subtitle: 'Viral hook pacing, kinetic captions, and high-retention visual timing for TikTok and Instagram.'
+    subtitle: 'Viral hook pacing, kinetic captions, and high-retention visual timing tailored for brand campaigns across TikTok, Instagram, and YouTube.'
   },
   {
     id: 'graphic-design',
     title: 'Graphic Design & Branding',
-    subtitle: 'Minimalist brand identities, typography manuals, key marketing visuals, and vector assets.'
+    subtitle: 'Creative graphic design agency services in Bangladesh crafting minimalist brand identities, typography systems, and high-conversion vector assets.'
   },
   {
     id: 'web-development',
     title: 'Modern Web Development',
-    subtitle: 'Ultra-fast responsive websites, custom web applications, and conversion-focused architectures.'
+    subtitle: 'Full-cycle web development agency services in Bangladesh building ultra-fast responsive websites, custom web apps, and conversion architectures.'
   },
   {
     id: 'software-design-ai',
     title: 'Software Design with AI',
-    subtitle: 'Bespoke AI automation workflows, custom Adobe plugin panels, and neural productivity tools.'
+    subtitle: 'Bespoke AI automation workflows, custom Adobe plugin panels, and neural productivity tools engineered for high-performance creative teams.'
   },
   {
     id: 'advertising-campaigns',
     title: 'Advertising Campaigns',
-    subtitle: 'Performance-driven creative video variants, direct response scripts, and paid acquisition assets.'
+    subtitle: 'Full-service digital marketing agency Bangladesh strategies, performance-driven video variants, direct response scripts, and paid acquisition assets.'
   }
 ];
 
@@ -92,8 +92,8 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     category: 'AE & Premiere Pro',
     title: 'Easy Flow Plugin',
     description: 'Quick-access workflows and one-click timeline shortcuts for Premiere Pro & After Effects.',
-    price: 20,
-    priceDisplay: '৳20',
+    price: 200,
+    priceDisplay: '৳200',
     thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
     protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
     createdAt: '2026-10-05'
@@ -232,58 +232,62 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     createdAt: '2026-10-13'
   },
 
-  // Free Tutorials
+  // Free Tutorials (Official Khan Saheb / Khan Saheb Editz Masterclasses)
   {
-    id: 'tut-premiere-cuts',
-    type: 'Free Tutorial',
-    category: 'Premiere Pro',
-    title: 'High-Retention Cutting in Premiere Pro',
-    description: 'Master fast timeline editing, J-cuts, L-cuts, and micro-cuts for social attention retention.',
-    price: 0,
-    priceDisplay: 'Free',
-    duration: '14 min',
-    instructor: 'Lead Video Editor',
-    protectedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
-    createdAt: '2026-09-29'
-  },
-  {
-    id: 'tut-ae-kinetic',
+    id: 'tut-bangladeshi-money-explosion',
     type: 'Free Tutorial',
     category: 'After Effects',
-    title: 'Minimal Kinetic Typography & Bezier Curves',
-    description: 'Crafting clean text motion graphics without templates using graph editor easing curves.',
+    title: 'Bangladeshi Money Explosion Effect | After Effects Tutorial in Bangla | Khan Saheb',
+    description: '',
     price: 0,
     priceDisplay: 'Free',
-    duration: '22 min',
-    instructor: 'Motion Designer',
-    protectedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
-    createdAt: '2026-09-30'
-  },
-  {
-    id: 'tut-ps-colorgrade',
-    type: 'Free Tutorial',
-    category: 'Photoshop',
-    title: 'Precision Color Grading & Retouching',
-    description: 'Tone curve manipulation, selective masking, and high-frequency color balance fundamentals.',
-    price: 0,
-    priceDisplay: 'Free',
-    duration: '18 min',
-    instructor: 'Art Director',
-    protectedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+    duration: '8:05',
+    instructor: 'Khan Saheb Editz',
+    thumbnailUrl: 'https://i.ytimg.com/vi/Zj9IE-1CQik/maxresdefault.jpg',
+    protectedUrl: 'https://www.youtube.com/watch?v=Zj9IE-1CQik',
     createdAt: '2026-10-01'
   },
   {
-    id: 'tut-ai-automation',
+    id: 'tut-dune-2-scene-recreation',
     type: 'Free Tutorial',
-    category: 'AI Tools',
-    title: 'Building Custom AI Workflows for Creative Agencies',
-    description: 'Automating asset tagging, background removal, and batch export scripts via Python and APIs.',
+    category: 'After Effects',
+    title: 'I Recreated a Scene from DUNE-2 || Bangla Tutorial || After Effect || Khan Saheb',
+    description: '',
     price: 0,
     priceDisplay: 'Free',
-    duration: '27 min',
-    instructor: 'AI Software Engineer',
-    protectedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+    duration: '6:17',
+    instructor: 'Khan Saheb Editz',
+    thumbnailUrl: 'https://i.ytimg.com/vi/VHNqdusgG6g/maxresdefault.jpg',
+    protectedUrl: 'https://www.youtube.com/watch?v=VHNqdusgG6g',
     createdAt: '2026-10-02'
+  },
+  {
+    id: 'tut-social-media-poster-design',
+    type: 'Free Tutorial',
+    category: 'Photoshop',
+    title: 'How To Master Social Media Poster Design || Bangla Tutorial || Khan Saheb Editz',
+    description: '',
+    price: 0,
+    priceDisplay: 'Free',
+    duration: '9:12',
+    instructor: 'Khan Saheb Editz',
+    thumbnailUrl: 'https://i.ytimg.com/vi/AO-lWDwrLTo/maxresdefault.jpg',
+    protectedUrl: 'https://www.youtube.com/watch?v=AO-lWDwrLTo',
+    createdAt: '2026-10-03'
+  },
+  {
+    id: 'tut-improve-design-skill',
+    type: 'Free Tutorial',
+    category: 'Photoshop',
+    title: 'Imporve Your Design Skill || Bangla Tutorial || Photoshop || Khan Saheb Editz',
+    description: '',
+    price: 0,
+    priceDisplay: 'Free',
+    duration: '9:12',
+    instructor: 'Khan Saheb Editz',
+    thumbnailUrl: 'https://i.ytimg.com/vi/Dg8MbL71kW8/maxresdefault.jpg',
+    protectedUrl: 'https://www.youtube.com/watch?v=Dg8MbL71kW8',
+    createdAt: '2026-10-04'
   },
 
   // Agency Packages
@@ -356,8 +360,8 @@ export const PLUGINS: PluginItem[] = [
     id: 'plugin-easy-flow',
     title: 'Easy Flow Plugin',
     software: 'AE & Premiere Pro',
-    price: 20,
-    priceDisplay: '৳20',
+    price: 200,
+    priceDisplay: '৳200',
     thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
     description: 'Quick-access workflows and one-click timeline shortcuts for Premiere Pro & After Effects.'
   },
@@ -428,40 +432,44 @@ export const COURSES: CourseItem[] = [
 
 export const TUTORIALS: TutorialItem[] = [
   {
-    id: 'tut-premiere-cuts',
-    title: 'High-Retention Cutting in Premiere Pro',
-    software: 'Premiere Pro',
-    duration: '14 min',
-    description: 'Master fast timeline editing, J-cuts, L-cuts, and micro-cuts for social attention retention.',
-    instructor: 'Lead Video Editor',
-    videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'
-  },
-  {
-    id: 'tut-ae-kinetic',
-    title: 'Minimal Kinetic Typography & Bezier Curves',
+    id: 'tut-bangladeshi-money-explosion',
+    title: 'Bangladeshi Money Explosion Effect | After Effects Tutorial in Bangla | Khan Saheb',
     software: 'After Effects',
-    duration: '22 min',
-    description: 'Crafting clean text motion graphics without templates using graph editor easing curves.',
-    instructor: 'Motion Designer',
-    videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'
+    duration: '8:05',
+    description: '',
+    instructor: 'Khan Saheb Editz',
+    videoUrl: 'https://www.youtube.com/watch?v=Zj9IE-1CQik',
+    thumbnailUrl: 'https://i.ytimg.com/vi/Zj9IE-1CQik/maxresdefault.jpg'
   },
   {
-    id: 'tut-ps-colorgrade',
-    title: 'Precision Color Grading & Retouching',
+    id: 'tut-dune-2-scene-recreation',
+    title: 'I Recreated a Scene from DUNE-2 || Bangla Tutorial || After Effect || Khan Saheb',
+    software: 'After Effects',
+    duration: '6:17',
+    description: '',
+    instructor: 'Khan Saheb Editz',
+    videoUrl: 'https://www.youtube.com/watch?v=VHNqdusgG6g',
+    thumbnailUrl: 'https://i.ytimg.com/vi/VHNqdusgG6g/maxresdefault.jpg'
+  },
+  {
+    id: 'tut-social-media-poster-design',
+    title: 'How To Master Social Media Poster Design || Bangla Tutorial || Khan Saheb Editz',
     software: 'Photoshop',
-    duration: '18 min',
-    description: 'Tone curve manipulation, selective masking, and high-frequency color balance fundamentals.',
-    instructor: 'Art Director',
-    videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'
+    duration: '9:12',
+    description: '',
+    instructor: 'Khan Saheb Editz',
+    videoUrl: 'https://www.youtube.com/watch?v=AO-lWDwrLTo',
+    thumbnailUrl: 'https://i.ytimg.com/vi/AO-lWDwrLTo/maxresdefault.jpg'
   },
   {
-    id: 'tut-ai-automation',
-    title: 'Building Custom AI Workflows for Creative Agencies',
-    software: 'AI Tools',
-    duration: '27 min',
-    description: 'Automating asset tagging, background removal, and batch export scripts via Python and APIs.',
-    instructor: 'AI Software Engineer',
-    videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'
+    id: 'tut-improve-design-skill',
+    title: 'Imporve Your Design Skill || Bangla Tutorial || Photoshop || Khan Saheb Editz',
+    software: 'Photoshop',
+    duration: '9:12',
+    description: '',
+    instructor: 'Khan Saheb Editz',
+    videoUrl: 'https://www.youtube.com/watch?v=Dg8MbL71kW8',
+    thumbnailUrl: 'https://i.ytimg.com/vi/Dg8MbL71kW8/maxresdefault.jpg'
   }
 ];
 

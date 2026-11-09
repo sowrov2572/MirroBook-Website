@@ -85,16 +85,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  // Custom Master Key
+  // Custom Master Key (Default: 257261)
+  const DEFAULT_MASTER_KEY = '257261';
+
   const [masterPasskey, setMasterPasskey] = useState<string>(() => {
     try {
-      return localStorage.getItem('mirrorbook_admin_passkey') || '1234';
+      const stored = localStorage.getItem('mirrorbook_admin_passkey');
+      if (stored && stored !== '1234') {
+        return stored;
+      }
+      localStorage.setItem('mirrorbook_admin_passkey', DEFAULT_MASTER_KEY);
+      return DEFAULT_MASTER_KEY;
     } catch {
-      return '1234';
+      return DEFAULT_MASTER_KEY;
     }
   });
   const [newPasskeyInput, setNewPasskeyInput] = useState('');
   const [passkeySavedToast, setPasskeySavedToast] = useState(false);
+  const [productSavedToast, setProductSavedToast] = useState<string | null>(null);
 
   // Active Main Tab: 'orders' | 'products' | 'automation'
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'automation'>('orders');
@@ -234,7 +242,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanInput = pinInput.trim();
-    if (cleanInput === masterPasskey || cleanInput === '1234') {
+    if (cleanInput === masterPasskey || cleanInput === '257261') {
       setIsAuthenticated(true);
       setPinError(false);
     } else {
@@ -475,6 +483,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         instructor: formInstructor.trim() || undefined,
       };
       onUpdateProduct(updated);
+      setProductSavedToast(`✓ "${updated.title}" updated! Price: ${updated.priceDisplay}, Link saved & live on website.`);
+      setTimeout(() => setProductSavedToast(null), 4500);
     } else {
       const newId = `${formType.toLowerCase().replace(/\s+/g, '-')}-${Date.now().toString().slice(-6)}`;
       const created: ProductItem = {
@@ -493,6 +503,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         createdAt: new Date().toISOString().split('T')[0],
       };
       onAddProduct(created);
+      setProductSavedToast(`✓ "${created.title}" added to store & live on website.`);
+      setTimeout(() => setProductSavedToast(null), 4500);
     }
 
     setIsFormOpen(false);
@@ -514,6 +526,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         price: newPrice,
         priceDisplay: computedPriceDisplay,
       });
+      setProductSavedToast(`✓ Price updated for "${product.title}" to ${computedPriceDisplay} (live on site).`);
+      setTimeout(() => setProductSavedToast(null), 3500);
     }
     setInlinePriceId(null);
   };
@@ -1078,6 +1092,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </button>
                   </div>
                 </div>
+
+                {productSavedToast && (
+                  <div className="p-3 bg-[#71B913]/15 border border-[#71B913]/40 rounded-xl text-xs text-[#71B913] flex items-center gap-2 font-medium shadow-[0_0_15px_rgba(113,185,19,0.15)]">
+                    <CheckCircle2 size={16} className="text-[#71B913] shrink-0" />
+                    <span>{productSavedToast}</span>
+                  </div>
+                )}
 
                 {isFormOpen && (
                   <div className="bg-[#131313] border border-white/15 rounded-2xl p-6 space-y-5">

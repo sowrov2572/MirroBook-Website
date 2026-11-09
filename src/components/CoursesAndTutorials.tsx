@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { COURSES, TUTORIALS } from '../data/content';
 import { CheckoutItem, TutorialItem, ProductItem } from '../types';
-import { Play, Clock, ArrowRight, Video } from 'lucide-react';
+import { Play, Clock, ArrowRight, Video, ExternalLink } from 'lucide-react';
 
 interface CoursesAndTutorialsProps {
   onEnrollCourse: (item: CheckoutItem) => void;
@@ -94,7 +94,9 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                     <div className="aspect-video w-full rounded-2xl bg-[#141414] border border-white/10 mb-5 overflow-hidden">
                       <img
                         src={course.thumbnailUrl}
-                        alt={course.title}
+                        alt={`${course.title} – Professional Course by MirrorBook`}
+                        loading="lazy"
+                        decoding="async"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -166,7 +168,9 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                     {tutorial.thumbnailUrl ? (
                       <img
                         src={tutorial.thumbnailUrl}
-                        alt={tutorial.title}
+                        alt={`${tutorial.title} – Free ${tutorial.software} Masterclass Tutorial`}
+                        loading="lazy"
+                        decoding="async"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -186,24 +190,27 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                   </div>
 
                   {/* Title */}
-                  <h3 className="font-display text-base font-bold text-white group-hover:text-[#71B913] transition-colors mb-1.5 line-clamp-2">
+                  <h3 className="font-display text-base font-bold text-white group-hover:text-[#71B913] transition-colors mb-3 line-clamp-2 leading-snug">
                     {tutorial.title}
                   </h3>
-
-                  {/* Subtitle */}
-                  <p className="text-xs text-[#AAAAAA] line-clamp-2 leading-relaxed mb-4 font-normal">
-                    {tutorial.description}
-                  </p>
                 </div>
 
                 <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-[#888888]">
-                  <span className="flex items-center gap-1 text-[11px] font-medium">
-                    <Clock size={11} className="text-[#71B913]" />
+                  <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#AAAAAA]">
+                    <Clock size={12} className="text-[#71B913]" />
                     {tutorial.duration}
                   </span>
-                  <span className="text-white group-hover:text-[#71B913] font-semibold text-[11px] underline">
-                    Stream Free
-                  </span>
+                  <a
+                    href={tutorial.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-white hover:text-[#71B913] font-semibold text-[11px] inline-flex items-center gap-1 py-1 px-2.5 rounded-lg bg-black/40 hover:bg-black/80 border border-white/10 hover:border-[#71B913]/40 transition-all cursor-pointer"
+                    title="Watch directly on YouTube"
+                  >
+                    <span>Stream Free</span>
+                    <ExternalLink size={11} className="text-[#71B913]" />
+                  </a>
                 </div>
               </div>
             ))}

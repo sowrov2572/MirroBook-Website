@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Primary Homepage & Digital Marketing Agency Bangladesh Hub -->
+  <url>
+    <loc>https://mirrorbook.site/</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Core Professional Services: Video Editing Services Bangladesh, Graphic Design Agency Bangladesh, Web Development Agency Bangladesh -->
+  <url>
+    <loc>https://mirrorbook.site/#services</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Commercial Showcases & Client Portfolio -->
+  <url>
+    <loc>https://mirrorbook.site/#portfolio</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Monthly Retainers & Agency Packages -->
+  <url>
+    <loc>https://mirrorbook.site/#packages</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Adobe Premiere Pro & After Effects Plugin Store -->
+  <url>
+    <loc>https://mirrorbook.site/#plugins</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Standalone PC & Mobile Production Software Library -->
+  <url>
+    <loc>https://mirrorbook.site/#software</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Masterclass Courses & Free Video Editing Masterclasses -->
+  <url>
+    <loc>https://mirrorbook.site/#courses</loc>
+    <lastmod>2026-11-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

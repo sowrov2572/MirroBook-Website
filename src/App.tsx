@@ -30,6 +30,7 @@ import {
   syncProductsToSheet,
   fetchProductsFromSheet,
   SHEETS_URL_KEY,
+  PRODUCTS_STORAGE_KEY,
 } from './utils/syncService';
 import {
   subscribeToProducts,
@@ -79,8 +80,32 @@ export default function App() {
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(loadPaymentConfig);
 
-  // Dynamic Products and Google Sheets state
-  const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
+  // Dynamic Products and Google Sheets state (persisted locally and synced with Firestore)
+  const [products, setProducts] = useState<ProductItem[]>(() => {
+    try {
+      const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+      if (raw) {
+        const parsed: ProductItem[] = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasNewTutorials = parsed.some((p) => p.id === 'tut-bangladeshi-money-explosion');
+          if (hasNewTutorials) {
+            return parsed;
+          }
+          // Merge custom admin products with the new canonical tutorials
+          const nonTutorials = parsed.filter((p) => p.type !== 'Free Tutorial');
+          const canonicalTutorials = INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial');
+          const merged = [...nonTutorials, ...canonicalTutorials];
+          try {
+            localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return INITIAL_PRODUCTS;
+  });
   const [sheetsUrl, setSheetsUrl] = useState<string>('');
 
   // Floating Toast Notification
@@ -177,16 +202,13 @@ export default function App() {
 
   // 4. Real-time Firebase Firestore Global Synchronization
   useEffect(() => {
-    // Seed new Easy Flow Plugin directly to Firestore so it's live worldwide immediately
-    const easyFlowProduct = INITIAL_PRODUCTS.find((p) => p.id === 'plugin-easy-flow');
-    if (easyFlowProduct) {
-      saveProductToFirestore(easyFlowProduct).catch(() => {});
-    }
-
     // Listen to live products from Firestore (shared worldwide)
     const unsubscribeProducts = subscribeToProducts((cloudProducts) => {
       if (cloudProducts.length > 0) {
         setProducts(cloudProducts);
+        try {
+          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(cloudProducts));
+        } catch {}
       }
     });
 
@@ -248,6 +270,10 @@ export default function App() {
   );
   const publicPlugins = useMemo(
     () => publicProducts.filter((p) => p.type === 'Plugin'),
+    [publicProducts]
+  );
+  const publicSoftware = useMemo(
+    () => publicProducts.filter((p) => p.type === 'Software'),
     [publicProducts]
   );
   const publicCourses = useMemo(
@@ -374,24 +400,64 @@ export default function App() {
 
   // Product mutations with instant Firebase Firestore sync & Google Sheets sync
   const handleAddProduct = (newProduct: ProductItem) => {
-    const updated = [newProduct, ...products];
+    const itemWithTime: ProductItem = {
+      ...newProduct,
+      updatedAt: new Date().toISOString(),
+    };
+    const updated = [itemWithTime, ...products.filter((p) => p.id !== newProduct.id)];
     setProducts(updated);
-    saveProductToFirestore(newProduct).catch((err) => console.warn('Firestore add error', err));
-    syncProductsToSheet(sheetsUrl, updated);
+    try {
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    saveProductToFirestore(itemWithTime).catch((err) => console.warn('Firestore add error', err));
+    const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
+    if (targetUrl) {
+      syncProductsToSheet(targetUrl, updated).catch(() => {});
+    }
+    showToast(`✓ "${newProduct.title}" added to catalog.`);
   };
 
   const handleUpdateProduct = (updatedProduct: ProductItem) => {
-    const updated = products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p));
-    setProducts(updated);
-    saveProductToFirestore(updatedProduct).catch((err) => console.warn('Firestore update error', err));
-    syncProductsToSheet(sheetsUrl, updated);
+    const itemWithTime: ProductItem = {
+      ...updatedProduct,
+      updatedAt: new Date().toISOString(),
+    };
+    let found = false;
+    const updated = products.map((p) => {
+      if (
+        p.id === updatedProduct.id ||
+        (p.title && p.title.toLowerCase().trim() === updatedProduct.title.toLowerCase().trim())
+      ) {
+        found = true;
+        return itemWithTime;
+      }
+      return p;
+    });
+    const finalProducts = found ? updated : [itemWithTime, ...products];
+    setProducts(finalProducts);
+    try {
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(finalProducts));
+    } catch {}
+    saveProductToFirestore(itemWithTime).catch((err) => console.warn('Firestore update error', err));
+    const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
+    if (targetUrl) {
+      syncProductsToSheet(targetUrl, finalProducts).catch(() => {});
+    }
+    showToast(`✓ "${updatedProduct.title}" updated successfully! Price: ${updatedProduct.priceDisplay}`);
   };
 
   const handleDeleteProduct = (id: string) => {
     const updated = products.filter((p) => p.id !== id);
     setProducts(updated);
+    try {
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
     deleteProductFromFirestore(id).catch((err) => console.warn('Firestore delete error', err));
-    syncProductsToSheet(sheetsUrl, updated);
+    const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
+    if (targetUrl) {
+      syncProductsToSheet(targetUrl, updated).catch(() => {});
+    }
+    showToast('✓ Item removed from catalog.', 'info');
   };
 
   const handleSyncProducts = async (urlOverride?: string) => {
@@ -500,6 +566,12 @@ export default function App() {
         {/* 6. Plugin Store (Includes Easy Flow Plugin) */}
         <PluginStore
           plugins={publicPlugins}
+          onBuyItem={(item) => setCheckoutItem(item)}
+        />
+
+        {/* 6.5 PC & Phone Software Library */}
+        <SoftwareStore
+          softwareList={publicSoftware}
           onBuyItem={(item) => setCheckoutItem(item)}
         />
 

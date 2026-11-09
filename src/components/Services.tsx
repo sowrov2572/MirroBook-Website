@@ -15,6 +15,9 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
           <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-black tracking-tight">
             Services
           </h2>
+          <p className="text-sm sm:text-base text-black/80 font-medium max-w-2xl mt-2 leading-relaxed">
+            Full-spectrum digital marketing agency services in Bangladesh — from cinematic video editing and graphic design to responsive web development and AI software tools.
+          </p>
         </div>
 
         {/* Text-Only Minimal Cards (No Videos, Pure Clean Text) */}

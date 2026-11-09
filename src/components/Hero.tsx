@@ -14,7 +14,9 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
       <div className="absolute inset-0 z-0">
         <img
           src="https://i.ibb.co/dsxmjMSP/mirrorbook.jpg"
-          alt="MirrorBook Full Background Banner"
+          alt="MirrorBook – Digital Marketing Agency Bangladesh Creative Studio Hero Banner"
+          loading="eager"
+          decoding="async"
           referrerPolicy="no-referrer"
           onError={(e) => {
             const target = e.currentTarget;
@@ -52,7 +54,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
             </h1>
 
             <p className="text-base sm:text-lg text-[#CCCCCC] font-normal leading-relaxed max-w-xl drop-shadow">
-              Advertising, Video Editing, Design, AI Software Development, and Digital Tools.
+              Premier Digital Marketing Agency Bangladesh specializing in Video Editing Services, Graphic Design, Web Development, and AI Software Design.
             </p>
           </div>
 

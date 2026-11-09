@@ -74,7 +74,9 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({ softwareList = [],
                   {sw.thumbnailUrl ? (
                     <img
                       src={sw.thumbnailUrl}
-                      alt={sw.title}
+                      alt={`${sw.title} – ${sw.category} Creative Software by MirrorBook Studio`}
+                      loading="lazy"
+                      decoding="async"
                       referrerPolicy="no-referrer"
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

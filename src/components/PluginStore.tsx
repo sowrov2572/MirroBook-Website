@@ -82,7 +82,9 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
                   {plugin.thumbnailUrl ? (
                     <img
                       src={plugin.thumbnailUrl}
-                      alt={plugin.title}
+                      alt={`${plugin.title} – ${plugin.software} Plugin by MirrorBook`}
+                      loading="lazy"
+                      decoding="async"
                       referrerPolicy="no-referrer"
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

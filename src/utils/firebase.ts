@@ -37,6 +37,7 @@ function createFirestore() {
       app,
       {
         experimentalAutoDetectLongPolling: true,
+        ignoreUndefinedProperties: true,
       },
       dbId
     );
@@ -138,14 +139,43 @@ export function subscribeToProducts(
       }
 
       if (!snapshot.empty) {
-        const list: ProductItem[] = [];
+        const cloudList: ProductItem[] = [];
         snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as ProductItem);
+          cloudList.push(docSnap.data() as ProductItem);
         });
 
-        // Sort by creation date if available
-        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-        onUpdate(list);
+        // Intelligently merge with localStorage so recent local admin edits are never lost
+        let mergedList = [...cloudList];
+        try {
+          const localRaw = localStorage.getItem('mirrorbook_products');
+          if (localRaw) {
+            const localProducts: ProductItem[] = JSON.parse(localRaw);
+            const localMap = new Map<string, ProductItem>();
+            localProducts.forEach((lp) => localMap.set(lp.id, lp));
+
+            mergedList = cloudList.map((cp) => {
+              const lp = localMap.get(cp.id);
+              if (lp && lp.updatedAt && (!cp.updatedAt || lp.updatedAt > cp.updatedAt)) {
+                // Local version is newer than cloud snapshot, keep local and re-sync
+                saveProductToFirestore(lp).catch(() => {});
+                return lp;
+              }
+              return cp;
+            });
+
+            // Retain any items existing locally that are not yet in Firestore
+            localProducts.forEach((lp) => {
+              if (!mergedList.some((p) => p.id === lp.id)) {
+                mergedList.push(lp);
+                saveProductToFirestore(lp).catch(() => {});
+              }
+            });
+          }
+        } catch {
+          // fallback to cloudList
+        }
+
+        onUpdate(mergedList);
       }
     },
     (err) => {
@@ -161,7 +191,24 @@ export async function saveProductToFirestore(product: ProductItem): Promise<void
   const docPath = `${PRODUCTS_COLLECTION}/${product.id}`;
   try {
     const docRef = doc(db, PRODUCTS_COLLECTION, product.id);
-    await setDoc(docRef, product, { merge: true });
+    const cleaned: Record<string, any> = {
+      id: product.id,
+      type: product.type || 'Plugin',
+      category: product.category || '',
+      title: product.title || '',
+      description: product.description || '',
+      price: Number(product.price) || 0,
+      priceDisplay: product.priceDisplay || `৳${(Number(product.price) || 0).toLocaleString()}`,
+      protectedUrl: product.protectedUrl || '',
+      thumbnailUrl: product.thumbnailUrl || '',
+      createdAt: product.createdAt || new Date().toISOString().split('T')[0],
+      updatedAt: product.updatedAt || new Date().toISOString(),
+    };
+    if (product.period) cleaned.period = product.period;
+    if (product.duration) cleaned.duration = product.duration;
+    if (product.instructor) cleaned.instructor = product.instructor;
+
+    await setDoc(docRef, cleaned, { merge: true });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, docPath);
     throw err;
@@ -188,7 +235,7 @@ export async function deleteProductFromFirestore(id: string): Promise<void> {
 export async function seedProductsIfEmpty(): Promise<void> {
   try {
     for (const item of INITIAL_PRODUCTS) {
-      await setDoc(doc(db, PRODUCTS_COLLECTION, item.id), item, { merge: true });
+      await saveProductToFirestore(item);
     }
   } catch (err) {
     console.warn('Seeding initial products notification:', err);

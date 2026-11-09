@@ -16,6 +16,7 @@ export interface ProductItem {
   duration?: string;
   instructor?: string;
   createdAt?: string;
+  updatedAt?: string;
   featured?: boolean;
 }
 
