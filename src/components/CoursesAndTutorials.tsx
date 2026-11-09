@@ -49,35 +49,20 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
   }, [courses]);
 
   const displayTutorials: TutorialItem[] = useMemo(() => {
-    const rawList =
-      tutorials && tutorials.length > 0
-        ? tutorials.map((t) => {
-            const canonical =
-              TUTORIALS.find((item) => item.id === t.id || item.title === t.title) || TUTORIALS[0];
-            return {
-              id: t.id,
-              title: t.title || canonical.title,
-              software: t.category || canonical.software || 'After Effects',
-              duration: t.duration || canonical.duration || '08:00',
-              description: t.description || '',
-              videoUrl: t.protectedUrl || canonical.videoUrl,
-              instructor: t.instructor || canonical.instructor || 'Khan Saheb Editz',
-              thumbnailUrl: t.thumbnailUrl || canonical.thumbnailUrl,
-            };
-          })
-        : TUTORIALS;
-
-    // Deduplicate by videoUrl so exactly 4 distinct YouTube tutorials are shown
-    const seen = new Set<string>();
-    const deduplicated: TutorialItem[] = [];
-    for (const item of rawList) {
-      const key = item.videoUrl || item.title;
-      if (!seen.has(key)) {
-        seen.add(key);
-        deduplicated.push(item);
-      }
-    }
-    return deduplicated.length > 0 ? deduplicated : TUTORIALS;
+    // Strictly render the 4 official YouTube tutorials requested by the user
+    return TUTORIALS.map((canonical) => {
+      const live = tutorials?.find((t) => t.id === canonical.id);
+      return {
+        id: canonical.id,
+        title: live?.title || canonical.title,
+        software: live?.category || canonical.software,
+        duration: live?.duration || canonical.duration,
+        description: '',
+        videoUrl: canonical.videoUrl,
+        instructor: canonical.instructor,
+        thumbnailUrl: canonical.thumbnailUrl,
+      };
+    }).slice(0, 4);
   }, [tutorials]);
 
   return (

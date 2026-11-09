@@ -284,10 +284,32 @@ export default function App() {
     () => publicProducts.filter((p) => p.type === 'Course'),
     [publicProducts]
   );
-  const publicTutorials = useMemo(
-    () => publicProducts.filter((p) => p.type === 'Free Tutorial'),
-    [publicProducts]
-  );
+  const publicTutorials = useMemo(() => {
+    const canonicalIds = [
+      'tut-bangladeshi-money-explosion',
+      'tut-dune-2-scene-recreation',
+      'tut-social-media-poster-design',
+      'tut-improve-design-skill',
+    ];
+    const map = new Map<string, ProductItem>();
+    publicProducts.forEach((p) => {
+      if (p.type === 'Free Tutorial') {
+        map.set(p.id, p);
+      }
+    });
+
+    const result: ProductItem[] = [];
+    for (const id of canonicalIds) {
+      const match = map.get(id);
+      if (match) {
+        result.push(match);
+      } else {
+        const fallback = INITIAL_PRODUCTS.find((p) => p.id === id);
+        if (fallback) result.push(fallback);
+      }
+    }
+    return result;
+  }, [publicProducts]);
 
   // Auth Handlers
   const handleGoogleSignIn = async () => {
