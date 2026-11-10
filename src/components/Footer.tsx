@@ -1,6 +1,19 @@
-import React from 'react';
+interface FooterProps {
+  onNavigate?: (path: string) => void;
+}
 
-export const Footer: React.FC = () => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+  const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('/')) {
+      e.preventDefault();
+      if (onNavigate) {
+        onNavigate(href);
+      } else {
+        window.location.href = href;
+      }
+    }
+  };
+
   return (
     <footer className="bg-[#080808] border-t border-[#1A1A1A] py-16 px-6">
       <div className="max-w-7xl mx-auto">
@@ -31,6 +44,15 @@ export const Footer: React.FC = () => {
                 <a href="#portfolio" className="hover:text-[#71B913] transition-colors">Portfolio</a>
               </li>
               <li>
+                <a
+                  href="/sowrov-hosen"
+                  onClick={(e) => handleNav(e, '/sowrov-hosen')}
+                  className="hover:text-[#71B913] transition-colors text-white/90 font-medium"
+                >
+                  Founder: Sowrov Hosen
+                </a>
+              </li>
+              <li>
                 <a href="#packages" className="hover:text-[#71B913] transition-colors">Agency Packages</a>
               </li>
               <li>
@@ -40,7 +62,7 @@ export const Footer: React.FC = () => {
                 <a href="#software" className="hover:text-[#71B913] transition-colors">Software Library</a>
               </li>
               <li>
-                <a href="#courses" className="hover:text-[#71B913] transition-colors">Courses &amp; Tutorials</a>
+                <a href="#tutorials" className="hover:text-[#71B913] transition-colors">Courses &amp; Tutorials</a>
               </li>
             </ul>
           </div>
@@ -51,6 +73,15 @@ export const Footer: React.FC = () => {
               Network
             </span>
             <ul className="space-y-2 text-xs text-[#888888]">
+              <li>
+                <a
+                  href="/sowrov-hosen"
+                  onClick={(e) => handleNav(e, '/sowrov-hosen')}
+                  className="hover:text-[#71B913] transition-colors font-medium text-white/95"
+                >
+                  Sowrov Hosen (Founder) →
+                </a>
+              </li>
               <li>
                 <a
                   href="https://sowrovhosenstudio.netlify.app"

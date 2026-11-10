@@ -15,6 +15,7 @@ import { UserVaultModal } from './components/UserVaultModal';
 import { AuthModal } from './components/AuthModal';
 import { SecureDownloadModal, SecureDownloadTarget } from './components/SecureDownloadModal';
 import { Footer } from './components/Footer';
+import { SowrovHosenProfile } from './components/SowrovHosenProfile';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase, AppUser, isStudioOwner } from './types';
@@ -541,7 +542,49 @@ export default function App() {
     }
   };
 
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+      if (path === '/sowrov-hosen' || window.location.hash === '#/sowrov-hosen') {
+        return '/sowrov-hosen';
+      }
+    }
+    return '/';
+  });
+
+  const navigateTo = (path: string) => {
+    const normalized = path.replace(/\/+$/, '') || '/';
+    if (window.location.pathname !== normalized) {
+      window.history.pushState({}, '', normalized);
+    }
+    setCurrentPath(normalized);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+      if (path === '/sowrov-hosen' || window.location.hash === '#/sowrov-hosen') {
+        setCurrentPath('/sowrov-hosen');
+      } else {
+        setCurrentPath('/');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const scrollToSection = (id: string) => {
+    if (currentPath !== '/') {
+      navigateTo('/');
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 120);
+      return;
+    }
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -558,69 +601,80 @@ export default function App() {
         onSignIn={() => setIsAuthModalOpen(true)}
         purchaseCount={userPurchases.length}
         onOpenAdmin={() => setIsAdminOpen(true)}
+        onNavigate={navigateTo}
+        currentPath={currentPath}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area: switches cleanly between Sowrov Hosen Profile and Homepage */}
       <main className="flex-grow pb-24 md:pb-0">
-        {/* 2. Hero with Interactive Agency Showreel Video Player */}
-        <Hero
-          onViewPackages={() => scrollToSection('packages')}
-          onBrowseStore={() => scrollToSection('plugins')}
-          onPlayShowreel={() =>
-            setActiveVideo({
-              title: 'MirrorBook Agency Showreel // 2026 Edition',
-              software: 'Agency 4K Master',
-              duration: '03:20',
-              description: 'Commercial video reel featuring our flagship client edits, DaVinci color grading, viral reels pacing, and proprietary AI workflows.',
-              instructor: 'MirrorBook Creative Director',
-            })
-          }
-        />
+        {currentPath === '/sowrov-hosen' ? (
+          <SowrovHosenProfile
+            onNavigateHome={() => navigateTo('/')}
+            onStartProject={() => setIsStartProjectOpen(true)}
+          />
+        ) : (
+          <>
+            {/* 2. Hero with Interactive Agency Showreel Video Player */}
+            <Hero
+              onViewPackages={() => scrollToSection('packages')}
+              onBrowseStore={() => scrollToSection('plugins')}
+              onPlayShowreel={() =>
+                setActiveVideo({
+                  title: 'MirrorBook Agency Showreel // 2026 Edition',
+                  software: 'Agency 4K Master',
+                  duration: '03:20',
+                  description: 'Commercial video reel featuring our flagship client edits, DaVinci color grading, viral reels pacing, and proprietary AI workflows.',
+                  instructor: 'MirrorBook Creative Director',
+                })
+              }
+            />
 
-        {/* 3. Services: Text-Only Minimal Capabilities */}
-        <Services />
+            {/* 3. Services: Text-Only Minimal Capabilities */}
+            <Services />
 
-        {/* 4. Portfolio Showcase Button to external studio link */}
-        <ShowcasesVault />
+            {/* 4. Portfolio Showcase Button to external studio link & Founder internal link */}
+            <ShowcasesVault onNavigate={navigateTo} />
 
-        {/* 5. Agency Packages */}
-        <Packages
-          packages={publicPackages}
-          onSelectPackage={(item) => setCheckoutItem(item)}
-        />
+            {/* 5. Agency Packages */}
+            <Packages
+              packages={publicPackages}
+              onSelectPackage={(item) => setCheckoutItem(item)}
+            />
 
-        {/* 6. Plugin Store (Includes Easy Flow Plugin) */}
-        <PluginStore
-          plugins={publicPlugins}
-          onBuyItem={(item) => setCheckoutItem(item)}
-        />
+            {/* 6. Plugin Store (Includes Easy Flow Plugin) */}
+            <PluginStore
+              plugins={publicPlugins}
+              onBuyItem={(item) => setCheckoutItem(item)}
+            />
 
-        {/* 6.5 PC & Phone Software Library */}
-        <SoftwareStore
-          softwareList={publicSoftware}
-          onBuyItem={(item) => setCheckoutItem(item)}
-        />
+            {/* 6.5 PC & Phone Software Library */}
+            <SoftwareStore
+              softwareList={publicSoftware}
+              onBuyItem={(item) => setCheckoutItem(item)}
+            />
 
-        {/* 7. Courses & Video Masterclasses */}
-        <CoursesAndTutorials
-          courses={publicCourses}
-          tutorials={publicTutorials}
-          onEnrollCourse={(item) => setCheckoutItem(item)}
-          onSelectTutorial={(tut: TutorialItem) =>
-            setActiveVideo({
-              title: tut.title,
-              software: tut.software,
-              duration: tut.duration,
-              description: tut.description,
-              instructor: tut.instructor,
-              videoUrl: tut.videoUrl,
-            })
-          }
-        />
+            {/* 7. Courses & Video Masterclasses */}
+            <CoursesAndTutorials
+              courses={publicCourses}
+              tutorials={publicTutorials}
+              onEnrollCourse={(item) => setCheckoutItem(item)}
+              onSelectTutorial={(tut: TutorialItem) =>
+                setActiveVideo({
+                  title: tut.title,
+                  software: tut.software,
+                  duration: tut.duration,
+                  description: tut.description,
+                  instructor: tut.instructor,
+                  videoUrl: tut.videoUrl,
+                })
+              }
+            />
+          </>
+        )}
       </main>
 
-      {/* 8. Footer (Public minimal brand footer without exposing admin links) */}
-      <Footer />
+      {/* 8. Footer with Founder Profile and Index links */}
+      <Footer onNavigate={navigateTo} />
 
       {/* Creator Authentication Modal (Opens instantly when clicking Sign In) */}
       <AuthModal

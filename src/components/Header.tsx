@@ -9,6 +9,8 @@ interface HeaderProps {
   onSignIn: () => void;
   purchaseCount: number;
   onOpenAdmin?: () => void;
+  onNavigate?: (path: string) => void;
+  currentPath?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +20,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSignIn,
   purchaseCount,
   onOpenAdmin,
+  onNavigate,
+  currentPath = '/',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isOwner = isStudioOwner(user?.email);
@@ -25,17 +29,49 @@ export const Header: React.FC<HeaderProps> = ({
   const navLinks = [
     { name: 'Services', href: '#services' },
     { name: 'Portfolio', href: '#portfolio' },
+    { name: 'Founder', href: '/sowrov-hosen' },
     { name: 'Packages', href: '#packages' },
     { name: 'Plugin Store', href: '#plugins' },
     { name: 'Software', href: '#software' },
     { name: 'Courses & Tutorials', href: '#tutorials' },
   ];
 
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('/')) {
+      e.preventDefault();
+      if (onNavigate) {
+        onNavigate(href);
+      } else {
+        window.location.href = href;
+      }
+    } else if (href.startsWith('#') && currentPath !== '/') {
+      e.preventDefault();
+      if (onNavigate) {
+        onNavigate('/');
+        setTimeout(() => {
+          const target = document.querySelector(href);
+          target?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-[#080808]/85 border-b border-white/[0.08] transition-all">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Brand Lockup with MirrorBook Official Icon & Typography */}
-        <a href="#" className="flex items-center gap-3.5 group text-left">
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            if (onNavigate) {
+              onNavigate('/');
+            } else {
+              window.location.href = '/';
+            }
+          }}
+          className="flex items-center gap-3.5 group text-left cursor-pointer"
+        >
           <img
             src="https://i.ibb.co/vCgzdc3H/icon.png"
             alt="MirrorBook Icon"
@@ -61,15 +97,23 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] px-4 py-1.5 rounded-full">
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              className="text-xs font-medium text-[#CCCCCC] hover:text-[#71B913] px-3.5 py-1.5 rounded-full hover:bg-white/[0.06] transition-all duration-150"
-            >
-              {link.name}
-            </a>
-          ))}
+          {navLinks.map((link) => {
+            const isCurrent = link.href === currentPath;
+            return (
+              <a
+                key={link.name}
+                href={link.href}
+                onClick={(e) => handleLinkClick(e, link.href)}
+                className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all duration-150 ${
+                  isCurrent
+                    ? 'text-[#71B913] bg-white/[0.08] font-semibold'
+                    : 'text-[#CCCCCC] hover:text-[#71B913] hover:bg-white/[0.06]'
+                }`}
+              >
+                {link.name}
+              </a>
+            );
+          })}
         </nav>
 
         {/* Action Buttons & User Account Lockup */}
@@ -173,8 +217,15 @@ export const Header: React.FC<HeaderProps> = ({
               <a
                 key={link.name}
                 href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-medium text-[#AAAAAA] hover:text-[#71B913] transition-colors py-1"
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleLinkClick(e, link.href);
+                }}
+                className={`text-sm font-medium transition-colors py-1 ${
+                  link.href === currentPath
+                    ? 'text-[#71B913] font-semibold'
+                    : 'text-[#AAAAAA] hover:text-[#71B913]'
+                }`}
               >
                 {link.name}
               </a>

@@ -4,7 +4,11 @@ import { ExternalLink } from 'lucide-react';
 export const PORTFOLIO_EXTERNAL_URL =
   'https://sowrovhosenstudio.netlify.app/?fbclid=IwY2xjawT_cQFwZG9mBWV4dG4DYWVtAjEwAGJyaWQRMUZLb1JyelFHZjFjTXZkdEJzcnRjBmFwcF9pZBAyMjIwMzkxNzg4MjAwODkyAAEefQrO89VdvwE2c07aR3cz9gATBwysSXe1-9bLYrKOPekyxiVLRWwpag-JVC0_aem_lz_Pwp2R09BO4aB8BeaRAQ';
 
-export const ShowcasesVault: React.FC = () => {
+interface ShowcasesVaultProps {
+  onNavigate?: (path: string) => void;
+}
+
+export const ShowcasesVault: React.FC<ShowcasesVaultProps> = ({ onNavigate }) => {
   return (
     <section id="portfolio" className="py-24 px-6 bg-[#070707] text-white bg-grid-subtle border-b border-white/[0.08] relative overflow-hidden">
       {/* Subtle Ambient Glow */}
@@ -36,6 +40,29 @@ export const ShowcasesVault: React.FC = () => {
         {/* Studio Link Label */}
         <div className="mt-6 text-xs text-[#666666] font-normal">
           sowrovhosenstudio.netlify.app
+        </div>
+
+        {/* Founder Internal Link for SEO & Authority */}
+        <div className="mt-12 pt-8 border-t border-white/[0.08] max-w-md mx-auto flex items-center justify-center gap-3.5 bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4">
+          <div className="w-9 h-9 rounded-xl bg-[#71B913]/15 border border-[#71B913]/40 flex items-center justify-center text-[#71B913] font-bold text-xs shrink-0 shadow-[0_0_15px_rgba(113,185,19,0.2)]">
+            SH
+          </div>
+          <div className="text-left">
+            <p className="text-[11px] text-[#888888] uppercase tracking-wider font-medium">Founder &amp; Creative Lead</p>
+            <a
+              href="/sowrov-hosen"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/sowrov-hosen');
+                }
+              }}
+              className="text-xs font-semibold text-white hover:text-[#71B913] transition-colors inline-flex items-center gap-1.5"
+            >
+              <span>Explore Founder Profile: Sowrov Hosen</span>
+              <span className="text-[#71B913]">→</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>
