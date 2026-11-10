@@ -1,19 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-  <!-- MirrorBook Digital Agency Official Canonical Homepage -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://mirrorbook.site/</loc>
-    <lastmod>2026-11-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://i.ibb.co/vCgzdc3H/icon.png</image:loc>
-      <image:title>MirrorBook Logo – Digital Marketing Agency Bangladesh</image:title>
-    </image:image>
-    <image:image>
-      <image:loc>https://i.ibb.co/dsxmjMSP/mirrorbook.jpg</image:loc>
-      <image:title>MirrorBook Creative Studio Video Editing and Design</image:title>
-    </image:image>
   </url>
 </urlset>
