@@ -35,13 +35,13 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
   // Update document title and SEO metadata on mount
   useEffect(() => {
     const originalTitle = document.title;
-    document.title = 'Sowrov Hosen | Founder of MirrorBook Agency';
+    document.title = 'Sowrov Hosen | Founder of MirrorBook';
 
     // Update Meta Description
     let metaDesc = document.querySelector('meta[name="description"]');
     const originalDesc = metaDesc?.getAttribute('content') || '';
     const newDesc =
-      'Sowrov Hosen is the founder of MirrorBook Agency, a creative professional specializing in video editing, graphic design, motion graphics and digital content creation.';
+      'Sowrov Hosen is the Founder of MirrorBook, a creative agency in Bangladesh providing graphic design, video editing, motion graphics, and digital content creation.';
     if (metaDesc) {
       metaDesc.setAttribute('content', newDesc);
     } else {
@@ -63,13 +63,21 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
       document.head.appendChild(canonical);
     }
 
-    // Update OpenGraph Title, Description, and URL
+    // Update OpenGraph Title, Description, Image, and URL
     const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.setAttribute('content', 'Sowrov Hosen | Founder of MirrorBook Agency');
+    if (ogTitle) ogTitle.setAttribute('content', 'Sowrov Hosen | Founder of MirrorBook');
     const ogDesc = document.querySelector('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute('content', newDesc);
     const ogUrl = document.querySelector('meta[property="og:url"]');
     if (ogUrl) ogUrl.setAttribute('content', 'https://mirrorbook.site/sowrov-hosen');
+    const ogImage = document.querySelector('meta[property="og:image"]');
+    if (ogImage) ogImage.setAttribute('content', 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg');
+    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twitterTitle) twitterTitle.setAttribute('content', 'Sowrov Hosen | Founder of MirrorBook');
+    const twitterDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twitterDesc) twitterDesc.setAttribute('content', newDesc);
+    const twitterImage = document.querySelector('meta[name="twitter:image"]');
+    if (twitterImage) twitterImage.setAttribute('content', 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg');
 
     // Inject Schema.org ProfilePage Structured Data
     const profileSchema = {
@@ -77,7 +85,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
       '@type': 'ProfilePage',
       '@id': 'https://mirrorbook.site/sowrov-hosen#profilepage',
       url: 'https://mirrorbook.site/sowrov-hosen',
-      name: 'Sowrov Hosen | Founder of MirrorBook Agency',
+      name: 'Sowrov Hosen | Founder of MirrorBook',
       description: newDesc,
       breadcrumb: {
         '@type': 'BreadcrumbList',
@@ -100,14 +108,16 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         '@type': 'Person',
         '@id': 'https://mirrorbook.site/sowrov-hosen#person',
         name: 'Sowrov Hosen',
-        jobTitle: 'Founder & Creative Director',
-        description:
-          'Sowrov Hosen is the founder of MirrorBook Agency, a creative professional specializing in video editing, graphic design, motion graphics and digital content creation.',
+        jobTitle: 'Founder of MirrorBook',
+        image: 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg',
+        description: newDesc,
         worksFor: {
           '@type': 'Organization',
           '@id': 'https://mirrorbook.site/#organization',
           name: 'MirrorBook',
+          alternateName: 'MirrorBook Creative Agency',
           url: 'https://mirrorbook.site/',
+          logo: 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png',
           slogan: 'Reflecting Creativity',
         },
         knowsAbout: [
@@ -309,28 +319,44 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         {/* Hero Section: Profile Photo Area & Key Identity */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start mb-16">
           {/* Column 1: Profile Photo Area */}
-          <div className="lg:col-span-4 flex flex-col items-center">
-            <div className="relative group w-full max-w-[320px] aspect-square rounded-3xl p-1 bg-gradient-to-b from-[#71B913]/40 via-white/10 to-transparent shadow-[0_0_40px_rgba(113,185,19,0.18)]">
+          <div className="lg:col-span-5 flex flex-col items-center">
+            <div className="relative group w-full max-w-[340px] rounded-3xl p-1 bg-gradient-to-b from-[#71B913]/40 via-white/10 to-transparent shadow-[0_0_45px_rgba(113,185,19,0.22)]">
               {/* Profile Card Frame */}
-              <div className="w-full h-full rounded-[22px] bg-[#0E0E0E] border border-white/10 overflow-hidden flex flex-col items-center justify-center relative p-6 text-center">
+              <div className="w-full rounded-[22px] bg-[#0E0E0E] border border-white/10 overflow-hidden flex flex-col items-center p-6 text-center relative">
                 {/* Background decorative glow */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#71B913]/20 rounded-full blur-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90 pointer-events-none" />
+                <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#71B913]/20 rounded-full blur-2xl pointer-events-none" />
 
-                {/* Avatar Visual / Monogram Frame */}
-                <div className="relative z-10 w-36 h-36 rounded-2xl bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] border-2 border-[#71B913]/50 flex flex-col items-center justify-center shadow-[0_0_25px_rgba(113,185,19,0.3)] mb-4 group-hover:scale-105 transition-transform">
-                  <span className="font-display text-4xl font-extrabold tracking-tight text-white">
-                    SH
-                  </span>
-                  <span className="text-[10px] tracking-widest uppercase text-[#71B913] font-bold mt-1">
-                    FOUNDER
-                  </span>
-                </div>
+                {/* Professional Portrait HTML img Element */}
+                <figure className="relative z-10 w-full flex flex-col items-center mb-4">
+                  <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border-2 border-[#71B913]/60 shadow-[0_0_30px_rgba(113,185,19,0.3)] group-hover:scale-[1.02] transition-transform">
+                    <img
+                      src="https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg"
+                      alt="Sowrov Hosen, Founder of MirrorBook"
+                      title="Sowrov Hosen – Founder of MirrorBook"
+                      width={224}
+                      height={224}
+                      loading="eager"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.src.includes('BHmVcvxW')) {
+                          target.src = 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg';
+                        }
+                      }}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                  <figcaption className="text-[11px] text-[#AAAAAA] text-center font-medium mt-2">
+                    Sowrov Hosen, Founder of MirrorBook
+                  </figcaption>
+                </figure>
 
                 {/* Founder Name & Identity Lockup */}
                 <div className="relative z-10 space-y-1">
                   <h2 className="text-xl font-bold text-white tracking-tight">Sowrov Hosen</h2>
-                  <p className="text-xs font-medium text-[#71B913]">Founder &amp; Creative Director</p>
+                  <p className="text-xs font-semibold text-[#71B913]">Founder of MirrorBook</p>
                   <p className="text-[11px] text-[#888888] flex items-center justify-center gap-1 pt-1">
                     <MapPin size={11} className="text-[#71B913]" />
                     <span>Dhaka, Bangladesh</span>
@@ -338,7 +364,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 </div>
 
                 {/* Verified Founder Badge */}
-                <div className="relative z-10 mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#71B913]/15 border border-[#71B913]/30 text-[11px] font-semibold text-[#8FD82A]">
+                <div className="relative z-10 mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#71B913]/15 border border-[#71B913]/30 text-[11px] font-semibold text-[#8FD82A]">
                   <CheckCircle2 size={12} className="text-[#71B913]" />
                   <span>Verified Founder</span>
                 </div>
@@ -352,7 +378,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                   <Briefcase size={13} className="text-[#71B913]" />
                   Agency
                 </span>
-                <span className="text-white font-medium">MirrorBook Agency</span>
+                <span className="text-white font-medium">MirrorBook</span>
               </div>
               <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between text-xs">
                 <span className="text-[#888888] flex items-center gap-1.5">
@@ -372,7 +398,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           </div>
 
           {/* Column 2: Introduction & Vision */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#71B913]/10 border border-[#71B913]/30 text-xs font-semibold text-[#71B913]">
               <Sparkles size={13} className="text-[#71B913]" />
               <span>Founder &amp; Creative Lead</span>
@@ -384,7 +410,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             </h1>
 
             <p className="text-lg sm:text-xl text-[#CCCCCC] font-normal leading-relaxed">
-              Founder &amp; Creative Director of <span className="text-white font-semibold">MirrorBook Agency</span>. A multi-disciplinary visual artist and post-production specialist based in Bangladesh, dedicated to elevating brands and creators through cinematic video editing, brand identity systems, and motion design.
+              Founder &amp; Creative Director of <span className="text-white font-semibold">MirrorBook</span>. A multi-disciplinary visual artist and post-production specialist based in Bangladesh, dedicated to elevating brands and creators through cinematic video editing, brand identity systems, and motion design.
             </p>
 
             {/* Action CTA Buttons */}

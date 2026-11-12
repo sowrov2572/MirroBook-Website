@@ -54,7 +54,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
             </h1>
 
             <p className="text-base sm:text-lg text-[#CCCCCC] font-normal leading-relaxed max-w-xl drop-shadow">
-              Premier Digital Marketing Agency Bangladesh specializing in Video Editing Services, Graphic Design, Web Development, and AI Software Design.
+              MirrorBook is a creative agency in Bangladesh providing graphic design, video editing, motion graphics, digital marketing, and modern web development.
             </p>
           </div>
 

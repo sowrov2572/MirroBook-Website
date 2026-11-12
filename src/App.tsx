@@ -16,6 +16,7 @@ import { AuthModal } from './components/AuthModal';
 import { SecureDownloadModal, SecureDownloadTarget } from './components/SecureDownloadModal';
 import { Footer } from './components/Footer';
 import { SowrovHosenProfile } from './components/SowrovHosenProfile';
+import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase, AppUser, isStudioOwner } from './types';
@@ -56,6 +57,8 @@ export default function App() {
   const [isStartProjectOpen, setIsStartProjectOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isPackageInquiryOpen, setIsPackageInquiryOpen] = useState(false);
+  const [packageInquiryData, setPackageInquiryData] = useState<PackageInquiryData | null>(null);
   const [secureDownloadTarget, setSecureDownloadTarget] = useState<SecureDownloadTarget | null>(null);
 
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -558,6 +561,9 @@ export default function App() {
       window.history.pushState({}, '', normalized);
     }
     setCurrentPath(normalized);
+    if (normalized === '/') {
+      document.title = 'MirrorBook | Creative Agency in Bangladesh';
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -568,6 +574,7 @@ export default function App() {
         setCurrentPath('/sowrov-hosen');
       } else {
         setCurrentPath('/');
+        document.title = 'MirrorBook | Creative Agency in Bangladesh';
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -635,10 +642,13 @@ export default function App() {
             {/* 4. Portfolio Showcase Button to external studio link & Founder internal link */}
             <ShowcasesVault onNavigate={navigateTo} />
 
-            {/* 5. Agency Packages */}
+            {/* 5. Monthly Service Packages (Two separate packages starting ৳25,000/mo) */}
             <Packages
-              packages={publicPackages}
               onSelectPackage={(item) => setCheckoutItem(item)}
+              onOpenCustomizer={(serviceName) => {
+                setPackageInquiryData({ initialService: serviceName });
+                setIsPackageInquiryOpen(true);
+              }}
             />
 
             {/* 6. Plugin Store (Includes Easy Flow Plugin) */}
@@ -776,6 +786,14 @@ export default function App() {
         isOpen={isStartProjectOpen}
         onClose={() => setIsStartProjectOpen(false)}
         onSelectCheckout={(item) => setCheckoutItem(item)}
+      />
+
+      {/* Monthly Package Inquiry & Customizer Modal */}
+      <PackageCustomizerModal
+        isOpen={isPackageInquiryOpen}
+        onClose={() => setIsPackageInquiryOpen(false)}
+        initialData={packageInquiryData}
+        onSuccessToast={(msg) => showToast(msg, 'success')}
       />
 
       {/* Modern Web App Mobile Floating Dock Navigation with Cart */}

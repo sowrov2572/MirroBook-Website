@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://mirrorbook.site/</loc>
+    <image:image>
+      <image:loc>https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png</image:loc>
+      <image:title>MirrorBook Official Logo</image:title>
+      <image:caption>Official logo of MirrorBook Creative Agency</image:caption>
+    </image:image>
   </url>
   <url>
     <loc>https://mirrorbook.site/sowrov-hosen</loc>
+    <image:image>
+      <image:loc>https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg</image:loc>
+      <image:title>Sowrov Hosen, Founder of MirrorBook</image:title>
+      <image:caption>Sowrov Hosen, Founder of MirrorBook</image:caption>
+    </image:image>
   </url>
 </urlset>

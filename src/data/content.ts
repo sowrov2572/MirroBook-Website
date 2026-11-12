@@ -290,68 +290,49 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     createdAt: '2026-10-04'
   },
 
-  // Agency Packages
+  // Agency Packages (Two Separate Monthly Subscription Services Starting From ৳25,000/mo)
   {
-    id: 'starter',
+    id: 'monthly-graphic-design',
     type: 'Agency Package',
-    category: 'Retainer',
-    title: 'Starter',
-    description: 'Reels Editing & Basic Design',
-    price: 5000,
+    category: 'Monthly Retainer',
+    title: 'Monthly Graphic Design',
+    description: 'Consistent, creative, and brand-focused graphic design solutions for businesses wanting a strong social media presence. 4 designs/day (~120/month).',
+    price: 25000,
     period: '/ month',
-    priceDisplay: '৳5,000',
-    createdAt: '2026-09-10'
+    priceDisplay: 'Starting From ৳25,000',
+    createdAt: '2026-11-12'
   },
   {
-    id: 'growth',
+    id: 'monthly-video-editing-reels',
     type: 'Agency Package',
-    category: 'Retainer',
-    title: 'Growth',
-    description: 'Video Editing, Reels, Ad Creatives',
-    price: 12000,
+    category: 'Monthly Retainer',
+    title: 'Monthly Video Editing & Reels',
+    description: 'Professional short-form video editing for brands and content creators. 2 edited reels/day (~60 reels/month), motion graphics, sound design & captions.',
+    price: 25000,
     period: '/ month',
-    priceDisplay: '৳12,000',
-    featured: true,
-    createdAt: '2026-09-10'
-  },
-  {
-    id: 'custom-ai-web',
-    type: 'Agency Package',
-    category: 'Custom Scope',
-    title: 'Custom AI & Web',
-    description: 'Web Development & AI Software Design',
-    price: 15000,
-    period: '+',
-    priceDisplay: '৳15,000+',
-    createdAt: '2026-09-10'
+    priceDisplay: 'Starting From ৳25,000',
+    createdAt: '2026-11-12'
   }
 ];
 
 export const PACKAGES: PackageItem[] = [
   {
-    id: 'starter',
-    name: 'Starter',
-    price: 5000,
+    id: 'monthly-graphic-design',
+    name: 'Monthly Graphic Design',
+    price: 25000,
     period: '/ month',
-    priceDisplay: '৳5,000',
-    description: 'Reels Editing & Basic Design'
-  },
-  {
-    id: 'growth',
-    name: 'Growth',
-    price: 12000,
-    period: '/ month',
-    priceDisplay: '৳12,000',
-    description: 'Video Editing, Reels, Ad Creatives',
+    priceDisplay: 'Starting From ৳25,000',
+    description: 'Consistent, creative, and brand-focused graphic design solutions (4 designs/day, ~120/month).',
     featured: true
   },
   {
-    id: 'custom-ai-web',
-    name: 'Custom AI & Web',
-    price: 15000,
-    period: '+',
-    priceDisplay: '৳15,000+',
-    description: 'Web Development & AI Software Design'
+    id: 'monthly-video-editing-reels',
+    name: 'Monthly Video Editing & Reels',
+    price: 25000,
+    period: '/ month',
+    priceDisplay: 'Starting From ৳25,000',
+    description: 'Professional short-form video editing (2 reels/day, ~60 reels/month, sound design & captions).',
+    featured: true
   }
 ];
 
