@@ -275,13 +275,6 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
 
   return (
     <div className="min-h-screen bg-[#070707] text-white">
-      {/* Ambient Glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[#71B913]/[0.06] rounded-full blur-[160px]" />
-        <div className="absolute bottom-40 right-10 w-[500px] h-[500px] bg-white/[0.02] rounded-full blur-[140px]" />
-        <div className="absolute inset-0 bg-grid-subtle opacity-20" />
-      </div>
-
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 md:py-16">
         {/* Navigation Breadcrumb & Back Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-6 border-b border-white/[0.08]">
@@ -307,7 +300,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-[#CCCCCC] hover:text-white transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-[#CCCCCC] hover:text-white transition-all cursor-pointer"
               title="Share profile"
             >
               <Share2 size={13} className="text-[#71B913]" />
@@ -320,17 +313,11 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start mb-16">
           {/* Column 1: Profile Photo Area */}
           <div className="lg:col-span-5 flex flex-col items-center">
-            <div className="relative group w-full max-w-[340px] rounded-3xl p-1 bg-gradient-to-b from-[#71B913]/40 via-white/10 to-transparent shadow-[0_0_45px_rgba(113,185,19,0.22)]">
-              {/* Profile Card Frame */}
-              <div className="w-full rounded-[22px] bg-[#0E0E0E] border border-white/10 overflow-hidden flex flex-col items-center p-6 text-center relative">
-                {/* Background decorative glow */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90 pointer-events-none" />
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#71B913]/20 rounded-full blur-2xl pointer-events-none" />
-
-                {/* Professional Portrait HTML img Element */}
-                <figure className="relative z-10 w-full flex flex-col items-center mb-4">
-                  <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border-2 border-[#71B913]/60 shadow-[0_0_30px_rgba(113,185,19,0.3)] group-hover:scale-[1.02] transition-transform">
-                    <img
+            <div className="w-full max-w-[340px] rounded-3xl border border-white/10 overflow-hidden bg-[#0E0E0E] p-6 text-center">
+              {/* Professional Portrait HTML img Element */}
+              <figure className="w-full flex flex-col items-center mb-4">
+                <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border border-white/15">
+                  <img
                       src="https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg"
                       alt="Sowrov Hosen, Founder of MirrorBook"
                       title="Sowrov Hosen – Founder of MirrorBook"
@@ -369,7 +356,6 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                   <span>Verified Founder</span>
                 </div>
               </div>
-            </div>
 
             {/* Quick Metadata Pill list below photo */}
             <div className="w-full max-w-[320px] mt-4 space-y-2">
@@ -399,9 +385,11 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
 
           {/* Column 2: Introduction & Vision */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#71B913]/10 border border-[#71B913]/30 text-xs font-semibold text-[#71B913]">
-              <Sparkles size={13} className="text-[#71B913]" />
-              <span>Founder &amp; Creative Lead</span>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#71B913]" />
+              <span className="text-xs font-semibold text-[#71B913] uppercase tracking-wider">
+                Founder &amp; Creative Lead
+              </span>
             </div>
 
             {/* Main H1 for SEO */}
@@ -419,7 +407,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 href="https://sowrovhosenstudio.netlify.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 rounded-xl bg-[#71B913] hover:bg-[#82d119] text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_25px_rgba(113,185,19,0.35)] cursor-pointer"
+                className="px-6 py-3 rounded-xl bg-[#71B913] hover:bg-[#82d119] text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer font-medium"
               >
                 <span>Visit Portfolio Studio</span>
                 <ExternalLink size={14} />
@@ -460,9 +448,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         </section>
 
         {/* Section 2: Founder of MirrorBook Agency */}
-        <section className="mb-16 bg-gradient-to-br from-[#0F0F0F] via-[#090909] to-[#070707] border border-white/[0.08] rounded-3xl p-8 md:p-10 relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#71B913]/[0.08] rounded-full blur-[120px] pointer-events-none" />
-          
+        <section className="mb-16 bg-[#0C0C0C] border border-white/[0.08] rounded-3xl p-8 md:p-10 relative overflow-hidden">
           <div className="max-w-3xl space-y-4 relative z-10">
             <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#71B913]">
               <Briefcase size={14} />

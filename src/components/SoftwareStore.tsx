@@ -17,16 +17,12 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({ softwareList = [],
 
   return (
     <section id="software" className="py-24 px-6 bg-[#080808] text-white border-b border-white/[0.08] relative overflow-hidden">
-      {/* Background glow orbs */}
-      <div className="absolute top-1/3 left-10 w-[500px] h-[500px] bg-[#71B913]/[0.06] rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[450px] h-[450px] bg-white/[0.02] rounded-full blur-[120px] pointer-events-none" />
-
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-4 border-b border-white/[0.08]">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#71B913]/10 border border-[#71B913]/25 text-[#71B913] text-xs font-semibold uppercase tracking-wider mb-3">
-              <Sparkles size={12} />
+            <div className="flex items-center gap-2 text-[#71B913] text-xs font-semibold uppercase tracking-wider mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#71B913]" />
               <span>Production Tools &amp; Utilities</span>
             </div>
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight">
@@ -46,9 +42,9 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({ softwareList = [],
                   key={filter}
                   type="button"
                   onClick={() => setPlatformFilter(filter)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                     isActive
-                      ? 'bg-[#71B913] text-black shadow-[0_0_20px_rgba(113,185,19,0.35)]'
+                      ? 'bg-[#71B913] text-black font-bold'
                       : 'bg-white/5 border border-white/10 text-[#888888] hover:text-white'
                   }`}
                 >

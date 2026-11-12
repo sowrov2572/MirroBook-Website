@@ -35,10 +35,6 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
 
   return (
     <section id="plugins" className="py-28 px-6 bg-[#070707] text-white bg-grid-subtle border-b border-white/[0.08] relative overflow-hidden">
-      {/* Floating Ambient Light Orbs */}
-      <div className="absolute top-1/4 right-10 w-[500px] h-[500px] bg-[#71B913]/[0.08] rounded-full blur-[140px] pointer-events-none animate-float-slow" />
-      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-white/[0.03] rounded-full blur-[120px] pointer-events-none animate-float-reverse" />
-
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header: Strictly "Plugin Store" */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-4 border-b border-white/[0.08]">
@@ -56,9 +52,9 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[#71B913] text-black shadow-[0_0_20px_rgba(113,185,19,0.35)]'
+                      ? 'bg-[#71B913] text-black font-bold'
                       : 'bg-white/5 border border-white/10 text-[#888888] hover:text-white'
                   }`}
                 >

@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
                 target.src = 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png';
               }
             }}
-            className="w-10 h-10 rounded-xl object-contain drop-shadow-[0_0_12px_rgba(113,185,19,0.35)] group-hover:scale-105 transition-transform"
+            className="w-10 h-10 rounded-xl object-contain group-hover:scale-105 transition-transform"
           />
 
           <div className="flex flex-col">

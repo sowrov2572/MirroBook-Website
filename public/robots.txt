@@ -1,4 +1,11 @@
+User-agent: Google-Favicon
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
 User-agent: *
 Allow: /
 
 Sitemap: https://mirrorbook.site/sitemap.xml
+
