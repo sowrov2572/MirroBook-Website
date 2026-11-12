@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Send, MessageSquare, CheckCircle2, Sliders, Sparkles } from 'lucide-react';
+import { X, Send, MessageSquare, CheckCircle2, Sliders, Sparkles, Loader2, AlertCircle, Mail } from 'lucide-react';
 import { PAYMENT_CONFIG } from '../data/content';
 
 export interface PackageInquiryData {
@@ -31,7 +31,13 @@ export const PackageCustomizerModal: React.FC<PackageCustomizerModalProps> = ({
   const [monthlyVideoQty, setMonthlyVideoQty] = useState('60 Reels (~2 reels/day standard)');
   const [budgetRange, setBudgetRange] = useState('Starting From ৳25,000 / month');
   const [additionalRequirements, setAdditionalRequirements] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+
+  // Status & submission states
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [orderRef, setOrderRef] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Sync state if initialData changes
   React.useEffect(() => {
@@ -39,13 +45,15 @@ export const PackageCustomizerModal: React.FC<PackageCustomizerModalProps> = ({
       setRequiredService(initialData.initialService);
     }
     setIsSubmitted(false);
+    setErrorMsg('');
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
-  const constructInquirySummary = () => {
-    return `*MONTHLY SERVICE PACKAGE INQUIRY — MIRRORBOOK AGENCY*
+  const constructInquirySummary = (refId?: string) => {
+    return `*MONTHLY SERVICE PACKAGE ORDER — MIRRORBOOK*
 ----------------------------------------
+*Order Ref:* ${refId || orderRef || 'PENDING'}
 *Client Name:* ${name.trim() || 'N/A'}
 *Brand / Business:* ${brandName.trim() || 'N/A'}
 *Email:* ${email.trim() || 'N/A'}
@@ -60,71 +68,110 @@ ${additionalRequirements.trim() || 'Standard package onboarding and discovery sc
 Sent via https://mirrorbook.site/`;
   };
 
-  const handleWhatsAppSubmit = (e: React.FormEvent) => {
+  const handleOrderSubmit = async (e: React.FormEvent, alsoOpenWhatsApp = false) => {
     e.preventDefault();
-    if (!name.trim()) {
-      alert('Please enter your Name before submitting.');
-      return;
-    }
-    if (!whatsAppNumber.trim() && !email.trim()) {
-      alert('Please provide either your WhatsApp Number or Email so our creative team can respond.');
-      return;
-    }
+    setErrorMsg('');
 
-    const summary = constructInquirySummary();
-    const phone = PAYMENT_CONFIG.whatsAppNumber || '8801767079837';
-    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(summary)}`;
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    const cleanPhone = whatsAppNumber.trim();
 
-    const link = document.createElement('a');
-    link.href = waUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setIsSubmitted(true);
-    if (onSuccessToast) {
-      onSuccessToast('Package inquiry initiated! Opening WhatsApp to connect with our creative lead.');
-    }
-  };
-
-  const handleDirectSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      alert('Please enter your Name before submitting.');
-      return;
-    }
-    if (!whatsAppNumber.trim() && !email.trim()) {
-      alert('Please provide your WhatsApp number or email.');
+    if (!cleanName || cleanName.length < 2) {
+      setErrorMsg('Please enter your full name (minimum 2 characters).');
       return;
     }
 
-    // Save lead locally as well
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      setErrorMsg('Please enter a valid email address so we can send your order confirmation.');
+      return;
+    }
+
+    if (!cleanPhone || cleanPhone.replace(/[^0-9]/g, '').length < 6) {
+      setErrorMsg('Please enter a valid phone or WhatsApp number (minimum 6 digits).');
+      return;
+    }
+
+    // Prevent duplicate submission if already processing
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
     try {
-      const stored = localStorage.getItem('mirrorbook_inquiries');
-      const inquiries = stored ? JSON.parse(stored) : [];
-      inquiries.push({
-        id: `INQ-${Date.now()}`,
-        name,
-        brandName,
-        email,
-        whatsAppNumber,
-        requiredService,
-        monthlyDesignQty,
-        monthlyVideoQty,
-        budgetRange,
-        additionalRequirements,
-        createdAt: new Date().toISOString(),
+      const response = await fetch('/api/package-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: cleanName,
+          brandName: brandName.trim(),
+          email: cleanEmail,
+          whatsAppNumber: cleanPhone,
+          packageName: requiredService,
+          monthlyDesignQty,
+          monthlyVideoQty,
+          budgetRange,
+          additionalRequirements: additionalRequirements.trim(),
+          honeypot: honeypot.trim(),
+        }),
       });
-      localStorage.setItem('mirrorbook_inquiries', JSON.stringify(inquiries));
-    } catch {}
 
-    setIsSubmitted(true);
-    if (onSuccessToast) {
-      onSuccessToast('Your package inquiry has been received! Our team will contact you shortly.');
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to submit package order. Please try again.');
+      }
+
+      const generatedId = data.orderId || `MB-PKG-${Date.now()}`;
+      setOrderRef(generatedId);
+      setIsSubmitted(true);
+
+      // Save lead locally as well
+      try {
+        const stored = localStorage.getItem('mirrorbook_inquiries');
+        const inquiries = stored ? JSON.parse(stored) : [];
+        inquiries.push({
+          id: generatedId,
+          name: cleanName,
+          brandName: brandName.trim(),
+          email: cleanEmail,
+          whatsAppNumber: cleanPhone,
+          requiredService,
+          monthlyDesignQty,
+          monthlyVideoQty,
+          budgetRange,
+          additionalRequirements: additionalRequirements.trim(),
+          createdAt: new Date().toISOString(),
+          status: 'Email Dispatched',
+        });
+        localStorage.setItem('mirrorbook_inquiries', JSON.stringify(inquiries));
+      } catch {}
+
+      if (onSuccessToast) {
+        onSuccessToast('Package request received! Confirmation email sent.');
+      }
+
+      // If user chose WhatsApp workflow, open chat with order reference
+      if (alsoOpenWhatsApp) {
+        const summary = constructInquirySummary(generatedId);
+        const phone = PAYMENT_CONFIG.whatsAppNumber || '8801767079837';
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(summary)}`;
+        const link = document.createElement('a');
+        link.href = waUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err: any) {
+      console.error('Package order error:', err);
+      setErrorMsg(err.message || 'An error occurred while submitting your order. Please check your connection.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
@@ -163,40 +210,94 @@ Sent via https://mirrorbook.site/`;
         </div>
 
         {isSubmitted ? (
-          <div className="p-8 md:p-12 text-center space-y-4">
+          <div className="p-8 md:p-12 text-center space-y-5">
             <div className="w-16 h-16 rounded-2xl bg-[#71B913]/20 border border-[#71B913]/40 text-[#71B913] flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(113,185,19,0.3)]">
               <CheckCircle2 size={36} />
             </div>
-            <h4 className="font-display text-2xl font-bold text-white">
-              Inquiry Sent Successfully!
-            </h4>
-            <p className="text-sm text-[#AAAAAA] max-w-md mx-auto leading-relaxed">
-              Thank you, <strong className="text-white">{name}</strong>. Our creative director and production team will review your requirements for <span className="text-[#71B913] font-medium">{requiredService}</span> and connect with you on WhatsApp or email to confirm final project scope.
+
+            <div>
+              <span className="text-[11px] uppercase tracking-wider text-[#71B913] font-bold">
+                Order Request Received
+              </span>
+              <h4 className="font-display text-2xl font-bold text-white mt-1">
+                Thank You, {name}!
+              </h4>
+            </div>
+
+            {/* Order Reference Card */}
+            <div className="bg-[#141414] border border-white/10 rounded-2xl p-4 max-w-md mx-auto text-left space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[#888888]">Order Reference:</span>
+                <span className="font-mono font-bold text-[#71B913] text-sm">{orderRef}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[#888888]">Selected Package:</span>
+                <span className="text-white font-medium">{requiredService}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[#888888]">Confirmation Sent To:</span>
+                <span className="text-white font-medium">{email}</span>
+              </div>
+            </div>
+
+            {/* Email Confirmation Notice */}
+            <div className="p-3.5 rounded-xl bg-[#71B913]/10 border border-[#71B913]/30 text-xs text-[#CCCCCC] max-w-md mx-auto flex items-start gap-2.5 text-left">
+              <Mail size={16} className="text-[#71B913] shrink-0 mt-0.5" />
+              <p className="leading-relaxed text-[11px]">
+                A confirmation email has been dispatched to <strong className="text-white">{email}</strong>. Our team has received your order request and will contact you shortly to discuss next steps, payment details, and project requirements.
+              </p>
+            </div>
+
+            <p className="text-[11px] text-[#777777] max-w-sm mx-auto">
+              Notice: This confirms receipt of an order request only. Payment details and project scope will be finalized with our team.
             </p>
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => {
-                  const summary = constructInquirySummary();
+                  const summary = constructInquirySummary(orderRef);
                   const phone = PAYMENT_CONFIG.whatsAppNumber || '8801767079837';
                   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(summary)}`, '_blank');
                 }}
                 className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg"
               >
                 <MessageSquare size={16} />
-                <span>Open in WhatsApp</span>
+                <span>Chat on WhatsApp</span>
               </button>
               <button
                 type="button"
                 onClick={onClose}
                 className="w-full sm:w-auto px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white text-xs font-bold uppercase tracking-wider border border-white/10 cursor-pointer"
               >
-                Close
+                Done
               </button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleWhatsAppSubmit} className="p-6 md:p-8 space-y-5">
+          <form onSubmit={(e) => handleOrderSubmit(e, false)} className="p-6 md:p-8 space-y-5">
+            {/* Honeypot field (hidden from real users, traps spam bots) */}
+            <div style={{ display: 'none' }} aria-hidden="true">
+              <label htmlFor="website-hp">Leave this empty</label>
+              <input
+                id="website-hp"
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+
+            {/* Error Message Banner */}
+            {errorMsg && (
+              <div className="p-3 rounded-xl bg-red-950/40 border border-red-800 text-red-200 text-xs flex items-center gap-2.5">
+                <AlertCircle size={16} className="text-red-400 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             {/* Notice regarding starting prices */}
             <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-[#999999] flex items-start gap-2.5">
               <Sparkles size={16} className="text-[#71B913] shrink-0 mt-0.5" />
@@ -239,10 +340,11 @@ Sent via https://mirrorbook.site/`;
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs uppercase tracking-wider text-[#AAAAAA] mb-1.5 font-semibold">
-                  Email Address
+                  Email Address <span className="text-[#71B913]">*</span>
                 </label>
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@business.com"
@@ -252,7 +354,7 @@ Sent via https://mirrorbook.site/`;
 
               <div>
                 <label className="block text-xs uppercase tracking-wider text-[#AAAAAA] mb-1.5 font-semibold">
-                  WhatsApp Number <span className="text-[#71B913]">*</span>
+                  WhatsApp / Phone Number <span className="text-[#71B913]">*</span>
                 </label>
                 <input
                   type="tel"
@@ -260,7 +362,7 @@ Sent via https://mirrorbook.site/`;
                   value={whatsAppNumber}
                   onChange={(e) => setWhatsAppNumber(e.target.value)}
                   placeholder="017XXXXXXXX or +880..."
-                  className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs placeholder:text-[#555555] focus:border-[#71B913] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs placeholder:text-[#555555] focus:border-[#71B913] focus:outline-none transition-colors font-mono"
                 />
               </div>
             </div>
@@ -391,19 +493,30 @@ Sent via https://mirrorbook.site/`;
             <div className="pt-3 flex flex-col sm:flex-row items-center gap-3">
               <button
                 type="submit"
-                className="w-full sm:flex-1 py-3.5 px-6 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(37,211,102,0.3)] transition-all"
+                disabled={isSubmitting}
+                className="w-full sm:flex-1 py-3.5 px-6 rounded-xl bg-[#71B913] hover:bg-[#81cf17] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(113,185,19,0.3)] transition-all disabled:opacity-60"
               >
-                <MessageSquare size={16} />
-                <span>Submit &amp; Connect on WhatsApp</span>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin text-black" />
+                    <span>Processing Order &amp; Sending Emails...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={15} />
+                    <span>Submit Order &amp; Send Confirmation Email</span>
+                  </>
+                )}
               </button>
 
               <button
                 type="button"
-                onClick={handleDirectSubmit}
-                className="w-full sm:w-auto py-3.5 px-6 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-bold uppercase tracking-wider border border-white/15 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                disabled={isSubmitting}
+                onClick={(e) => handleOrderSubmit(e, true)}
+                className="w-full sm:w-auto py-3.5 px-6 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-bold uppercase tracking-wider border border-white/15 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-60"
               >
-                <Send size={14} className="text-[#71B913]" />
-                <span>Submit Direct Inquiry</span>
+                <MessageSquare size={14} className="text-[#25D366]" />
+                <span>Submit &amp; Open WhatsApp</span>
               </button>
             </div>
           </form>
