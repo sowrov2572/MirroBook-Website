@@ -17,4 +17,12 @@
       <image:caption>Sowrov Hosen, Founder of MirrorBook</image:caption>
     </image:image>
   </url>
+  <url>
+    <loc>https://mirrorbook.site/mirrorpos</loc>
+    <image:image>
+      <image:loc>https://mirrorbook.site/mirror-pos-icon.png</image:loc>
+      <image:title>MirrorPOS Official App Icon</image:title>
+      <image:caption>MirrorPOS Point of Sale software by MirrorBook</image:caption>
+    </image:image>
+  </url>
 </urlset>

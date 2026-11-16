@@ -27,13 +27,14 @@ export const Header: React.FC<HeaderProps> = ({
   const isOwner = isStudioOwner(user?.email);
 
   const navLinks = [
+    { name: 'Products', href: '#products' },
     { name: 'Services', href: '#services' },
     { name: 'Portfolio', href: '#portfolio' },
     { name: 'Founder', href: '/sowrov-hosen' },
     { name: 'Packages', href: '#packages' },
     { name: 'Plugin Store', href: '#plugins' },
     { name: 'Software', href: '#software' },
-    { name: 'Courses & Tutorials', href: '#tutorials' },
+    { name: 'Courses', href: '#tutorials' },
   ];
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -51,14 +52,14 @@ export const Header: React.FC<HeaderProps> = ({
         setTimeout(() => {
           const target = document.querySelector(href);
           target?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        }, 120);
       }
     }
   };
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-[#080808]/85 border-b border-white/[0.08] transition-all">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
         {/* Brand Lockup with MirrorBook Official Icon & Typography */}
         <a
           href="/"
@@ -70,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
               window.location.href = '/';
             }
           }}
-          className="flex items-center gap-3.5 group text-left cursor-pointer"
+          className="flex items-center gap-3.5 group text-left cursor-pointer shrink-0"
         >
           <img
             src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
@@ -90,25 +91,27 @@ export const Header: React.FC<HeaderProps> = ({
           />
 
           <div className="flex flex-col">
-            <span className="font-display text-xl font-bold tracking-normal text-white group-hover:text-[#71B913] transition-colors leading-tight">
+            <span className="font-display text-xl font-bold tracking-normal text-white group-hover:text-[#71B913] transition-colors leading-tight whitespace-nowrap">
               MirrorBook
             </span>
-            <span className="text-xs text-[#999999] font-normal tracking-normal leading-tight mt-0.5">
+            <span className="text-xs text-[#999999] font-normal tracking-normal leading-tight mt-0.5 whitespace-nowrap">
               Reflecting Creativity
             </span>
           </div>
         </a>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] px-4 py-1.5 rounded-full">
+        <nav className="hidden lg:flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.08] px-3 py-1.5 rounded-full">
           {navLinks.map((link) => {
-            const isCurrent = link.href === currentPath;
+            const isCurrent =
+              link.href === currentPath ||
+              (currentPath === '/mirrorpos' && link.href === '#products');
             return (
               <a
                 key={link.name}
                 href={link.href}
                 onClick={(e) => handleLinkClick(e, link.href)}
-                className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all duration-150 ${
+                className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 whitespace-nowrap shrink-0 ${
                   isCurrent
                     ? 'text-[#71B913] bg-white/[0.08] font-semibold'
                     : 'text-[#CCCCCC] hover:text-[#71B913] hover:bg-white/[0.06]'
@@ -121,13 +124,13 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Action Buttons & User Account Lockup */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2.5 shrink-0">
           {/* Studio Owner Console Access (Google AI Studio Verified) */}
           {isOwner && onOpenAdmin && (
             <button
               type="button"
               onClick={onOpenAdmin}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-xs font-semibold text-yellow-300 transition-all cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.25)]"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-xs font-semibold text-yellow-300 transition-all cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.25)] whitespace-nowrap shrink-0"
               title="Studio Owner Console (Google AI Studio Verified)"
             >
               <ShieldAlert size={13} className="text-yellow-400" />
@@ -139,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
           {user ? (
             <button
               onClick={onOpenVault}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 hover:border-[#71B913]/50 text-xs text-white transition-all cursor-pointer group"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 hover:border-[#71B913]/50 text-xs text-white transition-all cursor-pointer group whitespace-nowrap shrink-0"
               title="Creator Vault & Downloads"
             >
               {user.photoURL ? (
@@ -166,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onSignIn}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-[#CCCCCC] hover:text-white transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-[#CCCCCC] hover:text-white transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
               <UserIcon size={13} className="text-[#71B913]" />
               <span>Sign In</span>
@@ -175,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={onStartProject}
-            className="px-5 py-2.5 text-xs font-bold uppercase tracking-normal text-black bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.98] rounded-full transition-all duration-150 cursor-pointer shadow-[0_0_20px_rgba(113,185,19,0.3)] flex items-center gap-1.5"
+            className="px-4 py-2.5 text-xs font-bold uppercase tracking-normal text-black bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.98] rounded-full transition-all duration-150 cursor-pointer shadow-[0_0_20px_rgba(113,185,19,0.3)] flex items-center gap-1.5 whitespace-nowrap shrink-0"
           >
             <span>Start a Project</span>
             <ArrowRight size={13} />
@@ -183,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile Hamburger & Quick Account */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex lg:hidden items-center gap-2">
           {user ? (
             <button
               onClick={onOpenVault}
@@ -215,25 +218,30 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-white/[0.08] bg-[#0C0C0C]/95 backdrop-blur-3xl px-6 py-6 space-y-4">
+        <div className="lg:hidden border-b border-white/[0.08] bg-[#0C0C0C]/95 backdrop-blur-3xl px-6 py-6 space-y-4">
           <div className="flex flex-col space-y-3">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                onClick={(e) => {
-                  setMobileMenuOpen(false);
-                  handleLinkClick(e, link.href);
-                }}
-                className={`text-sm font-medium transition-colors py-1 ${
-                  link.href === currentPath
-                    ? 'text-[#71B913] font-semibold'
-                    : 'text-[#AAAAAA] hover:text-[#71B913]'
-                }`}
-              >
-                {link.name}
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              const isCurrent =
+                link.href === currentPath ||
+                (currentPath === '/mirrorpos' && link.href === '#products');
+              return (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  onClick={(e) => {
+                    setMobileMenuOpen(false);
+                    handleLinkClick(e, link.href);
+                  }}
+                  className={`text-sm font-medium transition-colors py-1 ${
+                    isCurrent
+                      ? 'text-[#71B913] font-semibold'
+                      : 'text-[#AAAAAA] hover:text-[#71B913]'
+                  }`}
+                >
+                  {link.name}
+                </a>
+              );
+            })}
           </div>
 
           <div className="pt-4 border-t border-white/[0.08] space-y-2">

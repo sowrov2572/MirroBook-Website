@@ -16,6 +16,8 @@ import { AuthModal } from './components/AuthModal';
 import { SecureDownloadModal, SecureDownloadTarget } from './components/SecureDownloadModal';
 import { Footer } from './components/Footer';
 import { SowrovHosenProfile } from './components/SowrovHosenProfile';
+import { ProductsSection } from './components/ProductsSection';
+import { MirrorPOSPage } from './components/MirrorPOSPage';
 import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
@@ -551,6 +553,9 @@ export default function App() {
       if (path === '/sowrov-hosen' || window.location.hash === '#/sowrov-hosen') {
         return '/sowrov-hosen';
       }
+      if (path === '/mirrorpos' || window.location.hash === '#/mirrorpos') {
+        return '/mirrorpos';
+      }
     }
     return '/';
   });
@@ -572,6 +577,8 @@ export default function App() {
       const path = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
       if (path === '/sowrov-hosen' || window.location.hash === '#/sowrov-hosen') {
         setCurrentPath('/sowrov-hosen');
+      } else if (path === '/mirrorpos' || window.location.hash === '#/mirrorpos') {
+        setCurrentPath('/mirrorpos');
       } else {
         setCurrentPath('/');
         document.title = 'MirrorBook | Creative Agency in Bangladesh';
@@ -612,10 +619,15 @@ export default function App() {
         currentPath={currentPath}
       />
 
-      {/* Main Content Area: switches cleanly between Sowrov Hosen Profile and Homepage */}
+      {/* Main Content Area: switches cleanly between MirrorPOS Product Page, Sowrov Hosen Profile, and Homepage */}
       <main className="flex-grow pb-24 md:pb-0">
         {currentPath === '/sowrov-hosen' ? (
           <SowrovHosenProfile
+            onNavigateHome={() => navigateTo('/')}
+            onStartProject={() => setIsStartProjectOpen(true)}
+          />
+        ) : currentPath === '/mirrorpos' ? (
+          <MirrorPOSPage
             onNavigateHome={() => navigateTo('/')}
             onStartProject={() => setIsStartProjectOpen(true)}
           />
@@ -641,6 +653,9 @@ export default function App() {
 
             {/* 4. Portfolio Showcase Button to external studio link & Founder internal link */}
             <ShowcasesVault onNavigate={navigateTo} />
+
+            {/* 4.5 Products Section featuring MirrorPOS */}
+            <ProductsSection onLearnMore={() => navigateTo('/mirrorpos')} />
 
             {/* 5. Monthly Service Packages (Two separate packages starting ৳25,000/mo) */}
             <Packages
@@ -800,6 +815,7 @@ export default function App() {
       <MobileBottomNav
         activeTab={isVaultOpen ? 'vault' : 'home'}
         onNavigate={(sectionId) => scrollToSection(sectionId)}
+        onNavigateHome={() => navigateTo('/')}
         cartCount={checkoutItem ? 1 : 0}
         user={user}
         onOpenVault={() => setIsVaultOpen(true)}

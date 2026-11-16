@@ -5,6 +5,7 @@ import { AppUser } from '../types';
 interface MobileBottomNavProps {
   activeTab: string;
   onNavigate: (sectionId: string) => void;
+  onNavigateHome?: () => void;
   cartCount: number;
   user: AppUser | null;
   onOpenVault: () => void;
@@ -15,6 +16,7 @@ interface MobileBottomNavProps {
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   activeTab,
   onNavigate,
+  onNavigateHome,
   cartCount,
   user,
   onOpenVault,
@@ -28,7 +30,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         <button
           type="button"
           onClick={() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (onNavigateHome) {
+              onNavigateHome();
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
           }}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all cursor-pointer ${
             activeTab === 'home'

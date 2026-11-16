@@ -11,6 +11,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       } else {
         window.location.href = href;
       }
+    } else if (href.startsWith('#') && window.location.pathname !== '/') {
+      e.preventDefault();
+      if (onNavigate) {
+        onNavigate('/');
+        setTimeout(() => {
+          const target = document.querySelector(href);
+          target?.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
+      }
     }
   };
 
@@ -38,10 +47,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </span>
             <ul className="space-y-2 text-xs text-[#888888]">
               <li>
-                <a href="#services" className="hover:text-[#71B913] transition-colors">Services</a>
+                <a href="#products" onClick={(e) => handleNav(e, '#products')} className="hover:text-[#71B913] transition-colors">Products</a>
               </li>
               <li>
-                <a href="#portfolio" className="hover:text-[#71B913] transition-colors">Portfolio</a>
+                <a
+                  href="/mirrorpos"
+                  onClick={(e) => handleNav(e, '/mirrorpos')}
+                  className="hover:text-[#71B913] transition-colors text-white/90 font-medium"
+                >
+                  MirrorPOS Software
+                </a>
+              </li>
+              <li>
+                <a href="#services" onClick={(e) => handleNav(e, '#services')} className="hover:text-[#71B913] transition-colors">Services</a>
+              </li>
+              <li>
+                <a href="#portfolio" onClick={(e) => handleNav(e, '#portfolio')} className="hover:text-[#71B913] transition-colors">Portfolio</a>
               </li>
               <li>
                 <a
@@ -53,16 +74,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 </a>
               </li>
               <li>
-                <a href="#packages" className="hover:text-[#71B913] transition-colors">Agency Packages</a>
+                <a href="#packages" onClick={(e) => handleNav(e, '#packages')} className="hover:text-[#71B913] transition-colors">Agency Packages</a>
               </li>
               <li>
-                <a href="#plugins" className="hover:text-[#71B913] transition-colors">Plugin Store</a>
+                <a href="#plugins" onClick={(e) => handleNav(e, '#plugins')} className="hover:text-[#71B913] transition-colors">Plugin Store</a>
               </li>
               <li>
-                <a href="#software" className="hover:text-[#71B913] transition-colors">Software Library</a>
+                <a href="#software" onClick={(e) => handleNav(e, '#software')} className="hover:text-[#71B913] transition-colors">Software Library</a>
               </li>
               <li>
-                <a href="#tutorials" className="hover:text-[#71B913] transition-colors">Courses &amp; Tutorials</a>
+                <a href="#tutorials" onClick={(e) => handleNav(e, '#tutorials')} className="hover:text-[#71B913] transition-colors">Courses &amp; Tutorials</a>
               </li>
             </ul>
           </div>
