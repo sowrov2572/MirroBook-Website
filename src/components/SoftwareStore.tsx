@@ -29,13 +29,13 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 pb-4 border-b border-white/[0.08]">
           <div>
             <div className="flex items-center gap-2 text-[#71B913] text-xs font-semibold uppercase tracking-wider mb-2">
-              <span>Production Tools &amp; Utilities</span>
+              <span>MirrorBook Software Products</span>
             </div>
             <h2 className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight">
               Software Library
             </h2>
             <p className="text-xs sm:text-sm text-[#888888] mt-2 max-w-xl">
-              Engineered software and creative utilities for Windows, macOS, Android, and iOS devices.
+              Business and creative software products developed by MirrorBook for Windows, macOS, Web, Android, and iOS.
             </p>
           </div>
 
@@ -63,73 +63,93 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({
           </div>
         </div>
 
-        {/* Compact Software Grid (Scales cleanly as more software is uploaded) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Compact MirrorPOS Featured Card (Icon-first, opens /mirrorpos details page) */}
-          {showMirrorPOS && (
-            <div
-              onClick={() => onOpenMirrorPOS?.()}
-              className="glossy-card glossy-card-hover p-6 flex flex-col justify-between group cursor-pointer"
-            >
-              <div>
-                {/* Clean App Icon Display Only */}
-                <div className="aspect-video w-full rounded-xl bg-black/70 border border-white/10 mb-5 overflow-hidden flex items-center justify-center group-hover:border-[#71B913]/50 transition-colors p-4">
-                  <img
-                    src="/mirror-pos-icon.png"
-                    alt="MirrorPOS Official App Icon"
-                    width={64}
-                    height={64}
-                    loading="eager"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    className="w-16 h-16 object-contain group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-
-                {/* Category */}
-                <div className="text-[11px] uppercase tracking-normal text-[#71B913] font-semibold mb-1">
-                  Windows · Cloud POS
-                </div>
-
-                {/* Title */}
-                <h3 className="font-display text-base font-bold text-white group-hover:text-[#71B913] transition-colors mb-1.5 leading-snug">
-                  MirrorPOS
-                </h3>
-
-                {/* Exact Requested Short Description */}
-                <p className="text-xs text-[#888888] line-clamp-3 leading-relaxed mb-4 font-light">
-                  A smart Point of Sale software designed to manage sales, inventory, customers, and business operations.
-                </p>
-              </div>
-
-              <div>
-                <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-1 text-[11px] text-[#777777]">
-                    <Monitor size={12} className="text-[#71B913]" />
-                    <span>Desktop &amp; Web App</span>
+        {/* Featured MirrorBook Software Product: MirrorPOS */}
+        {showMirrorPOS && (
+          <div className="mb-10 bg-[#0C0C0C] border border-white/[0.1] hover:border-[#71B913]/40 rounded-3xl p-6 sm:p-8 lg:p-10 transition-colors">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              {/* Left: Product Identity under MirrorBook Brand */}
+              <div className="lg:col-span-7 space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#070707] border border-white/15 p-3 flex items-center justify-center shrink-0">
+                    <img
+                      src="/mirror-pos-icon.png"
+                      alt="MirrorPOS Official App Icon"
+                      width={64}
+                      height={64}
+                      loading="eager"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain"
+                    />
                   </div>
-                  <span className="text-xs font-bold text-[#71B913]">
-                    MirrorBook
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#71B913] font-semibold mb-1">
+                      <span>Developed by MirrorBook</span>
+                      <span aria-hidden="true" className="text-[#555555]">·</span>
+                      <span className="text-[#999999] font-normal">Official Product</span>
+                    </div>
+                    <h3 className="font-display text-2xl sm:text-4xl font-bold text-white tracking-tight leading-none">
+                      MirrorPOS
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-base sm:text-lg font-semibold text-white">
+                    Smart POS Software for Modern Businesses.
+                  </p>
+                  <p className="text-xs sm:text-sm text-[#999999] leading-relaxed max-w-2xl">
+                    Built by MirrorBook to streamline retail billing, inventory control, customer credit ledgers, daily expenses, and cloud-synced business operations from a single workspace.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  <a
+                    href="https://mirrorbook.site/mirrorpos"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onOpenMirrorPOS?.();
+                    }}
+                    className="px-7 py-3.5 rounded-xl bg-[#71B913] hover:bg-[#82d119] active:scale-[0.98] text-black text-xs font-bold uppercase tracking-wider transition-all inline-flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0 shadow-[0_8px_24px_rgba(113,185,19,0.28)]"
+                  >
+                    <span>Explore MirrorPOS</span>
+                    <ArrowRight size={15} />
+                  </a>
+
+                  <span className="text-xs text-[#777777] whitespace-nowrap">
+                    Desktop · Cloud Sync · Thermal Receipts
                   </span>
                 </div>
+              </div>
 
-                <a
-                  href="/mirrorpos"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onOpenMirrorPOS?.();
-                  }}
-                  className="w-full py-3 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                >
-                  <span>Learn More</span>
-                  <ArrowRight size={14} />
-                </a>
+              {/* Right: 6 Core Highlighted Features */}
+              <div className="lg:col-span-5 bg-[#070707] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+                <div className="text-xs font-semibold uppercase tracking-wider text-[#71B913] mb-4">
+                  Key Capabilities
+                </div>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                  {[
+                    'Offline billing support',
+                    'Online data synchronization',
+                    'Inventory management',
+                    'Sales and expense tracking',
+                    'Customer management',
+                    'Smart business reporting',
+                  ].map((feat) => (
+                    <li key={feat} className="flex items-center gap-2.5 text-xs sm:text-sm text-[#DDDDDD]">
+                      <ShieldCheck size={15} className="text-[#71B913] shrink-0" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Additional Software Items */}
+        {/* Additional Software Items Grid */}
+        {filtered.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filtered.map((sw) => (
             <div
               key={sw.id}
@@ -204,7 +224,8 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );

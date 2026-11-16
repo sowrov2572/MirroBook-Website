@@ -45,13 +45,13 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
 
   useEffect(() => {
     const originalTitle = document.title;
-    const newTitle = 'MirrorPOS | Smart Point of Sale Software by MirrorBook';
+    const newTitle = 'MirrorPOS by MirrorBook | Smart POS Software';
     document.title = newTitle;
 
     let metaDesc = document.querySelector('meta[name="description"]');
     const originalDesc = metaDesc?.getAttribute('content') || '';
     const newDesc =
-      'A smart Point of Sale software designed to manage sales, inventory, customers, and business operations. Built by MirrorBook for Windows Desktop, Web, and Mobile.';
+      'MirrorPOS by MirrorBook is smart POS software for modern businesses with offline billing, online sync, inventory, sales, expense, customer & reporting tools.';
     if (metaDesc) {
       metaDesc.setAttribute('content', newDesc);
     } else {
@@ -72,32 +72,74 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
       document.head.appendChild(canonical);
     }
 
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    const origOgTitle = ogTitle?.getAttribute('content') || '';
-    if (ogTitle) ogTitle.setAttribute('content', newTitle);
+    const updateMeta = (selector: string, attr: string, nextVal: string): string | null => {
+      const el = document.querySelector(selector);
+      if (!el) return null;
+      const prev = el.getAttribute(attr);
+      el.setAttribute(attr, nextVal);
+      return prev;
+    };
 
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    const origOgDesc = ogDesc?.getAttribute('content') || '';
-    if (ogDesc) ogDesc.setAttribute('content', newDesc);
+    const prevOgTitle = updateMeta('meta[property="og:title"]', 'content', newTitle);
+    const prevOgDesc = updateMeta('meta[property="og:description"]', 'content', newDesc);
+    const prevOgUrl = updateMeta('meta[property="og:url"]', 'content', 'https://mirrorbook.site/mirrorpos');
+    const prevOgImg = updateMeta('meta[property="og:image"]', 'content', 'https://mirrorbook.site/mirror-pos-icon.png');
+    const prevOgImgSecure = updateMeta('meta[property="og:image:secure_url"]', 'content', 'https://mirrorbook.site/mirror-pos-icon.png');
+    const prevOgImgAlt = updateMeta('meta[property="og:image:alt"]', 'content', 'MirrorPOS Official App Icon — Developed by MirrorBook');
 
-    const ogUrl = document.querySelector('meta[property="og:url"]');
-    const origOgUrl = ogUrl?.getAttribute('content') || '';
-    if (ogUrl) ogUrl.setAttribute('content', 'https://mirrorbook.site/mirrorpos');
+    const prevTwTitle = updateMeta('meta[name="twitter:title"]', 'content', newTitle);
+    const prevTwDesc = updateMeta('meta[name="twitter:description"]', 'content', newDesc);
+    const prevTwUrl = updateMeta('meta[name="twitter:url"]', 'content', 'https://mirrorbook.site/mirrorpos');
+    const prevTwImg = updateMeta('meta[name="twitter:image"]', 'content', 'https://mirrorbook.site/mirror-pos-icon.png');
+    const prevTwImgAlt = updateMeta('meta[name="twitter:image:alt"]', 'content', 'MirrorPOS Official App Icon — Developed by MirrorBook');
 
     const softwareSchema = {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
       '@id': 'https://mirrorbook.site/mirrorpos#software',
       name: 'MirrorPOS',
+      alternateName: 'MirrorPOS by MirrorBook',
+      headline: 'Smart POS Software for Modern Businesses.',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Windows, macOS, Web, Android, iOS',
-      url: 'https://mirror-pos.vercel.app/',
-      sameAs: 'https://mirrorbook.site/mirrorpos',
+      url: 'https://mirrorbook.site/mirrorpos',
+      installUrl: 'https://mirror-pos.vercel.app/',
       image: 'https://mirrorbook.site/mirror-pos-icon.png',
       description: newDesc,
+      featureList: [
+        'Offline billing support',
+        'Online data synchronization',
+        'Inventory management',
+        'Sales and expense tracking',
+        'Customer management',
+        'Smart business reporting',
+      ],
+      brand: {
+        '@type': 'Brand',
+        name: 'MirrorBook',
+        url: 'https://mirrorbook.site/',
+      },
       author: {
         '@type': 'Organization',
         '@id': 'https://mirrorbook.site/#organization',
+        name: 'MirrorBook',
+        url: 'https://mirrorbook.site/',
+      },
+      creator: {
+        '@type': 'Organization',
+        '@id': 'https://mirrorbook.site/#organization',
+        name: 'MirrorBook',
+        url: 'https://mirrorbook.site/',
+      },
+      publisher: {
+        '@type': 'Organization',
+        '@id': 'https://mirrorbook.site/#organization',
+        name: 'MirrorBook',
+        url: 'https://mirrorbook.site/',
+      },
+      isPartOf: {
+        '@type': 'WebSite',
+        '@id': 'https://mirrorbook.site/#website',
         name: 'MirrorBook',
         url: 'https://mirrorbook.site/',
       },
@@ -107,7 +149,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           {
             '@type': 'ListItem',
             position: 1,
-            name: 'Home',
+            name: 'MirrorBook',
             item: 'https://mirrorbook.site/',
           },
           {
@@ -135,9 +177,17 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
       document.title = originalTitle;
       if (metaDesc) metaDesc.setAttribute('content', originalDesc);
       if (canonical) canonical.setAttribute('href', originalCanonical);
-      if (ogTitle && origOgTitle) ogTitle.setAttribute('content', origOgTitle);
-      if (ogDesc && origOgDesc) ogDesc.setAttribute('content', origOgDesc);
-      if (ogUrl && origOgUrl) ogUrl.setAttribute('content', origOgUrl);
+      if (prevOgTitle !== null) updateMeta('meta[property="og:title"]', 'content', prevOgTitle);
+      if (prevOgDesc !== null) updateMeta('meta[property="og:description"]', 'content', prevOgDesc);
+      if (prevOgUrl !== null) updateMeta('meta[property="og:url"]', 'content', prevOgUrl);
+      if (prevOgImg !== null) updateMeta('meta[property="og:image"]', 'content', prevOgImg);
+      if (prevOgImgSecure !== null) updateMeta('meta[property="og:image:secure_url"]', 'content', prevOgImgSecure);
+      if (prevOgImgAlt !== null) updateMeta('meta[property="og:image:alt"]', 'content', prevOgImgAlt);
+      if (prevTwTitle !== null) updateMeta('meta[name="twitter:title"]', 'content', prevTwTitle);
+      if (prevTwDesc !== null) updateMeta('meta[name="twitter:description"]', 'content', prevTwDesc);
+      if (prevTwUrl !== null) updateMeta('meta[name="twitter:url"]', 'content', prevTwUrl);
+      if (prevTwImg !== null) updateMeta('meta[name="twitter:image"]', 'content', prevTwImg);
+      if (prevTwImgAlt !== null) updateMeta('meta[name="twitter:image:alt"]', 'content', prevTwImgAlt);
       const scriptToRemove = document.getElementById('mirrorpos-schema');
       if (scriptToRemove) scriptToRemove.remove();
     };
@@ -148,8 +198,8 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'MirrorPOS | Smart Point of Sale Software by MirrorBook',
-          text: 'A smart Point of Sale software designed to manage sales, inventory, customers, and business operations.',
+          title: 'MirrorPOS by MirrorBook | Smart POS Software',
+          text: 'Smart POS Software for Modern Businesses. Developed by MirrorBook.',
           url,
         });
         return;
@@ -177,40 +227,40 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
 
   const features = [
     {
-      icon: ShoppingCart,
-      title: 'Fast POS Billing & Checkout',
-      description:
-        'Process counter sales in seconds with keyboard shortcuts, instant item search, flexible line-item discounts, tax rules, and split payment methods.',
-    },
-    {
-      icon: ScanBarcode,
-      title: 'Barcode & Inventory Control',
-      description:
-        'Scan USB or Bluetooth barcodes directly at checkout. Every completed sale deducts stock automatically and flags low-inventory SKUs before you run out.',
-    },
-    {
-      icon: Users,
-      title: 'Customer & Supplier Ledgers',
-      description:
-        'Maintain organized customer profiles, track partial payments or credit dues, record supplier purchase invoices, and settle balances with full audit trails.',
-    },
-    {
-      icon: BarChart3,
-      title: 'Real-Time Business Accounting',
-      description:
-        'Monitor daily revenue, net profit margins, expense entries, and cashier performance in clear visual dashboards without manual spreadsheet reconciliation.',
-    },
-    {
       icon: Printer,
-      title: 'Thermal & A4 Invoice Printing',
+      title: 'Offline billing support',
       description:
-        'Print crisp 58mm and 80mm thermal counter receipts or export branded PDF invoices tailored with your business name, logo, address, and footer notes.',
+        'Keep counter billing running even when internet connectivity drops. Create invoices, print 58mm/80mm thermal or PDF receipts, and continue selling without disruption.',
     },
     {
       icon: Cloud,
-      title: 'Cloud Sync & Offline Resilience',
+      title: 'Online data synchronization',
       description:
-        'Keep selling even when internet connectivity dips. Local browser caching works smoothly alongside real-time cloud synchronization across devices.',
+        'Automatically sync sales, inventory updates, and store backups online with cloud backup sync and Google Sheets integration across your authorized devices.',
+    },
+    {
+      icon: ScanBarcode,
+      title: 'Inventory management',
+      description:
+        'Manage SKUs, USB/Bluetooth barcodes, size and color variants, purchase rates, selling prices, and automatic low-stock alerts with real-time deduction.',
+    },
+    {
+      icon: ShoppingCart,
+      title: 'Sales and expense tracking',
+      description:
+        'Process fast POS counter checkouts with discounts and split payments while logging daily shop expenses like rent, electricity, staff, and courier costs.',
+    },
+    {
+      icon: Users,
+      title: 'Customer management',
+      description:
+        'Maintain complete customer profiles, track partial payments or credit receivables, record supplier payables, and reconcile balances with transparent ledgers.',
+    },
+    {
+      icon: BarChart3,
+      title: 'Smart business reporting',
+      description:
+        'Review real-time Today, This Month, and All-Time financial statements covering gross revenue, COGS, operating expenses, and net profit margins.',
     },
   ];
 
@@ -570,8 +620,10 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-[#71B913] mb-1">
-                MirrorBook Software · Windows Desktop &amp; Cloud POS
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#71B913] mb-1">
+                <span>Developed by MirrorBook</span>
+                <span aria-hidden="true" className="text-[#555555]">·</span>
+                <span className="text-[#999999] font-normal">Official Software Product</span>
               </div>
               <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-none">
                 MirrorPOS
@@ -579,8 +631,12 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
           </div>
 
-          <p className="text-lg sm:text-xl text-[#DDDDDD] leading-relaxed font-normal">
-            A smart Point of Sale software designed to manage sales, inventory, customers, and business operations.
+          <p className="text-lg sm:text-2xl text-white font-semibold tracking-tight">
+            Smart POS Software for Modern Businesses.
+          </p>
+
+          <p className="text-sm sm:text-base text-[#BBBBBB] leading-relaxed font-normal">
+            A MirrorBook software product designed for offline billing support, online data synchronization, inventory management, sales and expense tracking, customer management, and smart business reporting.
           </p>
 
           {/* Clean Action Buttons */}
@@ -620,14 +676,14 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-[#71B913] block mb-2">
-                Core Capabilities
+                Developed by MirrorBook
               </span>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
-                What MirrorPOS Does
+                Key Features of MirrorPOS
               </h2>
             </div>
             <p className="text-sm text-[#999999] max-w-md leading-relaxed">
-              Built to handle daily counter billing, barcode inventory control, due ledgers, and business accounting in one place.
+              Engineered under the MirrorBook ecosystem for reliable counter billing, stock control, due ledgers, and business reporting.
             </p>
           </div>
 
