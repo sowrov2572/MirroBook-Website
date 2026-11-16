@@ -85,68 +85,6 @@ export const SHOWCASES: ShowcaseItem[] = [
 ];
 
 export const INITIAL_PRODUCTS: ProductItem[] = [
-  // Plugins
-  {
-    id: 'plugin-easy-flow',
-    type: 'Plugin',
-    category: 'AE & Premiere Pro',
-    title: 'Easy Flow Plugin',
-    description: 'Quick-access workflows and one-click timeline shortcuts for Premiere Pro & After Effects.',
-    price: 200,
-    priceDisplay: '৳200',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
-    createdAt: '2026-10-05'
-  },
-  {
-    id: 'plugin-autocut',
-    type: 'Plugin',
-    category: 'Premiere Pro',
-    title: 'AI AutoCut Plugin',
-    description: 'Automated silence, dead-time, and filler removal inside Premiere Pro.',
-    price: 999,
-    priceDisplay: '৳999',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1MB_AutoCut_Plugin_V2_Protected',
-    createdAt: '2026-09-15'
-  },
-  {
-    id: 'plugin-motionfx',
-    type: 'Plugin',
-    category: 'After Effects',
-    title: 'MotionFX AI Plugin',
-    description: 'Dynamic physics-based kinetic text animation and easing curves.',
-    price: 1299,
-    priceDisplay: '৳1,299',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1MB_MotionFX_AE_Protected',
-    createdAt: '2026-09-18'
-  },
-  {
-    id: 'plugin-neuralretouch',
-    type: 'Plugin',
-    category: 'Photoshop',
-    title: 'Neural Retouch Plugin',
-    description: 'One-click AI skin texture balancing and high-frequency color separation.',
-    price: 799,
-    priceDisplay: '৳799',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1MB_NeuralRetouch_PS_Protected',
-    createdAt: '2026-09-20'
-  },
-  {
-    id: 'plugin-presetbundle',
-    type: 'Plugin',
-    category: 'Premiere Pro',
-    title: 'Creator Preset Bundle',
-    description: 'Over 150+ transitions, SFX pairings, and LUTs for speed editors.',
-    price: 499,
-    priceDisplay: '৳499',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1MB_CreatorPresetBundle_Protected',
-    createdAt: '2026-09-22'
-  },
-
   // Courses
   {
     id: 'course-video-reels',
@@ -336,53 +274,7 @@ export const PACKAGES: PackageItem[] = [
   }
 ];
 
-export const PLUGINS: PluginItem[] = [
-  {
-    id: 'plugin-easy-flow',
-    title: 'Easy Flow Plugin',
-    software: 'AE & Premiere Pro',
-    price: 200,
-    priceDisplay: '৳200',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    description: 'Quick-access workflows and one-click timeline shortcuts for Premiere Pro & After Effects.'
-  },
-  {
-    id: 'plugin-autocut',
-    title: 'AI AutoCut Plugin',
-    software: 'Premiere Pro',
-    price: 999,
-    priceDisplay: '৳999',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80',
-    description: 'Automated silence, dead-time, and filler removal inside Premiere Pro.'
-  },
-  {
-    id: 'plugin-motionfx',
-    title: 'MotionFX AI Plugin',
-    software: 'After Effects',
-    price: 1299,
-    priceDisplay: '৳1,299',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    description: 'Dynamic physics-based kinetic text animation and easing curves.'
-  },
-  {
-    id: 'plugin-neuralretouch',
-    title: 'Neural Retouch Plugin',
-    software: 'Photoshop',
-    price: 799,
-    priceDisplay: '৳799',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
-    description: 'One-click AI skin texture balancing and high-frequency color separation.'
-  },
-  {
-    id: 'plugin-presetbundle',
-    title: 'Creator Preset Bundle',
-    software: 'Premiere Pro',
-    price: 499,
-    priceDisplay: '৳499',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=800&q=80',
-    description: 'Over 150+ transitions, SFX pairings, and LUTs for speed editors.'
-  }
-];
+export const PLUGINS: PluginItem[] = [];
 
 export const COURSES: CourseItem[] = [
   {

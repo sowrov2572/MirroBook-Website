@@ -199,6 +199,11 @@ export const OBSOLETE_PRODUCT_IDS = new Set([
   'tut-ai-automation',
   'tut-premiere-cuts',
   'tut-ps-colorgrade',
+  'plugin-easy-flow',
+  'plugin-autocut',
+  'plugin-motionfx',
+  'plugin-neuralretouch',
+  'plugin-presetbundle',
 ]);
 
 /**

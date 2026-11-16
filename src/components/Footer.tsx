@@ -47,7 +47,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </span>
             <ul className="space-y-2 text-xs text-[#888888]">
               <li>
-                <a href="#products" onClick={(e) => handleNav(e, '#products')} className="hover:text-[#71B913] transition-colors">Products</a>
+                <a href="#services" onClick={(e) => handleNav(e, '#services')} className="hover:text-[#71B913] transition-colors">Services</a>
+              </li>
+              <li>
+                <a href="#portfolio" onClick={(e) => handleNav(e, '#portfolio')} className="hover:text-[#71B913] transition-colors">Portfolio</a>
               </li>
               <li>
                 <a
@@ -57,12 +60,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 >
                   MirrorPOS Software
                 </a>
-              </li>
-              <li>
-                <a href="#services" onClick={(e) => handleNav(e, '#services')} className="hover:text-[#71B913] transition-colors">Services</a>
-              </li>
-              <li>
-                <a href="#portfolio" onClick={(e) => handleNav(e, '#portfolio')} className="hover:text-[#71B913] transition-colors">Portfolio</a>
               </li>
               <li>
                 <a

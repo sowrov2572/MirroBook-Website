@@ -27,14 +27,13 @@ export const Header: React.FC<HeaderProps> = ({
   const isOwner = isStudioOwner(user?.email);
 
   const navLinks = [
-    { name: 'Products', href: '#products' },
     { name: 'Services', href: '#services' },
     { name: 'Portfolio', href: '#portfolio' },
     { name: 'Founder', href: '/sowrov-hosen' },
     { name: 'Packages', href: '#packages' },
     { name: 'Plugin Store', href: '#plugins' },
     { name: 'Software', href: '#software' },
-    { name: 'Courses', href: '#tutorials' },
+    { name: 'Courses & Tutorials', href: '#tutorials' },
   ];
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -105,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
           {navLinks.map((link) => {
             const isCurrent =
               link.href === currentPath ||
-              (currentPath === '/mirrorpos' && link.href === '#products');
+              (currentPath === '/mirrorpos' && link.href === '#software');
             return (
               <a
                 key={link.name}
@@ -223,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({
             {navLinks.map((link) => {
               const isCurrent =
                 link.href === currentPath ||
-                (currentPath === '/mirrorpos' && link.href === '#products');
+                (currentPath === '/mirrorpos' && link.href === '#software');
               return (
                 <a
                   key={link.name}

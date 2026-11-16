@@ -16,7 +16,6 @@ import { AuthModal } from './components/AuthModal';
 import { SecureDownloadModal, SecureDownloadTarget } from './components/SecureDownloadModal';
 import { Footer } from './components/Footer';
 import { SowrovHosenProfile } from './components/SowrovHosenProfile';
-import { ProductsSection } from './components/ProductsSection';
 import { MirrorPOSPage } from './components/MirrorPOSPage';
 import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -48,6 +47,7 @@ import {
   signOutUser,
   onAuthChange,
   subscribeToUserPurchases,
+  OBSOLETE_PRODUCT_IDS,
 } from './utils/firebase';
 
 const ACTIVE_USER_STORAGE_KEY = 'mirrorbook_active_user';
@@ -93,12 +93,16 @@ export default function App() {
       if (raw) {
         const parsed: ProductItem[] = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const hasNewTutorials = parsed.some((p) => p.id === 'tut-bangladeshi-money-explosion');
+          const cleaned = parsed.filter((p) => !OBSOLETE_PRODUCT_IDS.has(p.id));
+          const hasNewTutorials = cleaned.some((p) => p.id === 'tut-bangladeshi-money-explosion');
           if (hasNewTutorials) {
-            return parsed;
+            try {
+              localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(cleaned));
+            } catch {}
+            return cleaned;
           }
           // Merge custom admin products with the new canonical tutorials
-          const nonTutorials = parsed.filter((p) => p.type !== 'Free Tutorial');
+          const nonTutorials = cleaned.filter((p) => p.type !== 'Free Tutorial');
           const canonicalTutorials = INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial');
           const merged = [...nonTutorials, ...canonicalTutorials];
           try {
@@ -651,11 +655,8 @@ export default function App() {
             {/* 3. Services: Text-Only Minimal Capabilities */}
             <Services />
 
-            {/* 4. Portfolio Showcase Button to external studio link & Founder internal link */}
+            {/* 4. Portfolio Showcase Button to external studio link */}
             <ShowcasesVault onNavigate={navigateTo} />
-
-            {/* 4.5 Products Section featuring MirrorPOS */}
-            <ProductsSection onLearnMore={() => navigateTo('/mirrorpos')} />
 
             {/* 5. Monthly Service Packages (Two separate packages starting ৳25,000/mo) */}
             <Packages
@@ -666,16 +667,17 @@ export default function App() {
               }}
             />
 
-            {/* 6. Plugin Store (Includes Easy Flow Plugin) */}
+            {/* 6. Plugin Store */}
             <PluginStore
               plugins={publicPlugins}
               onBuyItem={(item) => setCheckoutItem(item)}
             />
 
-            {/* 6.5 PC & Phone Software Library */}
+            {/* 6.5 PC & Phone Software Library (Includes MirrorPOS) */}
             <SoftwareStore
               softwareList={publicSoftware}
               onBuyItem={(item) => setCheckoutItem(item)}
+              onOpenMirrorPOS={() => navigateTo('/mirrorpos')}
             />
 
             {/* 7. Courses & Video Masterclasses */}

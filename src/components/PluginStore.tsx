@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { PLUGINS } from '../data/content';
 import { CheckoutItem, ProductItem } from '../types';
 import { ShoppingBag, Terminal, Layers } from 'lucide-react';
 
@@ -8,21 +7,18 @@ interface PluginStoreProps {
   plugins?: ProductItem[];
 }
 
-export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) => {
+export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [] }) => {
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
 
-  const sourcePlugins =
-    plugins && plugins.length > 0
-      ? plugins.map((p) => ({
-          id: p.id,
-          title: p.title,
-          software: p.category,
-          price: p.price,
-          priceDisplay: p.priceDisplay || `৳${p.price.toLocaleString()}`,
-          thumbnailUrl: p.thumbnailUrl,
-          description: p.description,
-        }))
-      : PLUGINS;
+  const sourcePlugins = plugins.map((p) => ({
+    id: p.id,
+    title: p.title,
+    software: p.category,
+    price: p.price,
+    priceDisplay: p.priceDisplay || `৳${p.price.toLocaleString()}`,
+    thumbnailUrl: p.thumbnailUrl,
+    description: p.description,
+  }));
 
   // Dynamically extract categories
   const categories = Array.from(new Set(sourcePlugins.map((p) => p.software)));
@@ -34,38 +30,53 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
   });
 
   return (
-    <section id="plugins" className="py-28 px-6 bg-[#070707] text-white bg-grid-subtle border-b border-white/[0.08] relative overflow-hidden">
+    <section id="plugins" className="py-20 px-6 bg-[#070707] text-white bg-grid-subtle border-b border-white/[0.08] relative overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header: Strictly "Plugin Store" */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-4 border-b border-white/[0.08]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 pb-4 border-b border-white/[0.08]">
           <div>
-            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight">
+            <h2 className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight">
               Plugin Store
             </h2>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
-            {filterOptions.map((filter) => {
-              const isActive = selectedFilter === filter;
-              return (
-                <button
-                  key={filter}
-                  onClick={() => setSelectedFilter(filter)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-[#71B913] text-black font-bold'
-                      : 'bg-white/5 border border-white/10 text-[#888888] hover:text-white'
-                  }`}
-                >
-                  {filter}
-                </button>
-              );
-            })}
-          </div>
+          {/* Filter Pills (Only when plugins exist) */}
+          {sourcePlugins.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
+              {filterOptions.map((filter) => {
+                const isActive = selectedFilter === filter;
+                return (
+                  <button
+                    key={filter}
+                    onClick={() => setSelectedFilter(filter)}
+                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-[#71B913] text-black font-bold'
+                        : 'bg-white/5 border border-white/10 text-[#888888] hover:text-white'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Filterable Grid: Glossy Minimal Cards */}
+        {/* Empty State when no plugins have been uploaded yet */}
+        {filteredPlugins.length === 0 ? (
+          <div className="rounded-2xl bg-[#0C0C0C] border border-white/[0.08] p-10 sm:p-14 text-center max-w-2xl mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-[#71B913] mx-auto mb-4">
+              <Layers size={22} />
+            </div>
+            <h3 className="font-display text-lg sm:text-xl font-bold text-white mb-2">
+              No Plugins Available Right Now
+            </h3>
+            <p className="text-xs sm:text-sm text-[#888888] leading-relaxed">
+              New Adobe Premiere Pro, After Effects, and Photoshop plugins uploaded to the store will appear here automatically.
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredPlugins.map((plugin) => (
             <div
@@ -153,6 +164,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins }) 
             </div>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
