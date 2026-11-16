@@ -29,7 +29,10 @@ const CANONICAL_PACKAGES: Record<string, { name: string; price: string; descript
   },
 };
 
-// HTML escape sanitization helper to prevent HTML injection in emails
+const DEFAULT_APPS_SCRIPT_INQUIRY_URL =
+  'https://script.google.com/macros/s/AKfycbySGdTFlRdWFg2VM0AeO-Jw1AiPvAPF0v8d7y82KpKIJBYrXJ8OCWHIqk5Snawqo1Xl4A/exec';
+
+// HTML escape sanitization helper to prevent HTML injection in fallback SMTP emails
 function sanitize(input: unknown): string {
   if (typeof input !== 'string') return '';
   return input
@@ -41,8 +44,13 @@ function sanitize(input: unknown): string {
     .trim();
 }
 
+function cleanPlainText(input: unknown): string {
+  if (typeof input !== 'string') return '';
+  return input.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
+}
+
 function isValidEmail(email: string): boolean {
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   return emailRegex.test(email) && email.length <= 254;
 }
 
@@ -61,6 +69,8 @@ function checkRateLimit(identifier: string): boolean {
 export interface PackageOrderRequestBody {
   name: string;
   email: string;
+  service?: string;
+  message?: string;
   phone?: string;
   whatsAppNumber?: string;
   packageName?: string;
@@ -70,6 +80,96 @@ export interface PackageOrderRequestBody {
   budgetRange?: string;
   additionalRequirements?: string;
   honeypot?: string;
+}
+
+async function dispatchToAppsScript(payload: {
+  name: string;
+  email: string;
+  service: string;
+  message: string;
+}): Promise<{ ok: boolean; message?: string; error?: string }> {
+  const targetUrl =
+    process.env.APPS_SCRIPT_INQUIRY_URL?.trim() || DEFAULT_APPS_SCRIPT_INQUIRY_URL;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const resp = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const rawText = await resp.text();
+    let parsed: Record<string, any> | null = null;
+    try {
+      parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      parsed = null;
+    }
+
+    if (!resp.ok) {
+      return {
+        ok: false,
+        error:
+          parsed?.error ||
+          parsed?.message ||
+          `Email automation endpoint returned HTTP ${resp.status}.`,
+      };
+    }
+
+    if (parsed) {
+      if (parsed.success === false || parsed.status === 'error' || parsed.result === 'error') {
+        return {
+          ok: false,
+          error:
+            parsed.error ||
+            parsed.message ||
+            'The email automation service could not process your inquiry.',
+        };
+      }
+      return {
+        ok: true,
+        message: parsed.message || 'Inquiry submitted and confirmation email dispatched.',
+      };
+    }
+
+    // Check for Google Apps Script HTML error responses returned with HTTP 200
+    const lowerText = rawText.toLowerCase();
+    if (
+      lowerText.includes('script function not found') ||
+      lowerText.includes('authorization is required') ||
+      lowerText.includes('typeerror:') ||
+      lowerText.includes('referenceerror:') ||
+      lowerText.includes('exception:')
+    ) {
+      return {
+        ok: false,
+        error: 'The email automation service reported a script execution error.',
+      };
+    }
+
+    return {
+      ok: true,
+      message: 'Inquiry submitted and confirmation email dispatched.',
+    };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    const isAbort = err?.name === 'AbortError';
+    return {
+      ok: false,
+      error: isAbort
+        ? 'The email automation service timed out. Please try again.'
+        : err?.message || 'Unable to connect to the email automation endpoint.',
+    };
+  }
 }
 
 export async function processPackageOrder(body: PackageOrderRequestBody, clientIp = 'unknown') {
@@ -92,7 +192,7 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
       status: 429,
       data: {
         success: false,
-        error: 'Too many requests. Please wait a few minutes before submitting another order.',
+        error: 'Too many requests. Please wait a few minutes before submitting another inquiry.',
       },
     };
   }
@@ -101,7 +201,18 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
   const rawName = body.name || '';
   const rawEmail = body.email || '';
   const rawPhone = body.phone || body.whatsAppNumber || '';
-  const rawPackageName = body.packageName || 'Monthly Graphic Design';
+  const rawService = body.service || body.packageName || 'General Inquiry';
+  const rawMessage = body.message || '';
+
+  const plainName = cleanPlainText(rawName);
+  const plainEmail = cleanPlainText(rawEmail).toLowerCase();
+  const plainPhone = cleanPlainText(rawPhone);
+  const plainService = cleanPlainText(rawService);
+  const plainBrandName = cleanPlainText(body.brandName || '');
+  const plainDesignQty = cleanPlainText(body.monthlyDesignQty || '');
+  const plainVideoQty = cleanPlainText(body.monthlyVideoQty || '');
+  const plainBudgetRange = cleanPlainText(body.budgetRange || '');
+  const plainAdditionalReq = cleanPlainText(body.additionalRequirements || '');
 
   const name = sanitize(rawName);
   const email = sanitize(rawEmail).toLowerCase();
@@ -112,31 +223,40 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
   const budgetRange = sanitize(body.budgetRange || '');
   const additionalRequirements = sanitize(body.additionalRequirements || '');
 
-  if (!name || name.length < 2) {
+  if (!plainName || plainName.length < 2) {
     return {
       status: 400,
       data: { success: false, error: 'Please provide a valid full name (minimum 2 characters).' },
     };
   }
 
-  if (!email || !isValidEmail(email)) {
+  if (!plainEmail || !isValidEmail(plainEmail)) {
     return {
       status: 400,
-      data: { success: false, error: 'Please provide a valid email address for order confirmation.' },
+      data: { success: false, error: 'Please provide a valid email address for confirmation.' },
     };
   }
 
-  const phoneDigits = phone.replace(/[^0-9]/g, '');
-  if (!phone || phoneDigits.length < 6) {
+  if (plainPhone) {
+    const phoneDigits = plainPhone.replace(/[^0-9]/g, '');
+    if (phoneDigits.length < 6) {
+      return {
+        status: 400,
+        data: { success: false, error: 'Please provide a valid phone or WhatsApp number with at least 6 digits.' },
+      };
+    }
+  }
+
+  if (!plainService) {
     return {
       status: 400,
-      data: { success: false, error: 'Please provide a valid phone or WhatsApp number with at least 6 digits.' },
+      data: { success: false, error: 'Please select a service for your inquiry.' },
     };
   }
 
   // 4. Resolve package details from website catalog
   let matchedPackage = CANONICAL_PACKAGES['monthly-graphic-design'];
-  const lowerPkg = rawPackageName.toLowerCase();
+  const lowerPkg = plainService.toLowerCase();
   if (lowerPkg.includes('video') || lowerPkg.includes('reel')) {
     matchedPackage = CANONICAL_PACKAGES['monthly-video-editing-reels'];
   } else if (lowerPkg.includes('both')) {
@@ -147,29 +267,77 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
     matchedPackage = CANONICAL_PACKAGES['monthly-graphic-design'];
   }
 
-  const packageName = sanitize(rawPackageName || matchedPackage.name);
+  const packageName = sanitize(plainService || matchedPackage.name);
   const packagePrice = budgetRange || matchedPackage.price;
 
-  // 5. Generate unique Order Reference ID
-  const orderRef = `MB-PKG-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  // 5. Generate unique Reference ID
+  const orderRef = `MB-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
   const submissionDate = new Date().toLocaleString('en-US', {
     timeZone: 'Asia/Dhaka',
     dateStyle: 'full',
     timeStyle: 'medium',
   }) + ' (BST / GMT+6)';
 
-  // 6. Check environment variables
+  // Build standardized plain-text message for Google Apps Script if not explicitly passed
+  const assembledMessageParts: string[] = [];
+  if (cleanPlainText(rawMessage)) {
+    assembledMessageParts.push(cleanPlainText(rawMessage));
+  } else {
+    if (plainBrandName) assembledMessageParts.push(`Brand / Business: ${plainBrandName}`);
+    if (plainPhone) assembledMessageParts.push(`Phone / WhatsApp: ${plainPhone}`);
+    if (plainDesignQty) assembledMessageParts.push(`Design Quantity: ${plainDesignQty}`);
+    if (plainVideoQty) assembledMessageParts.push(`Video / Reels Quantity: ${plainVideoQty}`);
+    if (plainBudgetRange) assembledMessageParts.push(`Budget Range: ${plainBudgetRange}`);
+    if (plainAdditionalReq) {
+      assembledMessageParts.push(`Message / Requirements:\n${plainAdditionalReq}`);
+    }
+  }
+  const plainMessage = assembledMessageParts.join('\n').trim();
+
+  if (!plainMessage || plainMessage.length < 3) {
+    return {
+      status: 400,
+      data: { success: false, error: 'Please include your project details or message before submitting.' },
+    };
+  }
+
+  const appsScriptPayload = {
+    name: plainName,
+    email: plainEmail,
+    service: plainService,
+    message: `${plainMessage}\n\nReference ID: ${orderRef}`,
+  };
+
+  // 6. Primary dispatch: Google Apps Script Gmail Automation Endpoint
+  const appsScriptResult = await dispatchToAppsScript(appsScriptPayload);
+  if (appsScriptResult.ok) {
+    return {
+      status: 200,
+      data: {
+        success: true,
+        orderId: orderRef,
+        customerEmailSent: true,
+        message:
+          appsScriptResult.message ||
+          'Your inquiry has been submitted and a confirmation email has been sent to your address.',
+      },
+    };
+  }
+
+  // 7. Secondary fallback: Gmail SMTP (only if configured in environment)
   const gmailUser = process.env.GMAIL_USER?.trim();
   const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.trim();
   const adminEmail = process.env.ADMIN_EMAIL?.trim() || gmailUser;
 
   if (!gmailUser || !gmailAppPassword) {
-    console.error('[SMTP Config Error] Missing GMAIL_USER or GMAIL_APP_PASSWORD in environment variables.');
+    console.error('[Apps Script Inquiry Error]:', appsScriptResult.error);
     return {
-      status: 503,
+      status: 502,
       data: {
         success: false,
-        error: 'Email notification service is not configured on this environment. Please ensure GMAIL_USER and GMAIL_APP_PASSWORD are set in Vercel.',
+        error:
+          appsScriptResult.error ||
+          'Could not submit your inquiry right now. Please try again shortly.',
       },
     };
   }

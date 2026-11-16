@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Send, ArrowRight, Loader2, CheckCircle2, AlertCircle, Mail, MessageSquare } from 'lucide-react';
 import { CheckoutItem } from '../types';
 import { PAYMENT_CONFIG } from '../data/content';
@@ -8,6 +8,8 @@ interface StartProjectModalProps {
   onClose: () => void;
   onSelectCheckout: (item: CheckoutItem) => void;
 }
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export const StartProjectModal: React.FC<StartProjectModalProps> = ({
   isOpen,
@@ -24,7 +26,22 @@ export const StartProjectModal: React.FC<StartProjectModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [orderRef, setOrderRef] = useState('');
+  const [submittedInfo, setSubmittedInfo] = useState<{
+    name: string;
+    email: string;
+    phone: string;
+    service: string;
+    message: string;
+  } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const submitLockRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsSubmitted(false);
+      setErrorMsg('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -37,33 +54,42 @@ export const StartProjectModal: React.FC<StartProjectModalProps> = ({
   ];
 
   const constructWhatsAppSummary = (refId?: string) => {
+    const info = submittedInfo || {
+      name: clientName,
+      email: clientEmail,
+      phone: clientPhone,
+      service: projectType,
+      message: projectBrief,
+    };
     return `*NEW PROJECT INQUIRY — MIRRORBOOK*
 ----------------------------------------
 *Order Ref:* ${refId || orderRef || 'PENDING'}
-*Client:* ${clientName || 'Inquirer'}
-*Email:* ${clientEmail || 'N/A'}
-*Phone:* ${clientPhone || 'N/A'}
-*Project Scope:* ${projectType}
-*Brief:* ${projectBrief || 'Looking for project scope and discovery call.'}
+*Client:* ${info.name || 'Inquirer'}
+*Email:* ${info.email || 'N/A'}
+*Phone:* ${info.phone || 'N/A'}
+*Project Scope:* ${info.service}
+*Brief:* ${info.message || 'Looking for project scope and discovery call.'}
 ----------------------------------------
 Sent via https://mirrorbook.site/`;
   };
 
   const handleProjectSubmit = async (e: React.FormEvent, openWhatsAppAfter = false) => {
     e.preventDefault();
+    if (submitLockRef.current || isSubmitting) return;
     setErrorMsg('');
 
     const cleanName = clientName.trim();
-    const cleanEmail = clientEmail.trim();
+    const cleanEmail = clientEmail.trim().toLowerCase();
     const cleanPhone = clientPhone.trim();
+    const cleanBrief = projectBrief.trim();
 
     if (!cleanName || cleanName.length < 2) {
       setErrorMsg('Please enter your full name (minimum 2 characters).');
       return;
     }
 
-    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      setErrorMsg('Please enter a valid email address.');
+    if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
+      setErrorMsg('Please enter a valid email address (e.g. name@company.com).');
       return;
     }
 
@@ -72,20 +98,28 @@ Sent via https://mirrorbook.site/`;
       return;
     }
 
-    if (isSubmitting) return;
+    if (!cleanBrief || cleanBrief.length < 5) {
+      setErrorMsg('Please provide a brief project note or message (minimum 5 characters).');
+      return;
+    }
+
+    submitLockRef.current = true;
     setIsSubmitting(true);
 
+    const formattedMessage = `Phone / WhatsApp: ${cleanPhone}\n\n${cleanBrief}`;
+
     try {
-      const response = await fetch('/api/package-order', {
+      const response = await fetch('/api/inquiry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: cleanName,
           email: cleanEmail,
+          service: projectType,
+          message: formattedMessage,
           phone: cleanPhone,
-          packageName: `Custom Project: ${projectType}`,
-          budgetRange: 'Custom Project Inquiry Scope',
-          additionalRequirements: projectBrief.trim(),
+          packageName: projectType,
+          additionalRequirements: cleanBrief,
           honeypot: honeypot.trim(),
         }),
       });
@@ -98,11 +132,27 @@ Sent via https://mirrorbook.site/`;
 
       const generatedId = data.orderId || `MB-PRJ-${Date.now()}`;
       setOrderRef(generatedId);
+      setSubmittedInfo({
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        service: projectType,
+        message: cleanBrief,
+      });
       setIsSubmitted(true);
 
       if (openWhatsAppAfter) {
-        const text = constructWhatsAppSummary(generatedId);
-        const url = `https://wa.me/${PAYMENT_CONFIG.whatsAppNumber}?text=${encodeURIComponent(text)}`;
+        const summary = `*NEW PROJECT INQUIRY — MIRRORBOOK*
+----------------------------------------
+*Order Ref:* ${generatedId}
+*Client:* ${cleanName}
+*Email:* ${cleanEmail}
+*Phone:* ${cleanPhone}
+*Project Scope:* ${projectType}
+*Brief:* ${cleanBrief}
+----------------------------------------
+Sent via https://mirrorbook.site/`;
+        const url = `https://wa.me/${PAYMENT_CONFIG.whatsAppNumber}?text=${encodeURIComponent(summary)}`;
         const link = document.createElement('a');
         link.href = url;
         link.target = '_blank';
@@ -111,10 +161,16 @@ Sent via https://mirrorbook.site/`;
         link.click();
         document.body.removeChild(link);
       }
+
+      setClientName('');
+      setClientEmail('');
+      setClientPhone('');
+      setProjectBrief('');
     } catch (err: any) {
       console.error('Project inquiry error:', err);
-      setErrorMsg(err.message || 'An error occurred while submitting your request.');
+      setErrorMsg(err.message || 'An error occurred while submitting your request. Please try again.');
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -152,7 +208,7 @@ Sent via https://mirrorbook.site/`;
                 Project Request Received
               </span>
               <h4 className="font-display text-xl font-bold text-white mt-1">
-                Thank You, {clientName}!
+                Thank You, {submittedInfo?.name || clientName}!
               </h4>
             </div>
 
@@ -163,18 +219,18 @@ Sent via https://mirrorbook.site/`;
               </div>
               <div className="flex justify-between">
                 <span className="text-[#888888]">Scope:</span>
-                <span className="text-white font-medium">{projectType}</span>
+                <span className="text-white font-medium">{submittedInfo?.service || projectType}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#888888]">Confirmation Email:</span>
-                <span className="text-white font-medium">{clientEmail}</span>
+                <span className="text-white font-medium">{submittedInfo?.email || clientEmail}</span>
               </div>
             </div>
 
             <div className="p-3 bg-[#71B913]/10 border border-[#71B913]/30 rounded-xl text-left flex items-start gap-2 text-xs text-[#CCCCCC]">
               <Mail size={15} className="text-[#71B913] shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed">
-                Confirmation email sent to <strong className="text-white">{clientEmail}</strong>. Our team will review your project brief and follow up shortly.
+                Confirmation email sent to <strong className="text-white">{submittedInfo?.email || clientEmail}</strong>. Our team will review your project brief and follow up shortly.
               </p>
             </div>
 
@@ -290,10 +346,11 @@ Sent via https://mirrorbook.site/`;
 
             <div>
               <label className="block text-xs uppercase tracking-normal text-[#888888] mb-1 font-medium">
-                Brief Project Notes
+                Brief Project Notes <span className="text-[#71B913]">*</span>
               </label>
               <textarea
                 rows={3}
+                required
                 value={projectBrief}
                 onChange={(e) => setProjectBrief(e.target.value)}
                 placeholder="Goals, target timeline, or reference links..."

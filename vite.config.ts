@@ -13,7 +13,7 @@ function apiDevServerPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url?.split('?')[0];
-        if (url === '/api/package-order' || url === '/api/order') {
+        if (url === '/api/package-order' || url === '/api/order' || url === '/api/inquiry') {
           if (req.method !== 'POST') {
             res.statusCode = 405;
             res.setHeader('Content-Type', 'application/json');

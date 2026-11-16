@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Send, MessageSquare, CheckCircle2, Sliders, Sparkles, Loader2, AlertCircle, Mail } from 'lucide-react';
 import { PAYMENT_CONFIG } from '../data/content';
 
@@ -13,6 +13,8 @@ interface PackageCustomizerModalProps {
   initialData?: PackageInquiryData | null;
   onSuccessToast?: (msg: string) => void;
 }
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export const PackageCustomizerModal: React.FC<PackageCustomizerModalProps> = ({
   isOpen,
@@ -38,6 +40,7 @@ export const PackageCustomizerModal: React.FC<PackageCustomizerModalProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [orderRef, setOrderRef] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const submitLockRef = useRef(false);
 
   // Sync state if initialData changes
   React.useEffect(() => {
@@ -70,18 +73,21 @@ Sent via https://mirrorbook.site/`;
 
   const handleOrderSubmit = async (e: React.FormEvent, alsoOpenWhatsApp = false) => {
     e.preventDefault();
+    if (submitLockRef.current || isSubmitting) return;
     setErrorMsg('');
 
     const cleanName = name.trim();
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     const cleanPhone = whatsAppNumber.trim();
+    const cleanBrand = brandName.trim();
+    const cleanRequirements = additionalRequirements.trim();
 
     if (!cleanName || cleanName.length < 2) {
       setErrorMsg('Please enter your full name (minimum 2 characters).');
       return;
     }
 
-    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+    if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
       setErrorMsg('Please enter a valid email address so we can send your order confirmation.');
       return;
     }
@@ -91,10 +97,17 @@ Sent via https://mirrorbook.site/`;
       return;
     }
 
-    // Prevent duplicate submission if already processing
-    if (isSubmitting) return;
-
+    submitLockRef.current = true;
     setIsSubmitting(true);
+
+    const structuredMessage = [
+      `Brand / Business: ${cleanBrand || 'N/A'}`,
+      `Phone / WhatsApp: ${cleanPhone}`,
+      `Monthly Design Quantity: ${monthlyDesignQty}`,
+      `Monthly Video & Reels Quantity: ${monthlyVideoQty}`,
+      `Budget Range: ${budgetRange}`,
+      `Additional Requirements:\n${cleanRequirements || 'Standard package onboarding and discovery scope.'}`,
+    ].join('\n');
 
     try {
       const response = await fetch('/api/package-order', {
@@ -104,14 +117,16 @@ Sent via https://mirrorbook.site/`;
         },
         body: JSON.stringify({
           name: cleanName,
-          brandName: brandName.trim(),
           email: cleanEmail,
+          service: requiredService,
+          message: structuredMessage,
+          brandName: cleanBrand,
           whatsAppNumber: cleanPhone,
           packageName: requiredService,
           monthlyDesignQty,
           monthlyVideoQty,
           budgetRange,
-          additionalRequirements: additionalRequirements.trim(),
+          additionalRequirements: cleanRequirements,
           honeypot: honeypot.trim(),
         }),
       });
@@ -133,14 +148,14 @@ Sent via https://mirrorbook.site/`;
         inquiries.push({
           id: generatedId,
           name: cleanName,
-          brandName: brandName.trim(),
+          brandName: cleanBrand,
           email: cleanEmail,
           whatsAppNumber: cleanPhone,
           requiredService,
           monthlyDesignQty,
           monthlyVideoQty,
           budgetRange,
-          additionalRequirements: additionalRequirements.trim(),
+          additionalRequirements: cleanRequirements,
           createdAt: new Date().toISOString(),
           status: 'Email Dispatched',
         });
@@ -168,6 +183,7 @@ Sent via https://mirrorbook.site/`;
       console.error('Package order error:', err);
       setErrorMsg(err.message || 'An error occurred while submitting your order. Please check your connection.');
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };
