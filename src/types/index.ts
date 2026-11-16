@@ -2,6 +2,8 @@ export type Category = 'All' | 'Premiere Pro' | 'After Effects' | 'Photoshop' | 
 
 export type ProductType = 'Plugin' | 'Course' | 'Software' | 'Free Tutorial' | 'Agency Package';
 
+export type UserRole = 'customer' | 'admin';
+
 export interface ProductItem {
   id: string;
   type: ProductType;
@@ -121,6 +123,7 @@ export interface Order {
   status?: 'Pending' | 'Verified' | 'Completed';
   productId?: string;
   downloadUrl?: string;
+  licenseKey?: string;
 }
 
 export interface UserPurchase {
@@ -131,6 +134,33 @@ export interface UserPurchase {
   downloadUrl: string;
   purchasedAt: string;
   trxId?: string;
+  licenseKey?: string;
+}
+
+export interface DownloadHistoryItem {
+  id: string;
+  userId: string;
+  purchaseId?: string;
+  title: string;
+  category?: string;
+  licenseKey?: string;
+  sessionToken?: string;
+  downloadedAt: string;
+}
+
+export interface CustomerProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string | null;
+  phone?: string;
+  company?: string;
+  role: UserRole;
+  authProvider: string;
+  emailVerified?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  lastLoginAt?: string;
 }
 
 export interface AppUser {
@@ -139,6 +169,12 @@ export interface AppUser {
   displayName: string | null;
   photoURL?: string | null;
   isGoogle?: boolean;
+  authProvider?: string;
+  emailVerified?: boolean;
+  role: UserRole;
+  backendVerified?: boolean;
+  phone?: string;
+  company?: string;
 }
 
 export interface CheckoutItem {
@@ -157,9 +193,9 @@ export interface SheetPaymentLog {
   status: string;
 }
 
+// Strict Studio Owner identity — verified server-side via Firebase ID token & Firestore rules
 export const OWNER_EMAILS: string[] = [
   'khansaheb2572@gmail.com',
-  'miirorbook.tech@gmail.com',
 ];
 
 export function isStudioOwner(email?: string | null): boolean {
@@ -168,3 +204,14 @@ export function isStudioOwner(email?: string | null): boolean {
   return OWNER_EMAILS.some((owner) => owner.toLowerCase() === clean);
 }
 
+export function isVerifiedAdminUser(user?: AppUser | null): boolean {
+  if (!user) return false;
+  return user.role === 'admin' && user.backendVerified === true && isStudioOwner(user.email);
+}
+
+export function generateDeterministicLicenseKey(title: string, email?: string | null, seed?: string): string {
+  const cleanProd = (title || 'ASSET').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase() || 'ASSET';
+  const emailPrefix = ((email || 'USER').split('@')[0] || 'USER').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || 'USER';
+  const suffix = (seed || '0000').replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase() || 'ACTIVE';
+  return `MB-${cleanProd}-${emailPrefix}-${suffix}`;
+}

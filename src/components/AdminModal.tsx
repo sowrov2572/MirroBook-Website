@@ -27,9 +27,8 @@ import {
   Zap,
   MessageSquare,
   ShieldCheck,
-  Key,
 } from 'lucide-react';
-import { Order, ProductItem, ProductType, PaymentConfig, AppUser, SheetPaymentLog, isStudioOwner } from '../types';
+import { Order, ProductItem, ProductType, PaymentConfig, AppUser, SheetPaymentLog, isVerifiedAdminUser } from '../types';
 import {
   COMPLETE_PAYMENT_GOOGLE_APPS_SCRIPT,
   sendTelegramNotification,
@@ -79,29 +78,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onRefreshOrdersFromSheet,
 }) => {
   const paymentConfig = passedPaymentConfig || loadPaymentConfig();
-  const isOwnerLoggedIn = isStudioOwner(currentUser?.email);
+  const isOwnerVerified = isVerifiedAdminUser(currentUser);
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState(false);
-
-  // Custom Master Key (Default: 257261)
-  const DEFAULT_MASTER_KEY = '257261';
-
-  const [masterPasskey, setMasterPasskey] = useState<string>(() => {
-    try {
-      const stored = localStorage.getItem('mirrorbook_admin_passkey');
-      if (stored && stored !== '1234') {
-        return stored;
-      }
-      localStorage.setItem('mirrorbook_admin_passkey', DEFAULT_MASTER_KEY);
-      return DEFAULT_MASTER_KEY;
-    } catch {
-      return DEFAULT_MASTER_KEY;
-    }
-  });
-  const [newPasskeyInput, setNewPasskeyInput] = useState('');
-  const [passkeySavedToast, setPasskeySavedToast] = useState(false);
   const [productSavedToast, setProductSavedToast] = useState<string | null>(null);
 
   // Active Main Tab: 'orders' | 'products' | 'automation'
@@ -201,30 +179,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setCfgWhatsApp(paymentConfig.whatsAppNumber);
   }, [paymentConfig, sheetsUrl]);
 
-  // Auto-authenticate verified studio owner from Google AI Studio session
+  // Auto fetch Google Sheet payments when opened by verified studio owner
   useEffect(() => {
-    if (isOpen) {
-      if (isOwnerLoggedIn) {
-        setIsAuthenticated(true);
-        setPinError(false);
-      }
-      // Auto fetch Google Sheet payments when opened
-      if (cfgWebAppUrl && cfgWebAppUrl.trim().startsWith('http')) {
-        fetchGoogleSheetPayments(cfgWebAppUrl).then((logs) => {
+    if (isOpen && isOwnerVerified && cfgWebAppUrl && cfgWebAppUrl.trim().startsWith('http')) {
+      fetchGoogleSheetPayments(cfgWebAppUrl)
+        .then((logs) => {
           if (logs.length > 0) setSheetSmsLogs(logs);
-        }).catch(() => {});
-      }
+        })
+        .catch(() => {});
     }
-  }, [isOpen, isOwnerLoggedIn, cfgWebAppUrl]);
+  }, [isOpen, isOwnerVerified, cfgWebAppUrl]);
 
-  // Reset auth and view states when modal closes (except if owner remains logged in)
+  // Reset view states when modal closes
   useEffect(() => {
     if (!isOpen) {
-      if (!isOwnerLoggedIn) {
-        setIsAuthenticated(false);
-      }
-      setPinInput('');
-      setPinError(false);
       setOrderSearchTerm('');
       setProductSearchTerm('');
       setIsFormOpen(false);
@@ -235,33 +203,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       setConfigSavedToast(false);
       setSyncFeedback(null);
     }
-  }, [isOpen, isOwnerLoggedIn]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const handlePinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanInput = pinInput.trim();
-    if (cleanInput === masterPasskey || cleanInput === '257261') {
-      setIsAuthenticated(true);
-      setPinError(false);
-    } else {
-      setPinError(true);
-      setPinInput('');
-    }
-  };
-
-  const handleSaveMasterPasskey = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPasskeyInput.trim().length >= 4) {
-      const cleanKey = newPasskeyInput.trim();
-      setMasterPasskey(cleanKey);
-      localStorage.setItem('mirrorbook_admin_passkey', cleanKey);
-      setNewPasskeyInput('');
-      setPasskeySavedToast(true);
-      setTimeout(() => setPasskeySavedToast(false), 3000);
-    }
-  };
 
   const handleSyncAllFromSheet = async () => {
     setIsSyncingAll(true);
@@ -384,7 +328,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       cleanTrx,
       amt,
       'ADMIN-TEST-ORD',
-      'miirorbook.tech@gmail.com'
+      currentUser?.email || 'khansaheb2572@gmail.com'
     );
 
     setIsTestingVerify(false);
@@ -620,63 +564,37 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           </button>
         </div>
 
-        {/* Master Security Key Gate */}
-        {!isAuthenticated ? (
+        {/* Role-Based Access Verification Gate */}
+        {!isOwnerVerified ? (
           <div className="p-12 max-w-md mx-auto text-center space-y-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#181818] border border-white/10 text-[#71B913] mx-auto flex items-center justify-center shadow-lg">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 mx-auto flex items-center justify-center shadow-lg">
               <Lock size={24} />
             </div>
 
             <div>
               <h4 className="font-display text-2xl font-bold text-white mb-2">
-                Studio Owner Verification
+                Access Denied
               </h4>
               <p className="text-xs text-[#AAAAAA] leading-relaxed">
                 {currentUser?.email ? (
                   <span>
-                    Current account: <strong className="text-white">{currentUser.email}</strong> is not authorized as Studio Owner. Please enter the Master Security Key.
+                    Current account (<strong className="text-white">{currentUser.email}</strong>) does not have Studio Owner administrator privileges.
                   </span>
                 ) : (
                   <span>
-                    This control desk is restricted to MirrorBook studio administrators. Sign in with owner Google account or enter Master Security Key.
+                    Please sign in at the dedicated Studio Owner portal (<code className="text-[#71B913]">/admin/login</code>) with a verified administrator Google account.
                   </span>
                 )}
               </p>
             </div>
 
-            <form onSubmit={handlePinSubmit} className="space-y-4">
-              <div className="relative">
-                <input
-                  type="password"
-                  value={pinInput}
-                  onChange={(e) => {
-                    setPinInput(e.target.value);
-                    if (pinError) setPinError(false);
-                  }}
-                  placeholder="Master Security Key"
-                  autoFocus
-                  className="w-full bg-[#121212] border border-white/15 focus:border-[#71B913] rounded-xl text-center text-lg tracking-[0.25em] py-3 text-white focus:outline-none font-mono transition-colors"
-                />
-              </div>
-
-              {pinError && (
-                <div className="text-xs text-red-400 flex items-center justify-center gap-1.5 bg-red-500/10 border border-red-500/20 py-2 rounded-lg">
-                  <AlertCircle size={14} />
-                  <span>Access Denied: Invalid Security Key.</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-3 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl transition-all cursor-pointer font-bold shadow-[0_0_15px_rgba(113,185,19,0.25)]"
-              >
-                Authorize Console Access
-              </button>
-            </form>
-
-            <p className="text-[11px] text-[#666666]">
-              Authorized Studio Emails: khansaheb2572@gmail.com, miirorbook.tech@gmail.com
-            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-3 text-xs font-semibold uppercase tracking-normal bg-white/10 hover:bg-white/15 text-white rounded-xl transition-all cursor-pointer"
+            >
+              Close
+            </button>
           </div>
         ) : (
           /* Authenticated Admin Workspace */
@@ -725,12 +643,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </button>
               </div>
 
-              <button
-                onClick={() => setIsAuthenticated(false)}
-                className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#1A1A1A] text-[#888888] hover:text-white border border-white/10 rounded-lg transition-colors cursor-pointer mb-2"
-              >
-                Lock
-              </button>
+              <span className="px-3 py-1 text-[10px] font-mono uppercase tracking-normal bg-[#71B913]/15 text-[#71B913] border border-[#71B913]/30 rounded-lg mb-2">
+                Verified Admin
+              </span>
             </div>
 
             {/* TAB 1: ORDERS & INCOMING PAYMENTS */}
@@ -1051,7 +966,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               <div className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
                   <div className="flex flex-wrap items-center gap-1">
-                    {(['All', 'Plugin', 'Course', 'Free Tutorial', 'Agency Package'] as const).map(
+                    {(['All', 'Plugin', 'Software', 'Course', 'Free Tutorial', 'Agency Package'] as const).map(
                       (type) => (
                         <button
                           key={type}
@@ -1130,6 +1045,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
                           >
                             <option value="Plugin">Plugin</option>
+                            <option value="Software">Software</option>
                             <option value="Course">Course</option>
                             <option value="Free Tutorial">Free Tutorial</option>
                             <option value="Agency Package">Agency Package</option>
@@ -1823,39 +1739,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </span>
                       </p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Section 6: Master Security Passkey */}
-                <div className="space-y-4 pt-2">
-                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                    <Key size={16} className="text-[#71B913]" />
-                    <h5 className="font-display text-base font-bold text-white">
-                      6. Admin Master Security Passkey
-                    </h5>
-                  </div>
-
-                  <div className="bg-[#121212] border border-white/10 rounded-xl p-4 space-y-3">
-                    <p className="text-[11px] text-[#888888]">
-                      Change the master secret key used to unlock this control desk when accessed without Google owner authentication.
-                    </p>
-
-                    <form onSubmit={handleSaveMasterPasskey} className="flex items-center gap-3">
-                      <input
-                        type="password"
-                        value={newPasskeyInput}
-                        onChange={(e) => setNewPasskeyInput(e.target.value)}
-                        placeholder="Enter new master key (min 4 chars)"
-                        className="bg-[#161616] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none w-64"
-                      />
-                      <button
-                        type="submit"
-                        disabled={newPasskeyInput.trim().length < 4}
-                        className="px-4 py-2 text-xs font-semibold uppercase tracking-normal bg-white/10 hover:bg-[#71B913] hover:text-black rounded-xl text-white transition-all disabled:opacity-40 cursor-pointer"
-                      >
-                        {passkeySavedToast ? 'Key Updated!' : 'Update Master Key'}
-                      </button>
-                    </form>
                   </div>
                 </div>
 

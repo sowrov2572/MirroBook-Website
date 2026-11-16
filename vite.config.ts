@@ -4,6 +4,7 @@ import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
 import { processPackageOrder } from './api/package-order';
+import { processAuthSession } from './api/auth/session';
 
 dotenv.config();
 
@@ -12,7 +13,59 @@ function apiDevServerPlugin(): Plugin {
     name: 'api-dev-server-plugin',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        const url = req.url?.split('?')[0];
+        const rawUrl = req.url || '';
+        const [url, queryStr] = rawUrl.split('?');
+
+        if (url === '/api/auth/session') {
+          if (req.method !== 'POST' && req.method !== 'GET') {
+            res.statusCode = 405;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ authenticated: false, error: 'Method not allowed.' }));
+            return;
+          }
+
+          let bodyStr = '';
+          req.on('data', (chunk) => {
+            bodyStr += chunk;
+          });
+          req.on('end', async () => {
+            try {
+              const params = new URLSearchParams(queryStr || '');
+              let intent = params.get('intent') || undefined;
+              if (bodyStr) {
+                try {
+                  const parsed = JSON.parse(bodyStr);
+                  if (typeof parsed?.intent === 'string') {
+                    intent = parsed.intent;
+                  }
+                } catch {
+                  // ignore optional body parse failure
+                }
+              }
+
+              const authHeader =
+                typeof req.headers['authorization'] === 'string'
+                  ? req.headers['authorization']
+                  : undefined;
+
+              const result = await processAuthSession(authHeader, intent);
+              res.statusCode = result.status;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify(result.data));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(
+                JSON.stringify({
+                  authenticated: false,
+                  error: err?.message || 'Session verification error.',
+                })
+              );
+            }
+          });
+          return;
+        }
+
         if (url === '/api/package-order' || url === '/api/order' || url === '/api/inquiry') {
           if (req.method !== 'POST') {
             res.statusCode = 405;

@@ -145,7 +145,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setVerificationFailed(false);
     setVerificationMessage('');
 
-    const customerEmail = (user?.email || email || '').trim();
+    const customerEmail = (user?.email || email || '').trim().toLowerCase();
     if (!customerEmail || !customerEmail.includes('@')) {
       setErrorMsg('সঠিক ইমেইল এড্রেস দিন (লাইসেন্স ও গুগল ড্রাইভ এক্সেসের জন্য)।');
       return;
@@ -329,7 +329,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       id: orderId,
       userId: user?.uid,
       customerName: name.trim() || user?.displayName || (user?.email || email || '').split('@')[0],
-      customerEmail: (user?.email || email || '').trim(),
+      customerEmail: (user?.email || email || '').trim().toLowerCase(),
       customerPhone: phone.trim(),
       itemName: item.name,
       itemPrice: item.price,

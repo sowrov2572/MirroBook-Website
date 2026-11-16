@@ -30,6 +30,13 @@ interface SecureDownloadModalProps {
   target: SecureDownloadTarget | null;
   user: AppUser | null;
   onSignIn: () => void;
+  onDownloadLogged?: (entry: {
+    purchaseId?: string;
+    title: string;
+    category?: string;
+    licenseKey?: string;
+    sessionToken?: string;
+  }) => void;
 }
 
 export const SecureDownloadModal: React.FC<SecureDownloadModalProps> = ({
@@ -38,6 +45,7 @@ export const SecureDownloadModal: React.FC<SecureDownloadModalProps> = ({
   target,
   user,
   onSignIn,
+  onDownloadLogged,
 }) => {
   const [secondsRemaining, setSecondsRemaining] = useState(600); // 10 minutes session
   const [downloadLaunched, setDownloadLaunched] = useState(false);
@@ -106,6 +114,16 @@ export const SecureDownloadModal: React.FC<SecureDownloadModalProps> = ({
       localStorage.setItem('mirrorbook_download_audit', JSON.stringify(existing.slice(0, 30)));
     } catch {
       // ignore
+    }
+
+    if (onDownloadLogged) {
+      onDownloadLogged({
+        purchaseId: target.orderId || target.id,
+        title: target.title,
+        category: target.category,
+        licenseKey,
+        sessionToken,
+      });
     }
 
     // Trigger download in clean context

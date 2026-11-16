@@ -2,31 +2,278 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Test connection check
-    match /test/{docId} {
-      allow read, write: if true;
+    // Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Public Product Catalog: accessible worldwide in real time
+    // ==================== GLOBAL HARDENED HELPERS ====================
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isVerifiedOwnerEmail() {
+      return isEmailVerified() && request.auth.token.email == 'khansaheb2572@gmail.com';
+    }
+
+    // Admin privilege check using dedicated server-managed /admins/{uid} collection or verified bootstrap owner email
+    function isAdmin() {
+      return isVerifiedOwnerEmail() || (
+        isSignedIn() &&
+        isEmailVerified() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // ==================== VALIDATION BLUEPRINTS ====================
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'type', 'category', 'title', 'description', 'price'])
+        && data.keys().hasOnly([
+          'id', 'type', 'category', 'title', 'description', 'price', 'priceDisplay',
+          'period', 'thumbnailUrl', 'protectedUrl', 'duration', 'instructor',
+          'featured', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.type is string && data.type in ['Plugin', 'Course', 'Software', 'Free Tutorial', 'Agency Package']
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 3000
+        && (data.price is int || data.price is float) && data.price >= 0 && data.price <= 10000000
+        && (!('priceDisplay' in data) || (data.priceDisplay is string && data.priceDisplay.size() <= 60))
+        && (!('period' in data) || (data.period is string && data.period.size() <= 40))
+        && (!('thumbnailUrl' in data) || (data.thumbnailUrl is string && data.thumbnailUrl.size() <= 1000))
+        && (!('protectedUrl' in data) || (data.protectedUrl is string && data.protectedUrl.size() <= 1000))
+        && (!('duration' in data) || (data.duration is string && data.duration.size() <= 60))
+        && (!('instructor' in data) || (data.instructor is string && data.instructor.size() <= 120))
+        && (!('featured' in data) || data.featured is bool)
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64))
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidSetting(settingId, data) {
+      return (
+        settingId == 'paymentConfig' &&
+        data.keys().hasOnly([
+          'bKashNumber', 'nagadNumber', 'rocketNumber', 'upayNumber',
+          'bankDetails', 'secondaryBankDetails', 'webAppUrl', 'whatsAppNumber'
+        ]) &&
+        (!('bKashNumber' in data) || (data.bKashNumber is string && data.bKashNumber.size() <= 40)) &&
+        (!('nagadNumber' in data) || (data.nagadNumber is string && data.nagadNumber.size() <= 40)) &&
+        (!('rocketNumber' in data) || (data.rocketNumber is string && data.rocketNumber.size() <= 40)) &&
+        (!('upayNumber' in data) || (data.upayNumber is string && data.upayNumber.size() <= 40)) &&
+        (!('webAppUrl' in data) || (data.webAppUrl is string && data.webAppUrl.size() <= 1000)) &&
+        (!('whatsAppNumber' in data) || (data.whatsAppNumber is string && data.whatsAppNumber.size() <= 40)) &&
+        (!('bankDetails' in data) || data.bankDetails is map) &&
+        (!('secondaryBankDetails' in data) || data.secondaryBankDetails is map)
+      ) || (
+        settingId == 'adminConfig' &&
+        data.keys().hasOnly(['telegramBotToken', 'telegramChatId', 'spreadsheetUrl', 'webAppUrl', 'updatedAt']) &&
+        (!('telegramBotToken' in data) || (data.telegramBotToken is string && data.telegramBotToken.size() <= 300)) &&
+        (!('telegramChatId' in data) || (data.telegramChatId is string && data.telegramChatId.size() <= 100)) &&
+        (!('spreadsheetUrl' in data) || (data.spreadsheetUrl is string && data.spreadsheetUrl.size() <= 1000)) &&
+        (!('webAppUrl' in data) || (data.webAppUrl is string && data.webAppUrl.size() <= 1000)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 80))
+      );
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'customerName', 'customerEmail', 'customerPhone', 'itemName', 'itemPrice', 'paymentMethod', 'trxId', 'createdAt', 'status'])
+        && data.keys().hasOnly([
+          'id', 'userId', 'customerName', 'customerEmail', 'customerPhone',
+          'itemId', 'productId', 'itemName', 'itemPrice', 'paymentMethod',
+          'senderAccount', 'trxId', 'createdAt', 'status', 'downloadUrl', 'licenseKey'
+        ])
+        && isValidId(data.id)
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
+        && data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120
+        && data.customerEmail is string && data.customerEmail.size() >= 3 && data.customerEmail.size() <= 254
+        && data.customerPhone is string && data.customerPhone.size() >= 4 && data.customerPhone.size() <= 40
+        && (!('itemId' in data) || (data.itemId is string && data.itemId.size() <= 128))
+        && (!('productId' in data) || (data.productId is string && data.productId.size() <= 128))
+        && data.itemName is string && data.itemName.size() >= 1 && data.itemName.size() <= 200
+        && data.itemPrice is string && data.itemPrice.size() >= 1 && data.itemPrice.size() <= 60
+        && data.paymentMethod is string && data.paymentMethod in ['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer']
+        && (!('senderAccount' in data) || (data.senderAccount is string && data.senderAccount.size() <= 80))
+        && data.trxId is string && data.trxId.size() >= 4 && data.trxId.size() <= 60
+        && data.createdAt is string && data.createdAt.size() <= 80
+        && data.status is string && data.status in ['Pending', 'Verified', 'Completed']
+        && (!('downloadUrl' in data) || (data.downloadUrl is string && data.downloadUrl.size() <= 1000))
+        && (!('licenseKey' in data) || (data.licenseKey is string && data.licenseKey.size() <= 120));
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'authProvider', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'photoURL', 'phone', 'company',
+          'role', 'authProvider', 'emailVerified', 'createdAt', 'updatedAt', 'lastLoginAt'
+        ])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.role is string && data.role in ['customer', 'admin']
+        && data.authProvider is string && data.authProvider.size() >= 1 && data.authProvider.size() <= 60
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1000))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+        && (!('company' in data) || (data.company is string && data.company.size() <= 120))
+        && (!('emailVerified' in data) || data.emailVerified is bool)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && (!('lastLoginAt' in data) || data.lastLoginAt is timestamp);
+    }
+
+    function isValidPurchase(data) {
+      return data.keys().hasAll(['id', 'title', 'downloadUrl', 'purchasedAt'])
+        && data.keys().hasOnly(['id', 'productId', 'title', 'category', 'downloadUrl', 'purchasedAt', 'trxId', 'licenseKey'])
+        && isValidId(data.id)
+        && (!('productId' in data) || (data.productId is string && data.productId.size() <= 128))
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
+        && data.downloadUrl is string && data.downloadUrl.size() <= 1000
+        && data.purchasedAt is string && data.purchasedAt.size() <= 80
+        && (!('trxId' in data) || (data.trxId is string && data.trxId.size() <= 60))
+        && (!('licenseKey' in data) || (data.licenseKey is string && data.licenseKey.size() <= 120));
+    }
+
+    function isValidDownloadLog(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'downloadedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'purchaseId', 'title', 'category', 'licenseKey', 'sessionToken', 'downloadedAt'])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && (!('purchaseId' in data) || (data.purchaseId is string && data.purchaseId.size() <= 128))
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
+        && (!('licenseKey' in data) || (data.licenseKey is string && data.licenseKey.size() <= 120))
+        && (!('sessionToken' in data) || (data.sessionToken is string && data.sessionToken.size() <= 120))
+        && data.downloadedAt is timestamp;
+    }
+
+    // ==================== COLLECTION RULES ====================
+
+    // 1. Public Digital Store Catalog (Admin write only)
     match /products/{productId} {
-      allow read, write: if true;
+      allow get: if isValidId(productId);
+      allow list: if true;
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().id == productId;
+      allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().id == existing().id;
+      allow delete: if isAdmin() && isValidId(productId);
     }
 
-    // Global Public Settings & Payment Config
+    // 2. Settings: paymentConfig is public read-only for checkout; adminConfig is strictly Admin-only
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow get: if isValidId(settingId) && (settingId == 'paymentConfig' || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(settingId) && isValidSetting(settingId, incoming());
+      allow delete: if isAdmin() && isValidId(settingId);
     }
 
-    // Customer Orders & Submissions
+    // 3. Server-managed Admin Allowlist (immutable from client SDKs)
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && isSignedIn() && (request.auth.uid == adminUid || isVerifiedOwnerEmail());
+      allow list, create, update, delete: if false;
+    }
+
+    // 4. Customer Orders (Strictly isolated to order owner or Admin)
     match /orders/{orderId} {
-      allow read, write: if true;
+      allow get: if isValidId(orderId) && isSignedIn() && (
+        isAdmin() ||
+        (('userId' in existing()) && existing().userId == request.auth.uid) ||
+        (isEmailVerified() && existing().customerEmail == request.auth.token.email)
+      );
+      allow list: if isSignedIn() && (
+        isVerifiedOwnerEmail() ||
+        (('userId' in resource.data) && resource.data.userId == request.auth.uid) ||
+        (isEmailVerified() && resource.data.customerEmail == request.auth.token.email)
+      );
+      allow create: if isValidId(orderId)
+        && isValidOrder(incoming())
+        && incoming().id == orderId
+        && incoming().status in ['Pending', 'Verified']
+        && (
+          (isSignedIn() && ('userId' in incoming()) && incoming().userId == request.auth.uid) ||
+          (!isSignedIn() && !('userId' in incoming()))
+        );
+      allow update: if isAdmin() && isValidId(orderId) && isValidOrder(incoming()) && incoming().id == existing().id;
+      allow delete: if isAdmin() && isValidId(orderId);
     }
 
-    // User Personal Vault & Digital Library (accessible to owner and customers)
+    // 5. Customer Profiles & Isolated Vault Subcollections
     match /users/{userId} {
-      allow read, write: if true;
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (isVerifiedOwnerEmail() || resource.data.uid == request.auth.uid);
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && request.auth.uid == userId
+        && isValidUserProfile(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (incoming().role == 'customer' || (incoming().role == 'admin' && isVerifiedOwnerEmail()));
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && isValidUserProfile(incoming())
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            incoming().uid == existing().uid &&
+            incoming().email == existing().email &&
+            incoming().role == existing().role &&
+            incoming().createdAt == existing().createdAt &&
+            incoming().updatedAt == request.time &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'photoURL', 'phone', 'company', 'emailVerified', 'lastLoginAt', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+
+      // Customer Purchases Subcollection
       match /purchases/{purchaseId} {
-        allow read, write: if true;
+        allow get: if isValidId(userId) && isValidId(purchaseId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow list: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isVerifiedOwnerEmail());
+        allow create, update: if isValidId(userId)
+          && isValidId(purchaseId)
+          && isSignedIn()
+          && (request.auth.uid == userId || isAdmin())
+          && isValidPurchase(incoming())
+          && incoming().id == purchaseId
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow delete: if isValidId(userId) && isValidId(purchaseId) && isAdmin();
+      }
+
+      // Customer Download History Subcollection
+      match /downloads/{downloadId} {
+        allow get: if isValidId(userId) && isValidId(downloadId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow list: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isVerifiedOwnerEmail());
+        allow create: if isValidId(userId)
+          && isValidId(downloadId)
+          && isSignedIn()
+          && (request.auth.uid == userId || isAdmin())
+          && isValidDownloadLog(incoming())
+          && incoming().id == downloadId
+          && incoming().userId == userId
+          && incoming().downloadedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(downloadId) && isAdmin();
       }
     }
   }

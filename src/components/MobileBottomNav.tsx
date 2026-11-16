@@ -115,8 +115,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 {(user.displayName || user.email || 'U')[0].toUpperCase()}
               </div>
             )}
-            <span className="text-[10px] font-medium text-[#71B913] mt-1 truncate max-w-[42px]">
-              Active
+            <span className="text-[10px] font-medium text-[#71B913] mt-1 truncate max-w-[46px]">
+              Account
             </span>
           </button>
         ) : (

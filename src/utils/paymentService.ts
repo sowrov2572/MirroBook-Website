@@ -104,14 +104,13 @@ export async function sendTelegramNotification(
 }
 
 /**
- * Sends customer registration or login data (email, password/auth provider, name)
- * directly to Google Sheet "Users" tab so customer accounts are never lost.
+ * Sends customer registration or login metadata (without passwords)
+ * to Google Sheet "Users" tab so customer account activity stays synced.
  */
 export async function logUserLoginToGoogleSheet(
   webAppUrl: string,
   user: {
     email: string;
-    password?: string;
     name?: string;
     authProvider?: string;
     uid?: string;
@@ -125,9 +124,8 @@ export async function logUserLoginToGoogleSheet(
     action: 'logUser',
     user: {
       email: user.email.trim(),
-      password: user.password ? user.password.trim() : '(Google One-Tap)',
       name: user.name ? user.name.trim() : user.email.split('@')[0],
-      authProvider: user.authProvider || 'Email/Password',
+      authProvider: user.authProvider || 'Firebase Auth',
       uid: user.uid || '',
       timestamp: new Date().toISOString(),
     },
@@ -146,7 +144,7 @@ export async function logUserLoginToGoogleSheet(
   if (response.ok) {
     return {
       success: true,
-      message: response.data?.message || 'User credentials synced to Google Sheet Users tab.',
+      message: response.data?.message || 'User metadata synced to Google Sheet Users tab.',
     };
   }
 
@@ -154,11 +152,11 @@ export async function logUserLoginToGoogleSheet(
     endpointAction: 'logUser',
     status: 'FAILED',
     attempts: response.attempts,
-    message: response.error || 'Failed to sync user credentials to Google Sheet.',
+    message: response.error || 'Failed to sync user metadata to Google Sheet.',
     details: { email: user.email },
   });
 
-  return { success: true, message: 'User stored locally (remote sync queued).' };
+  return { success: true, message: 'User stored in Firebase (remote sheet sync queued).' };
 }
 
 /**
@@ -565,8 +563,8 @@ function setupUsersSheet() {
   var sheet = ss.getSheetByName("Users");
   if (!sheet) {
     sheet = ss.insertSheet("Users");
-    sheet.appendRow(["RegisteredAt", "Email", "Password", "CreatorName", "Provider", "UID", "Status"]);
-    sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#71B913").setFontColor("#000000");
+    sheet.appendRow(["RegisteredAt", "Email", "CreatorName", "Provider", "UID", "Status"]);
+    sheet.getRange(1, 1, 1, 6).setFontWeight("bold").setBackground("#71B913").setFontColor("#000000");
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -871,16 +869,11 @@ function doPost(e) {
         uSheet.appendRow([
           new Date().toISOString(),
           u.email || "",
-          u.password || "(Google)",
           u.name || "",
-          u.authProvider || "Web",
+          u.authProvider || "Firebase Auth",
           u.uid || "",
           "Active"
         ]);
-      } else {
-        if (u.password && u.password !== "(Google One-Tap)") {
-          uSheet.getRange(userRow, 3).setValue(u.password);
-        }
       }
 
       var oSheet = setupOrdersSheet();

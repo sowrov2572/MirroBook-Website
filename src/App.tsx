@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Services } from './components/Services';
@@ -9,7 +9,6 @@ import { CoursesAndTutorials } from './components/CoursesAndTutorials';
 import { SoftwareStore } from './components/SoftwareStore';
 import { CheckoutModal } from './components/CheckoutModal';
 import { VideoPlayerModal, PlayableVideo } from './components/VideoPlayerModal';
-import { AdminModal } from './components/AdminModal';
 import { StartProjectModal } from './components/StartProjectModal';
 import { UserVaultModal } from './components/UserVaultModal';
 import { AuthModal } from './components/AuthModal';
@@ -19,8 +18,23 @@ import { SowrovHosenProfile } from './components/SowrovHosenProfile';
 import { MirrorPOSPage } from './components/MirrorPOSPage';
 import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { CustomerAuthPage } from './components/CustomerAuthPage';
+import { CustomerDashboard } from './components/CustomerDashboard';
+import { AdminAuthPortal } from './components/AdminAuthPortal';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
-import { CheckoutItem, TutorialItem, Order, ProductItem, PaymentConfig, UserPurchase, AppUser, isStudioOwner } from './types';
+import {
+  CheckoutItem,
+  TutorialItem,
+  Order,
+  ProductItem,
+  PaymentConfig,
+  UserPurchase,
+  AppUser,
+  CustomerProfile,
+  DownloadHistoryItem,
+  isVerifiedAdminUser,
+  generateDeterministicLicenseKey,
+} from './types';
 import { INITIAL_PRODUCTS } from './data/content';
 import {
   loadPaymentConfig,
@@ -40,22 +54,61 @@ import {
   saveProductToFirestore,
   deleteProductFromFirestore,
   subscribeToPaymentConfig,
+  subscribeToAdminConfig,
   savePaymentConfigToFirestore,
   subscribeToOrders,
+  subscribeToUserOrders,
+  updateOrderInFirestore,
   deleteOrderFromFirestore,
   signInWithGoogle,
+  signInWithEmail,
+  registerWithEmail,
+  sendResetPassword,
+  resendVerificationEmail,
   signOutUser,
   onAuthChange,
+  verifySessionWithBackend,
+  syncUserProfileToFirestore,
+  updateCustomerProfile,
+  subscribeToAllUsers,
   subscribeToUserPurchases,
+  recordDownloadHistory,
+  subscribeToDownloadHistory,
+  formatFirebaseAuthError,
   OBSOLETE_PRODUCT_IDS,
 } from './utils/firebase';
 
-const ACTIVE_USER_STORAGE_KEY = 'mirrorbook_active_user';
+const KNOWN_ROUTES = new Set([
+  '/',
+  '/sowrov-hosen',
+  '/mirrorpos',
+  '/login',
+  '/signup',
+  '/account',
+  '/admin/login',
+  '/admin',
+]);
+
+function resolveRouteFromLocation(): string {
+  if (typeof window === 'undefined') return '/';
+  const pathname = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+  if (KNOWN_ROUTES.has(pathname)) {
+    return pathname;
+  }
+  const hash = window.location.hash.toLowerCase();
+  if (hash === '#/sowrov-hosen') return '/sowrov-hosen';
+  if (hash === '#/mirrorpos') return '/mirrorpos';
+  if (hash === '#/login') return '/login';
+  if (hash === '#/signup') return '/signup';
+  if (hash === '#/account') return '/account';
+  if (hash === '#/admin/login') return '/admin/login';
+  if (hash === '#admin' || hash === '#admin-studio' || hash === '#/admin') return '/admin';
+  return '/';
+}
 
 export default function App() {
   const [checkoutItem, setCheckoutItem] = useState<CheckoutItem | null>(null);
   const [activeVideo, setActiveVideo] = useState<PlayableVideo | null>(null);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isStartProjectOpen, setIsStartProjectOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -63,30 +116,24 @@ export default function App() {
   const [packageInquiryData, setPackageInquiryData] = useState<PackageInquiryData | null>(null);
   const [secureDownloadTarget, setSecureDownloadTarget] = useState<SecureDownloadTarget | null>(null);
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const raw = localStorage.getItem('mirrorbook_orders');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Scoped Orders & Customers state (adminOrders only populated for verified owner)
+  const [adminOrders, setAdminOrders] = useState<Order[]>([]);
+  const [allCustomers, setAllCustomers] = useState<CustomerProfile[]>([]);
 
-  // User Auth & Personal Vault state (supports Google Auth & direct Creator Email login)
-  const [user, setUser] = useState<AppUser | null>(() => {
-    try {
-      const raw = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
+  // Verified User Auth & Customer Profile state
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [userProfile, setUserProfile] = useState<CustomerProfile | null>(null);
+  const [authReady, setAuthReady] = useState<boolean>(false);
+
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
+  const [firestorePurchases, setFirestorePurchases] = useState<UserPurchase[]>([]);
+  const [sheetPurchases, setSheetPurchases] = useState<UserPurchase[]>([]);
+  const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
 
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(loadPaymentConfig);
 
-  // Dynamic Products and Google Sheets state (persisted locally and synced with Firestore)
+  // Dynamic Products and Google Sheets state
   const [products, setProducts] = useState<ProductItem[]>(() => {
     try {
       const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
@@ -101,7 +148,6 @@ export default function App() {
             } catch {}
             return cleaned;
           }
-          // Merge custom admin products with the new canonical tutorials
           const nonTutorials = cleaned.filter((p) => p.type !== 'Free Tutorial');
           const canonicalTutorials = INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial');
           const merged = [...nonTutorials, ...canonicalTutorials];
@@ -116,7 +162,15 @@ export default function App() {
     }
     return INITIAL_PRODUCTS;
   });
-  const [sheetsUrl, setSheetsUrl] = useState<string>('');
+  const [sheetsUrl, setSheetsUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem(SHEETS_URL_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [currentPath, setCurrentPath] = useState<string>(resolveRouteFromLocation);
 
   // Floating Toast Notification
   const [toastNotification, setToastNotification] = useState<{
@@ -124,95 +178,186 @@ export default function App() {
     type: 'success' | 'info' | 'error';
   } | null>(null);
 
-  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToastNotification({ message, type });
     setTimeout(() => {
       setToastNotification((curr) => (curr?.message === message ? null : curr));
     }, 4500);
-  };
+  }, []);
 
-  // 1. Firebase Auth state listener
+  const navigateTo = useCallback((path: string) => {
+    const normalized = path.toLowerCase().replace(/\/+$/, '') || '/';
+    if (typeof window !== 'undefined' && window.location.pathname !== normalized) {
+      window.history.pushState({}, '', normalized);
+    }
+    setCurrentPath(normalized);
+    if (normalized === '/') {
+      document.title = 'MirrorBook | Creative Agency in Bangladesh';
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
+  // 1. Firebase Auth state listener with Backend Session Verification & Role Resolution
   useEffect(() => {
-    const unsubscribeAuth = onAuthChange((currentUser) => {
-      if (currentUser) {
-        const appUser: AppUser = {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          displayName: currentUser.displayName,
-          photoURL: currentUser.photoURL,
-          isGoogle: true,
-        };
-        setUser(appUser);
-        localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+    // Clean up legacy insecure auth cache keys from earlier versions
+    try {
+      localStorage.removeItem('mirrorbook_active_user');
+      localStorage.removeItem('mirrorbook_admin_passkey');
+    } catch {}
+
+    let isMounted = true;
+    const unsubscribeAuth = onAuthChange(async (firebaseUser) => {
+      if (!firebaseUser) {
+        if (!isMounted) return;
+        setUser(null);
+        setUserProfile(null);
+        setUserOrders([]);
+        setFirestorePurchases([]);
+        setSheetPurchases([]);
+        setDownloadHistory([]);
+        setAdminOrders([]);
+        setAllCustomers([]);
+        setAuthReady(true);
+        return;
+      }
+
+      const session = await verifySessionWithBackend(firebaseUser, 'customer');
+      const resolvedRole = session.isAdmin ? 'admin' : 'customer';
+      const providerId = firebaseUser.providerData?.[0]?.providerId || 'password';
+
+      const appUser: AppUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        isGoogle: providerId === 'google.com',
+        role: resolvedRole,
+        authProvider: providerId,
+        emailVerified: Boolean(firebaseUser.emailVerified || session.emailVerified),
+        backendVerified: Boolean(session.authenticated && session.isAdmin === (resolvedRole === 'admin')),
+      };
+
+      if (!isMounted) return;
+      setUser(appUser);
+
+      const syncedProfile = await syncUserProfileToFirestore(firebaseUser, resolvedRole);
+      if (isMounted && syncedProfile) {
+        setUserProfile(syncedProfile);
+        setUser((prev) =>
+          prev && prev.uid === firebaseUser.uid
+            ? {
+                ...prev,
+                displayName: syncedProfile.displayName || prev.displayName,
+                phone: syncedProfile.phone,
+                company: syncedProfile.company,
+              }
+            : prev
+        );
+      }
+
+      if (isMounted) {
+        setAuthReady(true);
       }
     });
 
     return () => {
+      isMounted = false;
       unsubscribeAuth();
     };
   }, []);
 
-  // 2. Personal Vault purchases listener for logged-in user
+  // Redirect authenticated customers away from /login & /signup to /account
+  useEffect(() => {
+    if (authReady && user && (currentPath === '/login' || currentPath === '/signup')) {
+      navigateTo('/account');
+    }
+  }, [authReady, user, currentPath, navigateTo]);
+
+  // 2. Customer-scoped Firestore Subscriptions (Purchases, Orders, Downloads) + Sheet recovery
   useEffect(() => {
     if (!user) {
-      setUserPurchases([]);
+      setUserOrders([]);
+      setFirestorePurchases([]);
+      setSheetPurchases([]);
+      setDownloadHistory([]);
       return;
     }
 
-    // Subscribe to cloud user purchases in Firestore
-    const unsubscribePurchases = subscribeToUserPurchases(user.uid, (cloudPurchases) => {
-      setUserPurchases((prev) => {
-        // Merge cloud purchases with existing, deduplicating by ID
-        const map = new Map<string, UserPurchase>();
-        prev.forEach((p) => map.set(p.id, p));
-        cloudPurchases.forEach((p) => map.set(p.id, p));
-        return Array.from(map.values());
+    const unsubPurchases = subscribeToUserPurchases(user.uid, (list) => {
+      setFirestorePurchases(list);
+    });
+    const unsubUserOrders = subscribeToUserOrders(
+      user.uid,
+      user.email,
+      Boolean(user.emailVerified),
+      (list) => {
+        setUserOrders(list);
+      }
+    );
+    const unsubDownloads = subscribeToDownloadHistory(user.uid, (logs) => {
+      setDownloadHistory(logs);
+    });
+
+    const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
+    if (user.email && targetUrl) {
+      fetchUserPurchasesFromGoogleSheet(targetUrl, user.email)
+        .then((recovered) => {
+          if (recovered.length > 0) {
+            setSheetPurchases(recovered);
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      unsubPurchases();
+      unsubUserOrders();
+      unsubDownloads();
+    };
+  }, [user?.uid, user?.email, user?.emailVerified, paymentConfig.webAppUrl, sheetsUrl]);
+
+  // Compute merged customer purchases from Firestore purchases, verified user orders, and sheet recovery
+  const userPurchases = useMemo(() => {
+    if (!user) return [];
+    const map = new Map<string, UserPurchase>();
+
+    sheetPurchases.forEach((p) => map.set(p.id, p));
+
+    userOrders.forEach((o) => {
+      if (o.downloadUrl && (o.status === 'Verified' || o.status === 'Completed')) {
+        map.set(o.id, {
+          id: o.id,
+          productId: o.productId || o.id,
+          title: o.itemName,
+          category: 'Plugin',
+          downloadUrl: o.downloadUrl,
+          purchasedAt: o.createdAt,
+          trxId: o.trxId,
+          licenseKey:
+            o.licenseKey ||
+            generateDeterministicLicenseKey(o.itemName, user.email, o.trxId || o.id),
+        });
+      }
+    });
+
+    firestorePurchases.forEach((p) => {
+      map.set(p.id, {
+        ...p,
+        licenseKey:
+          p.licenseKey ||
+          generateDeterministicLicenseKey(p.title, user.email, p.trxId || p.id),
       });
     });
 
-    return () => {
-      unsubscribePurchases();
-    };
-  }, [user]);
+    return Array.from(map.values());
+  }, [user, firestorePurchases, userOrders, sheetPurchases]);
 
-  // 3. Auto-bind any orders matching current user's email into their Vault
+  const isAdminVerified = isVerifiedAdminUser(user);
+
+  // 3. Public Firestore Catalog & Public Payment Config Listeners
   useEffect(() => {
-    if (!user || !user.email) return;
-    const userEmail = user.email.toLowerCase().trim();
-
-    const matchingOrders = orders.filter(
-      (o) =>
-        (o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail) ||
-        (o.userId && o.userId === user.uid)
-    );
-
-    if (matchingOrders.length > 0) {
-      setUserPurchases((prev) => {
-        const map = new Map<string, UserPurchase>();
-        prev.forEach((p) => map.set(p.id, p));
-
-        matchingOrders.forEach((o) => {
-          if (o.downloadUrl) {
-            map.set(o.id, {
-              id: o.id,
-              productId: o.productId || o.id,
-              title: o.itemName,
-              category: 'Plugin',
-              downloadUrl: o.downloadUrl,
-              purchasedAt: o.createdAt,
-              trxId: o.trxId,
-            });
-          }
-        });
-
-        return Array.from(map.values());
-      });
-    }
-  }, [user, orders]);
-
-  // 4. Real-time Firebase Firestore Global Synchronization
-  useEffect(() => {
-    // Listen to live products from Firestore (shared worldwide)
     const unsubscribeProducts = subscribeToProducts((cloudProducts) => {
       if (cloudProducts.length > 0) {
         const hasTutorials = cloudProducts.some((p) => p.type === 'Free Tutorial');
@@ -224,56 +369,95 @@ export default function App() {
           localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(finalProducts));
         } catch {}
       }
-    });
+    }, isAdminVerified);
 
-    // Listen to live payment config from Firestore (shared worldwide)
     const unsubscribeConfig = subscribeToPaymentConfig((cloudConfig) => {
-      setPaymentConfig(cloudConfig);
+      setPaymentConfig((prev) => ({
+        ...cloudConfig,
+        telegramBotToken: isAdminVerified ? prev.telegramBotToken : '',
+        telegramChatId: isAdminVerified ? prev.telegramChatId : '',
+      }));
       savePaymentConfig(cloudConfig);
-    });
-
-    // Listen to live customer orders from Firestore (merge deduplicated)
-    const unsubscribeOrders = subscribeToOrders((cloudOrders) => {
-      setOrders((prev) => {
-        const map = new Map<string, Order>();
-        prev.forEach((o) => map.set(o.id, o));
-        cloudOrders.forEach((o) => map.set(o.id, o));
-        return Array.from(map.values());
-      });
-    });
-
-    // Google Sheets URL fallback
-    const storedSheetsUrl = localStorage.getItem(SHEETS_URL_KEY) || '';
-    setSheetsUrl(storedSheetsUrl);
-
-    // Studio Owner Direct Keyboard & Hash Shortcuts
-    const handleHash = () => {
-      if (window.location.hash === '#admin-studio' || window.location.hash === '#admin') {
-        setIsAdminOpen(true);
-      }
-    };
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
-        e.preventDefault();
-        setIsAdminOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
+    }, isAdminVerified);
 
     return () => {
       unsubscribeProducts();
       unsubscribeConfig();
-      unsubscribeOrders();
+    };
+  }, [isAdminVerified]);
+
+  // 4. Admin-Only Firestore Listeners (STRICTLY gated by verified Studio Owner session)
+  useEffect(() => {
+    if (!isAdminVerified) {
+      setAdminOrders([]);
+      setAllCustomers([]);
+      return;
+    }
+
+    const unsubOrders = subscribeToOrders((cloudOrders) => {
+      setAdminOrders(cloudOrders);
+    });
+    const unsubUsers = subscribeToAllUsers((usersList) => {
+      setAllCustomers(usersList);
+    });
+    const unsubAdminCfg = subscribeToAdminConfig((adminPart) => {
+      setPaymentConfig((prev) => {
+        const merged: PaymentConfig = {
+          ...prev,
+          telegramBotToken: adminPart.telegramBotToken ?? prev.telegramBotToken,
+          telegramChatId: adminPart.telegramChatId ?? prev.telegramChatId,
+          spreadsheetUrl: adminPart.spreadsheetUrl ?? prev.spreadsheetUrl,
+          webAppUrl: adminPart.webAppUrl || prev.webAppUrl,
+        };
+        savePaymentConfig(merged);
+        return merged;
+      });
+    });
+
+    return () => {
+      unsubOrders();
+      unsubUsers();
+      unsubAdminCfg();
+    };
+  }, [isAdminVerified]);
+
+  // 5. History Popstate, Hash & Admin Keyboard Shortcut (Routes to /admin with RBAC protection)
+  useEffect(() => {
+    const handlePopState = () => {
+      const next = resolveRouteFromLocation();
+      setCurrentPath(next);
+      if (next === '/') {
+        document.title = 'MirrorBook | Creative Agency in Bangladesh';
+      }
+    };
+
+    const handleHash = () => {
+      if (window.location.hash === '#admin-studio' || window.location.hash === '#admin') {
+        navigateTo('/admin');
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        navigateTo('/admin');
+      }
+    };
+
+    handleHash();
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHash);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('hashchange', handleHash);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [navigateTo]);
 
   // Public Catalog Security Sanitization:
-  // Paid items NEVER have their protectedUrl exposed in public React tree or inspect element
+  // Paid items NEVER have their protectedUrl exposed in public React tree
   const publicProducts = useMemo(() => {
     return sanitizeProductsForPublic(products);
   }, [products]);
@@ -321,105 +505,168 @@ export default function App() {
     return result;
   }, [publicProducts]);
 
-  // Auth Handlers
-  const handleGoogleSignIn = async () => {
-    const firebaseUser = await signInWithGoogle();
-    const isOwner = isStudioOwner(firebaseUser.email);
+  // Auth Handlers (Real Firebase Auth + Backend Session Verification)
+  const syncAfterCustomerAuth = async (
+    firebaseUser: import('firebase/auth').User,
+    providerLabel: string,
+    redirectToAccount = true
+  ) => {
+    const session = await verifySessionWithBackend(firebaseUser, 'customer');
+    const resolvedRole = session.isAdmin ? 'admin' : 'customer';
+    const syncedProfile = await syncUserProfileToFirestore(firebaseUser, resolvedRole);
+
     const appUser: AppUser = {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
-      displayName: firebaseUser.displayName,
+      displayName: syncedProfile?.displayName || firebaseUser.displayName,
       photoURL: firebaseUser.photoURL,
-      isGoogle: true,
+      isGoogle: providerLabel === 'Google Auth',
+      role: resolvedRole,
+      authProvider: firebaseUser.providerData?.[0]?.providerId || providerLabel,
+      emailVerified: Boolean(firebaseUser.emailVerified || session.emailVerified),
+      backendVerified: Boolean(session.authenticated),
+      phone: syncedProfile?.phone,
+      company: syncedProfile?.company,
     };
+
     setUser(appUser);
-    localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+    if (syncedProfile) setUserProfile(syncedProfile);
 
-    showToast(
-      isOwner
-        ? `👑 Studio Owner Verified (${firebaseUser.email})! Studio Console unlocked.`
-        : `✓ Welcome back, ${firebaseUser.displayName || firebaseUser.email}! Google Auth verified.`
-    );
-
-    // Instant Google Sheet synchronization of user login
     const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
-    if (firebaseUser.email) {
+    if (firebaseUser.email && targetUrl) {
       logUserLoginToGoogleSheet(targetUrl, {
         email: firebaseUser.email,
-        name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-        authProvider: 'Google Auth',
+        name: appUser.displayName || firebaseUser.email.split('@')[0],
+        authProvider: providerLabel,
         uid: firebaseUser.uid,
       }).catch(() => {});
 
-      // Restore any past purchases from Google Sheet
-      fetchUserPurchasesFromGoogleSheet(targetUrl, firebaseUser.email).then((sheetPurchases) => {
-        if (sheetPurchases.length > 0) {
-          setUserPurchases((prev) => {
-            const map = new Map<string, UserPurchase>();
-            prev.forEach((p) => map.set(p.id, p));
-            sheetPurchases.forEach((p) => map.set(p.id, p));
-            return Array.from(map.values());
-          });
-        }
-      }).catch(() => {});
+      fetchUserPurchasesFromGoogleSheet(targetUrl, firebaseUser.email)
+        .then((recovered) => {
+          if (recovered.length > 0) setSheetPurchases(recovered);
+        })
+        .catch(() => {});
     }
 
-    setIsVaultOpen(true);
+    showToast(`✓ Welcome, ${appUser.displayName || firebaseUser.email}!`);
+
+    if (redirectToAccount) {
+      navigateTo('/account');
+    }
   };
 
-  const handleEmailSignIn = (email: string, name: string, password?: string) => {
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name.trim() || cleanEmail.split('@')[0];
-    const isOwner = isStudioOwner(cleanEmail);
-    const isGoogle = isOwner || cleanEmail.endsWith('@gmail.com');
-
-    // Safely encode UID even with unicode chars
-    let safeHash = '';
+  const handleCustomerGoogleSignIn = async () => {
     try {
-      safeHash = btoa(unescape(encodeURIComponent(cleanEmail))).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
-    } catch {
-      safeHash = Math.random().toString(36).substring(2, 15);
+      const firebaseUser = await signInWithGoogle();
+      await syncAfterCustomerAuth(firebaseUser, 'Google Auth');
+    } catch (err) {
+      throw new Error(formatFirebaseAuthError(err));
     }
-    const customUid = 'creator_' + safeHash;
-    const appUser: AppUser = {
-      uid: customUid,
-      email: cleanEmail,
-      displayName: cleanName,
-      photoURL: null,
-      isGoogle: isGoogle,
-    };
-    setUser(appUser);
-    localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(appUser));
+  };
 
-    showToast(
-      isOwner
-        ? `👑 Studio Owner Verified (${cleanEmail})! Studio Console unlocked.`
-        : `✓ Welcome, ${cleanName}! Signed in successfully with Gmail.`
+  const handleEmailSignIn = async (email: string, password: string) => {
+    try {
+      const firebaseUser = await signInWithEmail(email, password);
+      await syncAfterCustomerAuth(firebaseUser, 'Email & Password');
+    } catch (err) {
+      throw new Error(formatFirebaseAuthError(err));
+    }
+  };
+
+  const handleEmailSignUp = async (email: string, password: string, fullName: string) => {
+    try {
+      const firebaseUser = await registerWithEmail(email, password, fullName);
+      await syncAfterCustomerAuth(firebaseUser, 'Email & Password');
+    } catch (err) {
+      throw new Error(formatFirebaseAuthError(err));
+    }
+  };
+
+  const handleSendResetPassword = async (email: string) => {
+    try {
+      await sendResetPassword(email);
+    } catch (err) {
+      throw new Error(formatFirebaseAuthError(err));
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      await resendVerificationEmail();
+      showToast('Verification email sent! Please check your inbox.', 'info');
+    } catch (err) {
+      showToast(formatFirebaseAuthError(err), 'error');
+    }
+  };
+
+  const handleUpdateCustomerProfile = async (updates: {
+    displayName: string;
+    phone?: string;
+    company?: string;
+  }) => {
+    if (!user) throw new Error('Not authenticated.');
+    await updateCustomerProfile(user.uid, updates);
+    setUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            displayName: updates.displayName,
+            phone: updates.phone,
+            company: updates.company,
+          }
+        : prev
     );
+    setUserProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            displayName: updates.displayName,
+            phone: updates.phone,
+            company: updates.company,
+          }
+        : prev
+    );
+    showToast('✓ Customer profile updated.');
+  };
 
-    // Log user credentials & password directly to Google Sheet "Users" tab
-    const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
-    logUserLoginToGoogleSheet(targetUrl, {
-      email: cleanEmail,
-      password: password || '',
-      name: cleanName,
-      authProvider: isGoogle ? 'Gmail Fast-Track' : 'Email/Password Account',
-      uid: customUid,
-    }).catch(() => {});
+  const handleAdminGoogleSignIn = async () => {
+    let firebaseUser: import('firebase/auth').User;
+    try {
+      firebaseUser = await signInWithGoogle();
+    } catch (err) {
+      throw new Error(formatFirebaseAuthError(err));
+    }
 
-    // Restore any past purchases from Google Sheet
-    fetchUserPurchasesFromGoogleSheet(targetUrl, cleanEmail).then((sheetPurchases) => {
-      if (sheetPurchases.length > 0) {
-        setUserPurchases((prev) => {
-          const map = new Map<string, UserPurchase>();
-          prev.forEach((p) => map.set(p.id, p));
-          sheetPurchases.forEach((p) => map.set(p.id, p));
-          return Array.from(map.values());
-        });
-      }
-    }).catch(() => {});
+    const session = await verifySessionWithBackend(firebaseUser, 'admin');
+    if (!session.authenticated || !session.isAdmin) {
+      await signOutUser().catch(() => {});
+      setUser(null);
+      setUserProfile(null);
+      throw new Error(
+        session.error ||
+          'Access Denied: This Google account is not authorized as a MirrorBook Studio Administrator.'
+      );
+    }
 
-    setIsVaultOpen(true);
+    const syncedProfile = await syncUserProfileToFirestore(firebaseUser, 'admin');
+    const adminUser: AppUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      displayName: syncedProfile?.displayName || firebaseUser.displayName,
+      photoURL: firebaseUser.photoURL,
+      isGoogle: true,
+      role: 'admin',
+      authProvider: 'google.com',
+      emailVerified: Boolean(firebaseUser.emailVerified || session.emailVerified),
+      backendVerified: true,
+      phone: syncedProfile?.phone,
+      company: syncedProfile?.company,
+    };
+
+    setUser(adminUser);
+    if (syncedProfile) setUserProfile(syncedProfile);
+    showToast(`✓ Studio Owner verified (${firebaseUser.email}). Admin Console unlocked.`);
+    navigateTo('/admin');
   };
 
   const handleSignOut = async () => {
@@ -429,8 +676,13 @@ export default function App() {
       // ignore
     }
     setUser(null);
-    setUserPurchases([]);
-    localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+    setUserProfile(null);
+    setUserOrders([]);
+    setFirestorePurchases([]);
+    setSheetPurchases([]);
+    setDownloadHistory([]);
+    setAdminOrders([]);
+    setAllCustomers([]);
     showToast('Signed out of account.', 'info');
   };
 
@@ -519,78 +771,33 @@ export default function App() {
   };
 
   const handleOrderSuccess = (newOrder: Order) => {
-    setOrders((prev) => [newOrder, ...prev]);
-
-    // If user is authenticated and order is verified or has downloadUrl, update local vault list
-    if (user && newOrder.downloadUrl) {
-      const purchase: UserPurchase = {
-        id: newOrder.id,
-        productId: newOrder.productId || newOrder.id,
-        title: newOrder.itemName,
-        category: 'Plugin',
-        downloadUrl: newOrder.downloadUrl,
-        purchasedAt: newOrder.createdAt,
-        trxId: newOrder.trxId,
-      };
-      setUserPurchases((prev) => [purchase, ...prev.filter((p) => p.id !== purchase.id)]);
+    if (user) {
+      setUserOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
+    }
+    if (isAdminVerified) {
+      setAdminOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
     }
   };
 
+  const handleUpdateOrder = async (updatedOrder: Order) => {
+    await updateOrderInFirestore(updatedOrder);
+    setAdminOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+    showToast(`✓ Order ${updatedOrder.id} approved & license activated.`);
+  };
+
   const handleDeleteOrder = (id: string) => {
-    const updated = orders.filter((o) => o.id !== id);
-    setOrders(updated);
+    setAdminOrders((prev) => prev.filter((o) => o.id !== id));
     deleteOrderFromFirestore(id).catch(() => {});
   };
 
   const handleClearOrders = () => {
-    setOrders([]);
+    setAdminOrders([]);
     try {
       localStorage.removeItem('mirrorbook_orders');
     } catch {
       // ignore
     }
   };
-
-  const [currentPath, setCurrentPath] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
-      if (path === '/sowrov-hosen' || window.location.hash === '#/sowrov-hosen') {
-        return '/sowrov-hosen';
-      }
-      if (path === '/mirrorpos' || window.location.hash === '#/mirrorpos') {
-        return '/mirrorpos';
-      }
-    }
-    return '/';
-  });
-
-  const navigateTo = (path: string) => {
-    const normalized = path.replace(/\/+$/, '') || '/';
-    if (window.location.pathname !== normalized) {
-      window.history.pushState({}, '', normalized);
-    }
-    setCurrentPath(normalized);
-    if (normalized === '/') {
-      document.title = 'MirrorBook | Creative Agency in Bangladesh';
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
-      if (path === '/sowrov-hosen' || window.location.hash === '#/sowrov-hosen') {
-        setCurrentPath('/sowrov-hosen');
-      } else if (path === '/mirrorpos' || window.location.hash === '#/mirrorpos') {
-        setCurrentPath('/mirrorpos');
-      } else {
-        setCurrentPath('/');
-        document.title = 'MirrorBook | Creative Agency in Bangladesh';
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
 
   const scrollToSection = (id: string) => {
     if (currentPath !== '/') {
@@ -611,21 +818,83 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#070707] text-white flex flex-col selection:bg-[#71B913] selection:text-black">
-      {/* 1. Header with Account & Vault Integration & Studio Owner Access */}
+      {/* 1. Header with Customer Account & Verified Admin Access */}
       <Header
         onStartProject={() => setIsStartProjectOpen(true)}
         user={user}
-        onOpenVault={() => setIsVaultOpen(true)}
-        onSignIn={() => setIsAuthModalOpen(true)}
+        onOpenVault={() => navigateTo('/account')}
+        onSignIn={() => navigateTo('/login')}
         purchaseCount={userPurchases.length}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={() => navigateTo('/admin')}
         onNavigate={navigateTo}
         currentPath={currentPath}
       />
 
-      {/* Main Content Area: switches cleanly between MirrorPOS Product Page, Sowrov Hosen Profile, and Homepage */}
+      {/* Main Content Area: switches cleanly across Storefront, Customer Auth, Dashboard, Admin Portal, MirrorPOS, and Founder Profile */}
       <main className="flex-grow pb-24 md:pb-0">
-        {currentPath === '/sowrov-hosen' ? (
+        {currentPath === '/login' || currentPath === '/signup' ? (
+          <CustomerAuthPage
+            mode={currentPath === '/signup' ? 'signup' : 'login'}
+            onNavigate={navigateTo}
+            onGoogleSignIn={handleCustomerGoogleSignIn}
+            onEmailSignIn={handleEmailSignIn}
+            onEmailSignUp={handleEmailSignUp}
+            onSendResetPassword={handleSendResetPassword}
+          />
+        ) : currentPath === '/account' ? (
+          <CustomerDashboard
+            user={user}
+            profile={userProfile}
+            purchases={userPurchases}
+            orders={userOrders}
+            downloadHistory={downloadHistory}
+            onNavigate={navigateTo}
+            onSignOut={handleSignOut}
+            onSelectDownload={(target) => setSecureDownloadTarget(target)}
+            onUpdateProfile={handleUpdateCustomerProfile}
+            onSendResetPassword={handleSendResetPassword}
+            onResendVerification={handleResendVerification}
+            onBrowseStore={() => scrollToSection('plugins')}
+          />
+        ) : currentPath === '/admin/login' || currentPath === '/admin' ? (
+          <AdminAuthPortal
+            mode={currentPath === '/admin/login' ? 'login' : 'dashboard'}
+            user={user}
+            authReady={authReady}
+            onNavigate={navigateTo}
+            onAdminGoogleSignIn={handleAdminGoogleSignIn}
+            onSignOut={handleSignOut}
+            orders={adminOrders}
+            customers={allCustomers}
+            onDeleteOrder={handleDeleteOrder}
+            onUpdateOrder={handleUpdateOrder}
+            onClearOrders={handleClearOrders}
+            products={products}
+            onAddProduct={handleAddProduct}
+            onUpdateProduct={handleUpdateProduct}
+            onDeleteProduct={handleDeleteProduct}
+            onSyncProducts={handleSyncProducts}
+            sheetsUrl={sheetsUrl}
+            onSaveSheetsUrl={handleSaveSheetsUrl}
+            paymentConfig={paymentConfig}
+            onSavePaymentConfig={(newCfg) => {
+              savePaymentConfig(newCfg);
+              setPaymentConfig(newCfg);
+              savePaymentConfigToFirestore(newCfg).catch((err) =>
+                console.warn('Firestore payment save error', err)
+              );
+            }}
+            onRefreshOrdersFromSheet={(newOrders) => {
+              if (!isAdminVerified) return;
+              setAdminOrders((prev) => {
+                const map = new Map<string, Order>();
+                prev.forEach((o) => map.set(o.id, o));
+                newOrders.forEach((o) => map.set(o.id, o));
+                return Array.from(map.values());
+              });
+            }}
+          />
+        ) : currentPath === '/sowrov-hosen' ? (
           <SowrovHosenProfile
             onNavigateHome={() => navigateTo('/')}
             onStartProject={() => setIsStartProjectOpen(true)}
@@ -646,7 +915,8 @@ export default function App() {
                   title: 'MirrorBook Agency Showreel // 2026 Edition',
                   software: 'Agency 4K Master',
                   duration: '03:20',
-                  description: 'Commercial video reel featuring our flagship client edits, DaVinci color grading, viral reels pacing, and proprietary AI workflows.',
+                  description:
+                    'Commercial video reel featuring our flagship client edits, DaVinci color grading, viral reels pacing, and proprietary AI workflows.',
                   instructor: 'MirrorBook Creative Director',
                 })
               }
@@ -668,10 +938,7 @@ export default function App() {
             />
 
             {/* 6. Plugin Store */}
-            <PluginStore
-              plugins={publicPlugins}
-              onBuyItem={(item) => setCheckoutItem(item)}
-            />
+            <PluginStore plugins={publicPlugins} onBuyItem={(item) => setCheckoutItem(item)} />
 
             {/* 6.5 PC & Phone Software Library (Includes MirrorPOS) */}
             <SoftwareStore
@@ -703,15 +970,18 @@ export default function App() {
       {/* 8. Footer with Founder Profile and Index links */}
       <Footer onNavigate={navigateTo} />
 
-      {/* Creator Authentication Modal (Opens instantly when clicking Sign In) */}
+      {/* Customer Authentication Quick Modal (used during checkout or download unlock) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onGoogleSignIn={handleGoogleSignIn}
+        onGoogleSignIn={handleCustomerGoogleSignIn}
         onEmailSignIn={handleEmailSignIn}
+        onEmailSignUp={handleEmailSignUp}
+        onSendResetPassword={handleSendResetPassword}
+        onNavigate={navigateTo}
       />
 
-      {/* Multi-Method Payment Checkout Modal with Creator Vault auto-linking & DRM Protection */}
+      {/* Multi-Method Payment Checkout Modal with Customer Account binding & DRM Protection */}
       <CheckoutModal
         item={checkoutItem}
         onClose={() => setCheckoutItem(null)}
@@ -720,11 +990,11 @@ export default function App() {
         allProducts={products}
         user={user}
         onSignIn={() => setIsAuthModalOpen(true)}
-        onOpenVault={() => setIsVaultOpen(true)}
+        onOpenVault={() => navigateTo('/account')}
         onSelectDownload={(target) => setSecureDownloadTarget(target)}
       />
 
-      {/* User Digital Vault & Downloads Modal with Anti-Piracy Protection */}
+      {/* User Digital Vault & Downloads Modal */}
       <UserVaultModal
         isOpen={isVaultOpen}
         onClose={() => setIsVaultOpen(false)}
@@ -732,9 +1002,11 @@ export default function App() {
         purchases={userPurchases}
         onSignOut={handleSignOut}
         onBrowseStore={() => scrollToSection('plugins')}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={() => navigateTo('/admin')}
+        onOpenDashboard={() => navigateTo('/account')}
         onSelectDownload={(purchase) =>
           setSecureDownloadTarget({
+            id: purchase.id,
             title: purchase.title,
             category: purchase.category,
             downloadUrl: purchase.downloadUrl,
@@ -753,50 +1025,17 @@ export default function App() {
         user={user}
         onSignIn={() => {
           setSecureDownloadTarget(null);
-          setIsAuthModalOpen(true);
+          navigateTo('/login');
+        }}
+        onDownloadLogged={(entry) => {
+          if (user?.uid) {
+            recordDownloadHistory(user.uid, entry).catch(() => {});
+          }
         }}
       />
 
       {/* Video Player Modal for Showreels, Showcases, Services, and Tutorials */}
-      <VideoPlayerModal
-        video={activeVideo}
-        onClose={() => setActiveVideo(null)}
-      />
-
-      {/* Discreet Admin Portal (Restricted to Studio Owner khansaheb2572@gmail.com / miirorbook.tech@gmail.com or Master Key) */}
-      <AdminModal
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-        orders={orders}
-        onDeleteOrder={handleDeleteOrder}
-        onClearOrders={handleClearOrders}
-        products={products}
-        onAddProduct={handleAddProduct}
-        onUpdateProduct={handleUpdateProduct}
-        onDeleteProduct={handleDeleteProduct}
-        onSyncProducts={handleSyncProducts}
-        sheetsUrl={sheetsUrl}
-        onSaveSheetsUrl={handleSaveSheetsUrl}
-        paymentConfig={paymentConfig}
-        currentUser={user}
-        onRefreshOrdersFromSheet={(newOrders) => {
-          setOrders((prev) => {
-            const map = new Map<string, Order>();
-            prev.forEach((o) => map.set(o.id, o));
-            newOrders.forEach((o) => map.set(o.id, o));
-            const merged = Array.from(map.values());
-            try {
-              localStorage.setItem('mirrorbook_orders', JSON.stringify(merged));
-            } catch {}
-            return merged;
-          });
-        }}
-        onSavePaymentConfig={(newCfg) => {
-          savePaymentConfig(newCfg);
-          setPaymentConfig(newCfg);
-          savePaymentConfigToFirestore(newCfg).catch((err) => console.warn('Firestore payment save error', err));
-        }}
-      />
+      <VideoPlayerModal video={activeVideo} onClose={() => setActiveVideo(null)} />
 
       {/* Start Project Direct Inquiry Modal */}
       <StartProjectModal
@@ -815,17 +1054,15 @@ export default function App() {
 
       {/* Modern Web App Mobile Floating Dock Navigation with Cart */}
       <MobileBottomNav
-        activeTab={isVaultOpen ? 'vault' : 'home'}
+        activeTab={currentPath === '/account' || isVaultOpen ? 'vault' : 'home'}
         onNavigate={(sectionId) => scrollToSection(sectionId)}
         onNavigateHome={() => navigateTo('/')}
         cartCount={checkoutItem ? 1 : 0}
         user={user}
-        onOpenVault={() => setIsVaultOpen(true)}
-        onSignIn={() => setIsAuthModalOpen(true)}
+        onOpenVault={() => navigateTo('/account')}
+        onSignIn={() => navigateTo('/login')}
         onOpenCartOrStore={() => {
-          if (checkoutItem) {
-            // Reopen active checkout
-          } else {
+          if (!checkoutItem) {
             scrollToSection('plugins');
           }
         }}

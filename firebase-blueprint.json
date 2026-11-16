@@ -2,11 +2,11 @@
   "entities": {
     "Product": {
       "title": "Product",
-      "description": "A digital product, plugin, tutorial, or agency package",
+      "description": "A digital product, plugin, software, tutorial, or agency package",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "type": { "type": "string" },
+        "type": { "type": "string", "enum": ["Plugin", "Course", "Software", "Free Tutorial", "Agency Package"] },
         "category": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
@@ -17,13 +17,15 @@
         "protectedUrl": { "type": "string" },
         "duration": { "type": "string" },
         "instructor": { "type": "string" },
-        "createdAt": { "type": "string" }
+        "featured": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["id", "type", "title", "price"]
+      "required": ["id", "type", "category", "title", "description", "price"]
     },
     "PaymentConfig": {
       "title": "PaymentConfig",
-      "description": "Global payment numbers and accounts configuration",
+      "description": "Public payment account numbers and bank transfer instructions",
       "type": "object",
       "properties": {
         "bKashNumber": { "type": "string" },
@@ -33,14 +35,24 @@
         "bankDetails": { "type": "object" },
         "secondaryBankDetails": { "type": "object" },
         "webAppUrl": { "type": "string" },
+        "whatsAppNumber": { "type": "string" }
+      }
+    },
+    "AdminConfig": {
+      "title": "AdminConfig",
+      "description": "Admin-only private secrets such as Telegram Bot credentials and Google Sheet spreadsheet URL",
+      "type": "object",
+      "properties": {
         "telegramBotToken": { "type": "string" },
         "telegramChatId": { "type": "string" },
-        "whatsAppNumber": { "type": "string" }
+        "spreadsheetUrl": { "type": "string" },
+        "webAppUrl": { "type": "string" },
+        "updatedAt": { "type": "string" }
       }
     },
     "Order": {
       "title": "Order",
-      "description": "A customer purchase or inquiry order",
+      "description": "A customer purchase or payment verification order",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -49,20 +61,42 @@
         "customerEmail": { "type": "string" },
         "customerPhone": { "type": "string" },
         "itemId": { "type": "string" },
+        "productId": { "type": "string" },
         "itemName": { "type": "string" },
         "itemPrice": { "type": "string" },
         "paymentMethod": { "type": "string" },
         "senderAccount": { "type": "string" },
         "trxId": { "type": "string" },
         "createdAt": { "type": "string" },
-        "status": { "type": "string" },
-        "downloadUrl": { "type": "string" }
+        "status": { "type": "string", "enum": ["Pending", "Verified", "Completed"] },
+        "downloadUrl": { "type": "string" },
+        "licenseKey": { "type": "string" }
       },
-      "required": ["id", "customerName", "itemName", "trxId"]
+      "required": ["id", "customerName", "customerEmail", "itemName", "trxId", "status"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user account profile isolated to the user UID or verified studio owner",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "phone": { "type": "string" },
+        "company": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "admin"] },
+        "authProvider": { "type": "string" },
+        "emailVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "authProvider", "createdAt", "updatedAt"]
     },
     "Purchase": {
       "title": "Purchase",
-      "description": "A secured digital asset license unlocked for an authenticated creator",
+      "description": "A secured digital asset license unlocked for an authenticated customer",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -71,27 +105,68 @@
         "category": { "type": "string" },
         "downloadUrl": { "type": "string" },
         "purchasedAt": { "type": "string" },
-        "trxId": { "type": "string" }
+        "trxId": { "type": "string" },
+        "licenseKey": { "type": "string" }
       },
       "required": ["id", "title", "downloadUrl"]
+    },
+    "DownloadLog": {
+      "title": "DownloadLog",
+      "description": "Audit log of digital asset downloads by an authenticated customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "purchaseId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "licenseKey": { "type": "string" },
+        "sessionToken": { "type": "string" },
+        "downloadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "downloadedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Server-managed allowlist document identifying verified Studio Owner UIDs",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "grantedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
     }
   },
   "firestore": {
     "/products/{productId}": {
       "schema": "Product",
-      "description": "Public catalog of agency packages, plugins, tutorials, and courses"
+      "description": "Public catalog of agency packages, plugins, software, tutorials, and courses"
     },
     "/settings/{settingId}": {
       "schema": "PaymentConfig",
-      "description": "Global app configurations such as payment accounts and webhooks"
+      "description": "Public paymentConfig vs admin-only adminConfig secrets"
     },
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Customer payment verification and manual review orders"
     },
+    "/admins/{adminUid}": {
+      "schema": "AdminRecord",
+      "description": "Immutable admin allowlist checked for elevated privileges"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Customer and owner profile documents strictly isolated per UID"
+    },
     "/users/{userId}/purchases/{purchaseId}": {
       "schema": "Purchase",
-      "description": "Secured user downloads and digital licenses locked to their Google/Firebase account"
+      "description": "Secured user downloads and digital licenses locked to their Firebase account"
+    },
+    "/users/{userId}/downloads/{downloadId}": {
+      "schema": "DownloadLog",
+      "description": "Per-user download history audit records"
     }
   }
 }

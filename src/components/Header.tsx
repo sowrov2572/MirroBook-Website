@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, X, ArrowRight, User as UserIcon, FolderDown, ShieldAlert } from 'lucide-react';
-import { AppUser, isStudioOwner } from '../types';
+import { AppUser, isVerifiedAdminUser } from '../types';
 
 interface HeaderProps {
   onStartProject: () => void;
@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentPath = '/',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isOwner = isStudioOwner(user?.email);
+  const isOwner = isVerifiedAdminUser(user);
 
   const navLinks = [
     { name: 'Services', href: '#services' },
@@ -156,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
               <span className="font-medium group-hover:text-[#71B913] transition-colors">
-                My Vault
+                My Account
               </span>
               {purchaseCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-[#71B913] text-black text-[10px] font-bold">
@@ -264,10 +264,10 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   onOpenVault();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-white bg-white/10 rounded-xl flex items-center justify-center gap-2"
+                className="w-full py-2.5 text-center text-xs font-semibold text-white bg-white/10 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FolderDown size={14} className="text-[#71B913]" />
-                <span>Open My Vault ({purchaseCount} items)</span>
+                <span>My Account Dashboard ({purchaseCount} items)</span>
               </button>
             ) : (
               <button
@@ -279,7 +279,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full py-2.5 text-center text-xs font-semibold text-white bg-white/10 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UserIcon size={14} className="text-[#71B913]" />
-                <span>Sign In to Creator Account</span>
+                <span>Sign In / Create Account</span>
               </button>
             )}
 

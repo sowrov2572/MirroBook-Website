@@ -1,6 +1,16 @@
 import React from 'react';
-import { X, Download, ShieldCheck, LogOut, Package, Sparkles, FolderDown, ShieldAlert } from 'lucide-react';
-import { UserPurchase, AppUser, isStudioOwner } from '../types';
+import {
+  X,
+  Download,
+  ShieldCheck,
+  LogOut,
+  Package,
+  Sparkles,
+  FolderDown,
+  ShieldAlert,
+  LayoutDashboard,
+} from 'lucide-react';
+import { UserPurchase, AppUser, isVerifiedAdminUser } from '../types';
 
 interface UserVaultModalProps {
   isOpen: boolean;
@@ -10,6 +20,7 @@ interface UserVaultModalProps {
   onSignOut: () => void;
   onBrowseStore: () => void;
   onOpenAdmin?: () => void;
+  onOpenDashboard?: () => void;
   onSelectDownload?: (purchase: UserPurchase) => void;
 }
 
@@ -21,11 +32,12 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
   onSignOut,
   onBrowseStore,
   onOpenAdmin,
+  onOpenDashboard,
   onSelectDownload,
 }) => {
   if (!isOpen) return null;
 
-  const isOwner = isStudioOwner(user?.email);
+  const isAdmin = isVerifiedAdminUser(user);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
@@ -38,9 +50,9 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
             </div>
             <div>
               <h3 className="font-display text-sm font-bold text-white tracking-normal flex items-center gap-2">
-                <span>Creator Library &amp; Downloads</span>
+                <span>My Library &amp; Downloads</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#71B913] text-black font-bold">
-                  Vault Synced
+                  Synced
                 </span>
               </h3>
               <p className="text-xs text-[#888888] font-normal">
@@ -60,12 +72,12 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
         </div>
 
         {/* User Account Info Strip */}
-        <div className="px-6 py-3.5 bg-[#121212] border-b border-white/[0.06] flex items-center justify-between">
+        <div className="px-6 py-3.5 bg-[#121212] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             {user?.photoURL ? (
               <img
                 src={user.photoURL}
-                alt={user.displayName || 'Creator'}
+                alt={user.displayName || 'Customer'}
                 className="w-8 h-8 rounded-full border border-white/20 object-cover"
               />
             ) : (
@@ -75,7 +87,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
             )}
             <div className="text-xs">
               <span className="font-semibold text-white block">
-                {user?.displayName || 'Active Creator'}
+                {user?.displayName || 'Customer Account'}
               </span>
               <span className="text-[#888888] font-normal font-mono text-[11px]">
                 {user?.email}
@@ -84,17 +96,31 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {isOwner && onOpenAdmin && (
+            {onOpenDashboard && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenDashboard();
+                }}
+                className="px-3 py-1.5 text-xs text-black bg-[#71B913] hover:bg-[#81cf17] rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-bold"
+              >
+                <LayoutDashboard size={13} />
+                <span>Full Dashboard</span>
+              </button>
+            )}
+
+            {isAdmin && onOpenAdmin && (
               <button
                 type="button"
                 onClick={() => {
                   onClose();
                   onOpenAdmin();
                 }}
-                className="px-3 py-1.5 text-xs text-yellow-300 hover:text-yellow-200 bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/30 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-semibold shadow-[0_0_15px_rgba(234,179,8,0.2)]"
+                className="px-3 py-1.5 text-xs text-yellow-300 hover:text-yellow-200 bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/30 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-semibold"
               >
                 <ShieldAlert size={13} className="text-yellow-400" />
-                <span>Studio Owner Console</span>
+                <span>Admin Console</span>
               </button>
             )}
 
@@ -123,7 +149,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                   No Purchased Assets Yet
                 </h4>
                 <p className="text-xs text-[#888888] max-w-sm mx-auto leading-relaxed">
-                  When you purchase plugins (like Easy Flow Plugin, AI AutoCut) or masterclasses with this account, your download links and licenses will appear here permanently.
+                  When you purchase plugins, software, or courses with this account, your download links and licenses will appear here permanently.
                 </p>
               </div>
 
@@ -141,7 +167,9 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs text-[#888888] px-1">
-                <span>{purchases.length} Unlocked Asset{purchases.length === 1 ? '' : 's'}</span>
+                <span>
+                  {purchases.length} Unlocked Asset{purchases.length === 1 ? '' : 's'}
+                </span>
                 <span className="flex items-center gap-1 text-[#71B913]">
                   <ShieldCheck size={13} /> Single-Account License Active
                 </span>
@@ -189,20 +217,13 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                   </div>
                 </div>
               ))}
-
-              <div className="p-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] text-[#888888] flex items-start gap-2.5">
-                <ShieldCheck size={16} className="text-[#71B913] shrink-0 mt-0.5" />
-                <p>
-                  <strong>Account Security:</strong> Your files are permanently tied to <strong>{user?.email}</strong>. Whenever you visit MirrorBook from any browser, simply sign in with your Google account to access and download your installed plugins.
-                </p>
-              </div>
             </div>
           )}
         </div>
 
         {/* Modal Footer */}
         <div className="px-6 py-3 border-t border-white/[0.08] bg-[#0E0E0E] flex items-center justify-between text-xs text-[#666666]">
-          <span>MirrorBook Secured Cloud Vault</span>
+          <span>MirrorBook Customer Library</span>
           <button
             onClick={onClose}
             className="hover:text-white transition-colors cursor-pointer"
