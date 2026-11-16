@@ -24,8 +24,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenCartOrStore,
 }) => {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none p-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-      <nav className="pointer-events-auto glossy-glass-dock rounded-2xl px-2 py-2 flex items-center justify-around shadow-[0_15px_35px_rgba(0,0,0,0.85)] border border-white/15 max-w-md mx-auto">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none px-3 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
+      <nav
+        aria-label="Mobile Navigation"
+        className="pointer-events-auto glossy-glass-dock rounded-2xl px-2 py-1.5 flex items-center justify-around max-w-md mx-auto"
+      >
         {/* Home */}
         <button
           type="button"
@@ -36,45 +39,43 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }
           }}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all cursor-pointer ${
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'home'
-              ? 'text-[#71B913] bg-white/[0.06]'
-              : 'text-[#888888] hover:text-white'
+              ? 'text-[#B7F34A] bg-white/[0.06]'
+              : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
           }`}
         >
           <Home size={18} />
-          <span className="text-[10px] font-medium mt-1">Home</span>
+          <span className="text-[10px] font-medium mt-0.5">Home</span>
         </button>
 
         {/* Plugin Store */}
         <button
           type="button"
           onClick={() => onNavigate('plugins')}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all cursor-pointer ${
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'plugins'
-              ? 'text-[#71B913] bg-white/[0.06]'
-              : 'text-[#888888] hover:text-white'
+              ? 'text-[#B7F34A] bg-white/[0.06]'
+              : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
           }`}
         >
           <Sparkles size={18} />
-          <span className="text-[10px] font-medium mt-1">Plugins</span>
+          <span className="text-[10px] font-medium mt-0.5">Plugins</span>
         </button>
 
-        {/* Center Cart / Instant Buy Action */}
+        {/* Store / Cart Action */}
         <button
           type="button"
           onClick={onOpenCartOrStore}
-          className="relative -top-2 flex flex-col items-center justify-center"
+          className="relative flex flex-col items-center justify-center min-h-[44px] min-w-[56px] px-3 py-1 rounded-xl glossy-btn cursor-pointer"
         >
-          <div className="w-12 h-12 rounded-full glossy-btn flex items-center justify-center shadow-[0_6px_20px_rgba(113,185,19,0.45)] cursor-pointer active:scale-95 transition-transform border border-white/30">
-            <ShoppingBag size={20} className="text-black" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black text-[#71B913] border border-[#71B913] text-[10px] font-bold flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-bold text-[#71B913] mt-0.5">Cart</span>
+          <ShoppingBag size={17} className="text-[#0B0D0C]" />
+          <span className="text-[10px] font-bold text-[#0B0D0C] mt-0.5">Store</span>
+          {cartCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0B0D0C] text-[#B7F34A] border border-[#B7F34A] text-[9px] font-bold flex items-center justify-center tabular-nums">
+              {cartCount}
+            </span>
+          )}
         </button>
 
         {/* Vault / Library */}
@@ -87,14 +88,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               onSignIn();
             }
           }}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all cursor-pointer ${
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'vault'
-              ? 'text-[#71B913] bg-white/[0.06]'
-              : 'text-[#888888] hover:text-white'
+              ? 'text-[#B7F34A] bg-white/[0.06]'
+              : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
           }`}
         >
           <FolderDown size={18} />
-          <span className="text-[10px] font-medium mt-1">Vault</span>
+          <span className="text-[10px] font-medium mt-0.5">Vault</span>
         </button>
 
         {/* User Account / Profile */}
@@ -102,20 +103,20 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <button
             type="button"
             onClick={onOpenVault}
-            className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-white transition-all cursor-pointer"
+            className="flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl text-[#F5F7F2] hover:bg-white/[0.05] transition-colors cursor-pointer"
           >
             {user.photoURL ? (
               <img
                 src={user.photoURL}
                 alt="Profile"
-                className="w-5 h-5 rounded-full border border-[#71B913] object-cover"
+                className="w-5 h-5 rounded-lg border border-[#B7F34A] object-cover"
               />
             ) : (
-              <div className="w-5 h-5 rounded-full bg-[#71B913] text-black text-[10px] font-bold flex items-center justify-center">
+              <div className="w-5 h-5 rounded-lg bg-[#B7F34A] text-[#0B0D0C] text-[10px] font-bold flex items-center justify-center">
                 {(user.displayName || user.email || 'U')[0].toUpperCase()}
               </div>
             )}
-            <span className="text-[10px] font-medium text-[#71B913] mt-1 truncate max-w-[46px]">
+            <span className="text-[10px] font-medium text-[#B7F34A] mt-0.5 truncate max-w-[46px]">
               Account
             </span>
           </button>
@@ -123,10 +124,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <button
             type="button"
             onClick={onSignIn}
-            className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[#888888] hover:text-white transition-all cursor-pointer"
+            className="flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer"
           >
             <User size={18} />
-            <span className="text-[10px] font-medium mt-1">Login</span>
+            <span className="text-[10px] font-medium mt-0.5">Login</span>
           </button>
         )}
       </nav>

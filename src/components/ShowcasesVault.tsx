@@ -10,28 +10,38 @@ interface ShowcasesVaultProps {
 
 export const ShowcasesVault: React.FC<ShowcasesVaultProps> = () => {
   return (
-    <section id="portfolio" className="py-16 sm:py-20 px-6 bg-[#070707] text-white bg-grid-subtle border-b border-white/[0.08] relative overflow-hidden">
-      <div className="max-w-5xl mx-auto relative z-10 text-center">
-        {/* Title */}
-        <h2 className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight mb-3">
-          Portfolio
-        </h2>
+    <section
+      id="portfolio"
+      className="py-16 sm:py-20 px-5 sm:px-6 lg:px-8 bg-[#0B0D0C] text-[#F5F7F2] bg-grid-subtle border-b border-white/[0.09] relative overflow-hidden"
+    >
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="glossy-card p-8 sm:p-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="max-w-2xl space-y-2.5">
+            <span className="text-xs font-semibold text-[#B7F34A] block">
+              Selected Client Work
+            </span>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
+              Portfolio
+            </h2>
+            <p className="text-sm sm:text-base text-[#A1AAA2] font-normal leading-relaxed">
+              Explore our client work, commercial video productions, motion designs, and digital creations.
+            </p>
+          </div>
 
-        <p className="text-sm sm:text-base text-[#AAAAAA] max-w-xl mx-auto font-normal leading-relaxed mb-7">
-          Explore our client work, commercial video productions, motion designs, and digital creations.
-        </p>
-
-        {/* Clean Prominent Portfolio Action Button */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a
-            href={PORTFOLIO_EXTERNAL_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto px-9 py-4 text-sm font-bold uppercase tracking-normal text-black bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.98] rounded-2xl transition-all flex items-center justify-center gap-3 cursor-pointer group"
-          >
-            <span>View Portfolio</span>
-            <ExternalLink size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </a>
+          <div className="shrink-0">
+            <a
+              href={PORTFOLIO_EXTERNAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm glossy-btn rounded-xl flex items-center justify-center gap-2.5 cursor-pointer group whitespace-nowrap"
+            >
+              <span>View Portfolio</span>
+              <ExternalLink
+                size={16}
+                className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+              />
+            </a>
+          </div>
         </div>
       </div>
     </section>

@@ -40,22 +40,22 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
   const isAdmin = isVerifiedAdminUser(user);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl glossy-card border border-white/20 text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl glossy-card border border-white/[0.09] text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.1] bg-white/[0.04]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.09] bg-[#171C19]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-[#71B913]/15 border border-[#71B913]/40 text-[#71B913] flex items-center justify-center shadow-inner">
+            <div className="w-9 h-9 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/40 text-[#B7F34A] flex items-center justify-center shadow-inner">
               <FolderDown size={18} />
             </div>
             <div>
-              <h3 className="font-display text-sm font-bold text-white tracking-normal flex items-center gap-2">
+              <h3 className="font-display text-sm font-bold text-[#F5F7F2] tracking-normal flex items-center gap-2">
                 <span>My Library &amp; Downloads</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#71B913] text-black font-bold">
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#B7F34A] text-black font-bold">
                   Synced
                 </span>
               </h3>
-              <p className="text-xs text-[#888888] font-normal">
+              <p className="text-xs text-[#A1AAA2] font-normal">
                 Permanent access to your purchased tools &amp; plugins
               </p>
             </div>
@@ -64,7 +64,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-white/10 text-[#888888] hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-xl hover:bg-white/10 text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors flex items-center justify-center cursor-pointer"
             aria-label="Close"
           >
             <X size={16} />
@@ -72,7 +72,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
         </div>
 
         {/* User Account Info Strip */}
-        <div className="px-6 py-3.5 bg-[#121212] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
+        <div className="px-6 py-3.5 bg-[#121614] border-b border-white/[0.09] flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             {user?.photoURL ? (
               <img
@@ -81,15 +81,15 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                 className="w-8 h-8 rounded-full border border-white/20 object-cover"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-white/10 text-white font-bold text-xs flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-white/10 text-[#F5F7F2] font-bold text-xs flex items-center justify-center">
                 {(user?.displayName || user?.email || 'U')[0].toUpperCase()}
               </div>
             )}
             <div className="text-xs">
-              <span className="font-semibold text-white block">
+              <span className="font-semibold text-[#F5F7F2] block">
                 {user?.displayName || 'Customer Account'}
               </span>
-              <span className="text-[#888888] font-normal font-mono text-[11px]">
+              <span className="text-[#A1AAA2] font-normal font-mono text-[11px]">
                 {user?.email}
               </span>
             </div>
@@ -103,7 +103,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                   onClose();
                   onOpenDashboard();
                 }}
-                className="px-3 py-1.5 text-xs text-black bg-[#71B913] hover:bg-[#81cf17] rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-bold"
+                className="px-3 py-1.5 text-xs glossy-btn rounded-lg flex items-center gap-1.5 cursor-pointer font-bold"
               >
                 <LayoutDashboard size={13} />
                 <span>Full Dashboard</span>
@@ -129,7 +129,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                 onSignOut();
                 onClose();
               }}
-              className="px-3 py-1.5 text-xs text-[#999999] hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 text-xs glossy-btn-secondary hover:text-red-400 rounded-lg flex items-center gap-1.5 cursor-pointer"
             >
               <LogOut size={13} />
               <span>Sign Out</span>
@@ -141,14 +141,14 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
         <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
           {purchases.length === 0 ? (
             <div className="text-center py-12 px-4 space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 text-[#888888] mx-auto flex items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#121614] border border-white/[0.09] text-[#A1AAA2] mx-auto flex items-center justify-center">
                 <Package size={24} />
               </div>
               <div>
-                <h4 className="font-display text-base font-bold text-white mb-1">
+                <h4 className="font-display text-base font-bold text-[#F5F7F2] mb-1">
                   No Purchased Assets Yet
                 </h4>
-                <p className="text-xs text-[#888888] max-w-sm mx-auto leading-relaxed">
+                <p className="text-xs text-[#A1AAA2] max-w-sm mx-auto leading-relaxed">
                   When you purchase plugins, software, or courses with this account, your download links and licenses will appear here permanently.
                 </p>
               </div>
@@ -158,7 +158,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                   onClose();
                   onBrowseStore();
                 }}
-                className="px-6 py-2.5 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl shadow-lg transition-all cursor-pointer inline-flex items-center gap-2"
+                className="px-6 py-2.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl cursor-pointer inline-flex items-center gap-2"
               >
                 <Sparkles size={14} />
                 <span>Browse Plugin Store</span>
@@ -166,11 +166,11 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-[#888888] px-1">
+              <div className="flex items-center justify-between text-xs text-[#A1AAA2] px-1">
                 <span>
                   {purchases.length} Unlocked Asset{purchases.length === 1 ? '' : 's'}
                 </span>
-                <span className="flex items-center gap-1 text-[#71B913]">
+                <span className="flex items-center gap-1 text-[#B7F34A]">
                   <ShieldCheck size={13} /> Single-Account License Active
                 </span>
               </div>
@@ -178,23 +178,23 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
               {purchases.map((purchase) => (
                 <div
                   key={purchase.id}
-                  className="bg-[#121212] border border-white/10 hover:border-[#71B913]/40 rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="bg-[#121614] border border-white/[0.09] hover:border-[#B7F34A]/40 rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase font-semibold text-[#71B913] bg-[#71B913]/10 px-2 py-0.5 rounded">
+                      <span className="text-[10px] uppercase font-semibold text-[#B7F34A] bg-[#B7F34A]/10 px-2 py-0.5 rounded">
                         {purchase.category || 'Plugin'}
                       </span>
-                      <span className="text-[10px] text-[#777777] font-mono">
+                      <span className="text-[10px] text-[#707A72] font-mono">
                         Unlocked on {purchase.purchasedAt || 'Recent'}
                       </span>
                     </div>
 
-                    <h4 className="font-display text-base font-bold text-white">
+                    <h4 className="font-display text-base font-bold text-[#F5F7F2]">
                       {purchase.title}
                     </h4>
 
-                    <p className="text-xs text-[#888888] font-normal">
+                    <p className="text-xs text-[#A1AAA2] font-normal">
                       Full source folder &amp; lifetime installation files
                     </p>
                   </div>
@@ -209,7 +209,7 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
                           window.open(purchase.downloadUrl, '_blank', 'noopener,noreferrer');
                         }
                       }}
-                      className="px-5 py-2.5 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] active:scale-95 text-black rounded-xl shadow-[0_0_15px_rgba(113,185,19,0.25)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="px-5 py-2.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Download size={14} />
                       <span>Secure Download</span>
@@ -222,11 +222,11 @@ export const UserVaultModal: React.FC<UserVaultModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-white/[0.08] bg-[#0E0E0E] flex items-center justify-between text-xs text-[#666666]">
+        <div className="px-6 py-3 border-t border-white/[0.09] bg-[#171C19] flex items-center justify-between text-xs text-[#707A72]">
           <span>MirrorBook Customer Library</span>
           <button
             onClick={onClose}
-            className="hover:text-white transition-colors cursor-pointer"
+            className="hover:text-[#F5F7F2] transition-colors cursor-pointer"
           >
             Done
           </button>

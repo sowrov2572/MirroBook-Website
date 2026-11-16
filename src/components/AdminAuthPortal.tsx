@@ -36,7 +36,7 @@ interface AdminAuthPortalProps {
   orders: Order[];
   customers: CustomerProfile[];
   onDeleteOrder: (id: string) => void;
-  onUpdateOrder: (order: Order) => Promise<void>;
+  onApproveOrder: (orderId: string) => Promise<{ success: boolean; message: string }>;
   onClearOrders: () => void;
   products: ProductItem[];
   onAddProduct: (product: ProductItem) => void;
@@ -60,7 +60,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   orders,
   customers,
   onDeleteOrder,
-  onUpdateOrder,
+  onApproveOrder,
   onClearOrders,
   products,
   onAddProduct,
@@ -75,6 +75,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [isConsoleModalOpen, setIsConsoleModalOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -113,9 +114,9 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
 
   if (!authReady) {
     return (
-      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-[#070707]">
-        <div className="flex items-center gap-3 text-xs text-[#999999]">
-          <Loader2 size={18} className="animate-spin text-[#71B913]" />
+      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-[#0B0D0C]">
+        <div className="flex items-center gap-3 text-xs text-[#A1AAA2]">
+          <Loader2 size={18} className="animate-spin text-[#B7F34A]" />
           <span>Verifying session permissions...</span>
         </div>
       </section>
@@ -125,22 +126,22 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   // Case 1: Signed in as unauthorized customer attempting /admin (or /admin/login)
   if (user && !isAdmin) {
     return (
-      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-16 bg-[#070707]">
-        <div className="max-w-md w-full glossy-card border border-red-500/30 rounded-3xl p-8 text-center space-y-5 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9)]">
+      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-16 bg-[#0B0D0C]">
+        <div className="max-w-md w-full glossy-card border border-red-500/30 rounded-2xl p-8 text-center space-y-5 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.85)]">
           <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/40 text-red-400 mx-auto flex items-center justify-center">
             <ShieldAlert size={28} />
           </div>
           <div className="space-y-2">
-            <h1 className="font-display text-2xl font-bold text-white">Access Denied</h1>
-            <p className="text-xs text-[#AAAAAA] leading-relaxed">
-              Your current account (<strong className="text-white">{user.email}</strong>) is a customer account and does not have MirrorBook Administrator permissions.
+            <h1 className="font-display text-2xl font-bold text-[#F5F7F2]">Access Denied</h1>
+            <p className="text-xs text-[#A1AAA2] leading-relaxed">
+              Your current account (<strong className="text-[#F5F7F2]">{user.email}</strong>) is a customer account and does not have MirrorBook Administrator permissions.
             </p>
           </div>
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
               onClick={() => onNavigate('/account')}
-              className="w-full py-3 bg-[#71B913] hover:bg-[#81cf17] text-black text-xs font-bold uppercase rounded-xl cursor-pointer transition-colors"
+              className="glossy-btn w-full py-3 text-xs font-bold rounded-xl cursor-pointer"
             >
               Go to Customer Dashboard
             </button>
@@ -150,14 +151,14 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                 await onSignOut();
                 onNavigate('/admin/login');
               }}
-              className="w-full py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold rounded-xl cursor-pointer transition-colors"
+              className="glossy-btn-secondary w-full py-2.5 text-xs font-semibold rounded-xl cursor-pointer"
             >
               Sign Out &amp; Switch Account
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/')}
-              className="w-full py-2 text-xs text-[#888888] hover:text-white cursor-pointer"
+              className="w-full py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer"
             >
               Return Home
             </button>
@@ -170,33 +171,33 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   // Case 2: Unauthenticated visitor on /admin or /admin/login -> Show Dedicated Admin Login
   if (!user || mode === 'login') {
     return (
-      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-16 bg-[#070707]">
+      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-16 bg-[#0B0D0C]">
         <div className="max-w-md w-full space-y-5">
           <button
             type="button"
             onClick={() => onNavigate('/')}
-            className="inline-flex items-center gap-2 text-xs text-[#999999] hover:text-[#71B913] cursor-pointer"
+            className="inline-flex items-center gap-2 text-xs text-[#A1AAA2] hover:text-[#B7F34A] cursor-pointer"
           >
             <ArrowLeft size={14} />
             <span>Back to MirrorBook</span>
           </button>
 
-          <div className="glossy-card border border-white/15 rounded-3xl p-8 space-y-6 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9)]">
+          <div className="glossy-card rounded-2xl p-8 space-y-6 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.85)]">
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-[#71B913]/15 border border-[#71B913]/40 text-[#71B913] flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center shrink-0">
                 <ShieldCheck size={24} />
               </div>
               <div>
-                <h1 className="font-display text-lg font-bold text-white">
+                <h1 className="font-display text-lg font-bold text-[#F5F7F2]">
                   MirrorBook Admin Console
                 </h1>
-                <p className="text-xs text-[#888888]">
+                <p className="text-xs text-[#A1AAA2]">
                   Restricted Studio Owner Google Authentication
                 </p>
               </div>
             </div>
 
-            <p className="text-xs text-[#AAAAAA] leading-relaxed">
+            <p className="text-xs text-[#A1AAA2] leading-relaxed">
               Administrator sessions are cryptographically verified via Firebase Google Sign-In and backend token verification. Unauthorized accounts are denied automatically.
             </p>
 
@@ -211,11 +212,11 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
               type="button"
               onClick={handleAdminSignInClick}
               disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-white hover:bg-neutral-100 text-black font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
+              className="w-full py-3.5 px-4 bg-[#F5F7F2] hover:bg-white text-[#0B0D0C] font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
             >
               {isLoading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin text-black" />
+                  <Loader2 size={16} className="animate-spin text-[#0B0D0C]" />
                   <span>Verifying Studio Owner...</span>
                 </>
               ) : (
@@ -262,44 +263,37 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   const pendingOrders = orders.filter((o) => o.status === 'Pending');
 
   const handleApprovePendingOrder = async (ord: Order) => {
+    setApprovalError(null);
     setApprovingOrderId(ord.id);
     try {
-      const matched = products.find(
-        (p) => p.id === ord.productId || p.title.toLowerCase() === ord.itemName.toLowerCase()
-      );
-      const updatedOrder: Order = {
-        ...ord,
-        status: 'Verified',
-        downloadUrl: ord.downloadUrl || matched?.protectedUrl || 'https://drive.google.com',
-        licenseKey:
-          ord.licenseKey ||
-          generateDeterministicLicenseKey(ord.itemName, ord.customerEmail, ord.trxId || ord.id),
-      };
-      await onUpdateOrder(updatedOrder);
+      const res = await onApproveOrder(ord.id);
+      if (!res.success) {
+        setApprovalError(res.message);
+      }
     } finally {
       setApprovingOrderId(null);
     }
   };
 
   return (
-    <section className="min-h-[calc(100vh-140px)] bg-[#070707] px-4 sm:px-6 py-8">
+    <section className="min-h-[calc(100vh-140px)] bg-[#0B0D0C] px-5 sm:px-6 lg:px-8 py-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Verified Admin Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/[0.09]">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#71B913]/15 border border-[#71B913]/40 text-[#71B913] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center">
               <ShieldCheck size={24} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-display text-xl font-bold text-white">
+                <h1 className="font-display text-xl font-bold text-[#F5F7F2]">
                   MirrorBook Enterprise Admin Console
                 </h1>
-                <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-[#71B913] text-black">
+                <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-lg bg-[#B7F34A] text-[#0B0D0C]">
                   Verified Owner
                 </span>
               </div>
-              <p className="text-xs text-[#999999] font-mono">{user.email}</p>
+              <p className="text-xs text-[#A1AAA2] font-mono">{user.email}</p>
             </div>
           </div>
 
@@ -307,7 +301,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
             <button
               type="button"
               onClick={() => setIsConsoleModalOpen(true)}
-              className="px-4 py-2.5 bg-[#71B913] hover:bg-[#81cf17] text-black text-xs font-bold uppercase rounded-xl flex items-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(113,185,19,0.25)]"
+              className="glossy-btn px-4 py-2.5 text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer"
             >
               <Settings size={14} />
               <span>Open Full Control Desk (Orders / Products / Sheets / SMS)</span>
@@ -315,7 +309,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('/account')}
-              className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold rounded-xl cursor-pointer"
+              className="glossy-btn-secondary px-4 py-2.5 text-xs font-semibold rounded-xl cursor-pointer"
             >
               Customer View
             </button>
@@ -335,32 +329,32 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
 
         {/* Executive Overview Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#0F0F0F] border border-white/10 rounded-2xl p-4">
-            <span className="text-[11px] text-[#888888] flex items-center gap-1.5">
-              <ShoppingCart size={13} className="text-[#71B913]" /> Total Orders
+          <div className="glossy-card rounded-2xl p-4">
+            <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
+              <ShoppingCart size={13} className="text-[#B7F34A]" /> Total Orders
             </span>
-            <span className="text-2xl font-display font-bold text-white tabular-nums mt-1 block">
+            <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
               {orders.length}
             </span>
           </div>
-          <div className="bg-[#0F0F0F] border border-white/10 rounded-2xl p-4">
-            <span className="text-[11px] text-[#888888] flex items-center gap-1.5">
-              <Users size={13} className="text-[#71B913]" /> Registered Users
+          <div className="glossy-card rounded-2xl p-4">
+            <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
+              <Users size={13} className="text-[#B7F34A]" /> Registered Users
             </span>
-            <span className="text-2xl font-display font-bold text-white tabular-nums mt-1 block">
+            <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
               {customers.length}
             </span>
           </div>
-          <div className="bg-[#0F0F0F] border border-white/10 rounded-2xl p-4">
-            <span className="text-[11px] text-[#888888] flex items-center gap-1.5">
-              <Package size={13} className="text-[#71B913]" /> Catalog Products
+          <div className="glossy-card rounded-2xl p-4">
+            <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
+              <Package size={13} className="text-[#B7F34A]" /> Catalog Products
             </span>
-            <span className="text-2xl font-display font-bold text-white tabular-nums mt-1 block">
+            <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
               {products.length}
             </span>
           </div>
-          <div className="bg-[#0F0F0F] border border-white/10 rounded-2xl p-4">
-            <span className="text-[11px] text-[#888888] flex items-center gap-1.5">
+          <div className="glossy-card rounded-2xl p-4">
+            <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
               <KeyRound size={13} className="text-yellow-400" /> Pending Reviews
             </span>
             <span className="text-2xl font-display font-bold text-yellow-300 tabular-nums mt-1 block">
@@ -371,34 +365,40 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
 
         {/* Pending Manual Order Approval Queue */}
         {pendingOrders.length > 0 && (
-          <div className="bg-[#0F0F0F] border border-yellow-500/30 rounded-2xl p-5 space-y-4">
+          <div className="glossy-card border-yellow-500/30 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-bold text-white">
+              <h2 className="font-display text-base font-bold text-[#F5F7F2]">
                 Pending Orders Awaiting Approval ({pendingOrders.length})
               </h2>
             </div>
+            {approvalError && (
+              <div className="p-3 rounded-xl bg-red-950/40 border border-red-800 text-red-200 text-xs flex items-start gap-2">
+                <ShieldAlert size={15} className="shrink-0 text-red-400 mt-0.5" />
+                <span>{approvalError}</span>
+              </div>
+            )}
             <div className="space-y-2.5">
               {pendingOrders.map((ord) => (
                 <div
                   key={ord.id}
-                  className="bg-[#141414] border border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="bg-[#121614] border border-white/[0.09] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="text-xs space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-[#71B913]">{ord.id}</span>
-                      <span className="text-white font-semibold">{ord.itemName}</span>
-                      <span className="text-[#AAAAAA] font-mono">({ord.itemPrice})</span>
+                      <span className="font-mono font-bold text-[#B7F34A]">{ord.id}</span>
+                      <span className="text-[#F5F7F2] font-semibold">{ord.itemName}</span>
+                      <span className="text-[#A1AAA2] font-mono tabular-nums">({ord.itemPrice})</span>
                     </div>
-                    <p className="text-[#999999]">
+                    <p className="text-[#A1AAA2]">
                       {ord.customerName} • {ord.customerEmail} • {ord.paymentMethod} TrxID:{' '}
-                      <strong className="text-white font-mono">{ord.trxId}</strong>
+                      <strong className="text-[#F5F7F2] font-mono">{ord.trxId}</strong>
                     </p>
                   </div>
                   <button
                     type="button"
                     disabled={approvingOrderId === ord.id}
                     onClick={() => handleApprovePendingOrder(ord)}
-                    className="px-4 py-2 bg-[#71B913] hover:bg-[#81cf17] text-black text-xs font-bold rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                    className="glossy-btn px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
                   >
                     <CheckCircle2 size={14} />
                     <span>
@@ -412,34 +412,34 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         )}
 
         {/* Registered Users & Issued License Keys */}
-        <div className="bg-[#0C0C0C] border border-white/10 rounded-2xl p-6 space-y-4">
+        <div className="glossy-card rounded-2xl p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-base font-bold text-white">
+              <h2 className="font-display text-base font-bold text-[#F5F7F2]">
                 Customer Directory &amp; License Management
               </h2>
-              <p className="text-xs text-[#888888]">
+              <p className="text-xs text-[#A1AAA2]">
                 Manage registered customer accounts, roles, and verified license keys.
               </p>
             </div>
             <div className="relative w-full sm:w-72">
               <Search
                 size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]"
               />
               <input
                 type="text"
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
                 placeholder="Search customer email or name..."
-                className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none"
+                className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="border border-white/10 rounded-xl overflow-x-auto">
+          <div className="border border-white/[0.09] rounded-xl overflow-x-auto">
             <table className="w-full text-left text-xs whitespace-nowrap">
-              <thead className="bg-[#141414] border-b border-white/10 text-[#888888] font-mono uppercase">
+              <thead className="bg-[#121614] border-b border-white/[0.09] text-[#A1AAA2] font-mono uppercase">
                 <tr>
                   <th className="py-3 px-4 font-normal">Customer</th>
                   <th className="py-3 px-4 font-normal">Email</th>
@@ -449,10 +449,10 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                   <th className="py-3 px-4 font-normal">Last Login</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-white/[0.06]">
                 {filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-[#666666]">
+                    <td colSpan={6} className="py-8 text-center text-[#707A72]">
                       No registered users synced yet.
                     </td>
                   </tr>
@@ -465,26 +465,26 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                     );
                     return (
                       <tr key={cust.uid} className="hover:bg-white/[0.02]">
-                        <td className="py-3 px-4 font-semibold text-white">
+                        <td className="py-3 px-4 font-semibold text-[#F5F7F2]">
                           {cust.displayName}
                         </td>
-                        <td className="py-3 px-4 font-mono text-[#AAAAAA]">{cust.email}</td>
+                        <td className="py-3 px-4 font-mono text-[#A1AAA2]">{cust.email}</td>
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
                               cust.role === 'admin'
                                 ? 'bg-yellow-500/15 text-yellow-300 border border-yellow-500/30'
-                                : 'bg-[#71B913]/15 text-[#71B913] border border-[#71B913]/30'
+                                : 'bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30'
                             }`}
                           >
                             {cust.role}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-mono text-[#888888]">
+                        <td className="py-3 px-4 font-mono text-[#A1AAA2]">
                           {cust.authProvider}
                         </td>
-                        <td className="py-3 px-4 font-mono text-white">{custOrders.length}</td>
-                        <td className="py-3 px-4 font-mono text-[#888888]">
+                        <td className="py-3 px-4 font-mono text-[#F5F7F2] tabular-nums">{custOrders.length}</td>
+                        <td className="py-3 px-4 font-mono text-[#A1AAA2] tabular-nums">
                           {cust.lastLoginAt
                             ? new Date(cust.lastLoginAt).toLocaleString()
                             : 'Active'}
@@ -499,13 +499,13 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         </div>
 
         {/* Issued Licenses Overview */}
-        <div className="bg-[#0C0C0C] border border-white/10 rounded-2xl p-6 space-y-4">
-          <h2 className="font-display text-base font-bold text-white">
-            Issued Customer Licenses ({orders.filter((o) => o.status === 'Verified' || o.status === 'Completed').length})
+        <div className="glossy-card rounded-2xl p-6 space-y-4">
+          <h2 className="font-display text-base font-bold text-[#F5F7F2]">
+            Issued Customer Licenses ({orders.filter((o) => o.status === 'Verified' || o.status === 'Completed' || o.status === 'Paid').length})
           </h2>
-          <div className="border border-white/10 rounded-xl overflow-x-auto">
+          <div className="border border-white/[0.09] rounded-xl overflow-x-auto">
             <table className="w-full text-left text-xs whitespace-nowrap">
-              <thead className="bg-[#141414] border-b border-white/10 text-[#888888] font-mono uppercase">
+              <thead className="bg-[#121614] border-b border-white/[0.09] text-[#A1AAA2] font-mono uppercase">
                 <tr>
                   <th className="py-3 px-4 font-normal">Order ID</th>
                   <th className="py-3 px-4 font-normal">Customer Email</th>
@@ -514,9 +514,9 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                   <th className="py-3 px-4 font-normal text-right">Copy</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-white/[0.06]">
                 {orders
-                  .filter((o) => o.status === 'Verified' || o.status === 'Completed')
+                  .filter((o) => o.status === 'Verified' || o.status === 'Completed' || o.status === 'Paid')
                   .slice(0, 25)
                   .map((ord) => {
                     const key =
@@ -528,12 +528,12 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                       );
                     return (
                       <tr key={ord.id} className="hover:bg-white/[0.02]">
-                        <td className="py-3 px-4 font-mono text-[#71B913]">{ord.id}</td>
-                        <td className="py-3 px-4 font-mono text-[#CCCCCC]">
+                        <td className="py-3 px-4 font-mono text-[#B7F34A]">{ord.id}</td>
+                        <td className="py-3 px-4 font-mono text-[#A1AAA2]">
                           {ord.customerEmail}
                         </td>
-                        <td className="py-3 px-4 text-white font-medium">{ord.itemName}</td>
-                        <td className="py-3 px-4 font-mono text-[#71B913]">{key}</td>
+                        <td className="py-3 px-4 text-[#F5F7F2] font-medium">{ord.itemName}</td>
+                        <td className="py-3 px-4 font-mono text-[#B7F34A]">{key}</td>
                         <td className="py-3 px-4 text-right">
                           <button
                             type="button"
@@ -542,10 +542,10 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                               setCopiedKey(ord.id);
                               setTimeout(() => setCopiedKey(null), 1800);
                             }}
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/15 rounded text-white inline-flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 bg-[#121614] hover:bg-white/[0.08] border border-white/[0.09] rounded-lg text-[#F5F7F2] inline-flex items-center gap-1 cursor-pointer"
                           >
                             {copiedKey === ord.id ? (
-                              <Check size={12} className="text-[#71B913]" />
+                              <Check size={12} className="text-[#B7F34A]" />
                             ) : (
                               <Copy size={12} />
                             )}
@@ -567,6 +567,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         onClose={() => setIsConsoleModalOpen(false)}
         orders={orders}
         onDeleteOrder={onDeleteOrder}
+        onApproveOrder={onApproveOrder}
         onClearOrders={onClearOrders}
         products={products}
         onAddProduct={onAddProduct}

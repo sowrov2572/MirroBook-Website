@@ -562,41 +562,41 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
   const currentManual = activeManual.chapters[activeManualChapter] || activeManual.chapters[0];
 
   return (
-    <div className="min-h-screen bg-[#070707] text-white">
-      <div className="max-w-6xl mx-auto px-6 py-10 md:py-16">
+    <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2]">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-10 md:py-16">
         {/* Top Breadcrumb & Share Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-12 pb-6 border-b border-white/[0.08]">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#888888]">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-12 pb-6 border-b border-white/[0.09]">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#A1AAA2]">
             <a
               href="/"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigateHome();
               }}
-              className="hover:text-[#71B913] transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              className="hover:text-[#B7F34A] transition-colors flex items-center gap-1.5 whitespace-nowrap"
             >
               <ArrowLeft size={14} />
               <span>MirrorBook Home</span>
             </a>
             <span aria-hidden="true">/</span>
-            <span className="text-[#AAAAAA]">Software</span>
+            <span className="text-[#A1AAA2]">Software</span>
             <span aria-hidden="true">/</span>
-            <span className="text-[#71B913] font-semibold">MirrorPOS</span>
+            <span className="text-[#B7F34A] font-semibold">MirrorPOS</span>
           </nav>
 
           <button
             type="button"
             onClick={handleShare}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-[#CCCCCC] hover:text-white transition-all cursor-pointer whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glossy-btn-secondary text-xs font-medium cursor-pointer whitespace-nowrap shrink-0"
           >
             {copiedLink ? (
               <>
-                <Check size={13} className="text-[#71B913]" />
-                <span className="text-[#71B913]">Link Copied</span>
+                <Check size={13} className="text-[#B7F34A]" />
+                <span className="text-[#B7F34A]">Link Copied</span>
               </>
             ) : (
               <>
-                <Share2 size={13} className="text-[#71B913]" />
+                <Share2 size={13} className="text-[#B7F34A]" />
                 <span>Share Page</span>
               </>
             )}
@@ -606,7 +606,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         {/* 1. Clean Icon-First Header */}
         <section className="max-w-3xl mb-20 space-y-6">
           <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-[#0D0D0D] border border-white/15 p-3.5 flex items-center justify-center shrink-0 shadow-[0_12px_30px_rgba(0,0,0,0.6)]">
+            <div className="w-20 h-20 rounded-2xl bg-[#121614] border border-white/[0.09] p-3.5 flex items-center justify-center shrink-0 shadow-[0_12px_30px_rgba(0,0,0,0.6)]">
               <img
                 src="/mirror-pos-icon.png"
                 alt="MirrorPOS Official App Icon"
@@ -620,22 +620,22 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
 
             <div>
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#71B913] mb-1">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#B7F34A] mb-1">
                 <span>Developed by MirrorBook</span>
-                <span aria-hidden="true" className="text-[#555555]">·</span>
-                <span className="text-[#999999] font-normal">Official Software Product</span>
+                <span aria-hidden="true" className="text-[#707A72]">·</span>
+                <span className="text-[#A1AAA2] font-normal">Official Software Product</span>
               </div>
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-none">
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F7F2] leading-none">
                 MirrorPOS
               </h1>
             </div>
           </div>
 
-          <p className="text-lg sm:text-2xl text-white font-semibold tracking-tight">
+          <p className="text-lg sm:text-2xl text-[#F5F7F2] font-semibold tracking-tight">
             Smart POS Software for Modern Businesses.
           </p>
 
-          <p className="text-sm sm:text-base text-[#BBBBBB] leading-relaxed font-normal">
+          <p className="text-sm sm:text-base text-[#A1AAA2] leading-relaxed font-normal">
             A MirrorBook software product designed for offline billing support, online data synchronization, inventory management, sales and expense tracking, customer management, and smart business reporting.
           </p>
 
@@ -645,7 +645,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               href={MIRRORPOS_APP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-4 rounded-xl bg-[#71B913] hover:bg-[#82d119] active:scale-[0.98] text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 shadow-[0_10px_30px_rgba(113,185,19,0.3)]"
+              className="px-8 py-4 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
             >
               <span>Launch MirrorPOS</span>
               <ExternalLink size={15} />
@@ -654,35 +654,35 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             <button
               type="button"
               onClick={() => scrollToLocalSection('install-mirrorpos')}
-              className="px-7 py-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 hover:border-[#71B913]/50 text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+              className="px-7 py-4 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
             >
-              <Download size={14} className="text-[#71B913]" />
+              <Download size={14} className="text-[#B7F34A]" />
               <span>How to Install</span>
             </button>
 
             <button
               type="button"
               onClick={() => scrollToLocalSection('user-manual')}
-              className="px-6 py-4 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/10 text-[#CCCCCC] hover:text-white text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+              className="px-6 py-4 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
             >
-              <BookOpen size={14} className="text-[#71B913]" />
+              <BookOpen size={14} className="text-[#B7F34A]" />
               <span>User Manual</span>
             </button>
           </div>
         </section>
 
         {/* 2. What MirrorPOS Does */}
-        <section id="features" className="mb-16 pt-14 border-t border-white/[0.08]">
+        <section id="features" className="mb-16 pt-14 border-t border-white/[0.09]">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#71B913] block mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#B7F34A] block mb-2">
                 Developed by MirrorBook
               </span>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
                 Key Features of MirrorPOS
               </h2>
             </div>
-            <p className="text-sm text-[#999999] max-w-md leading-relaxed">
+            <p className="text-sm text-[#A1AAA2] max-w-md leading-relaxed">
               Engineered under the MirrorBook ecosystem for reliable counter billing, stock control, due ledgers, and business reporting.
             </p>
           </div>
@@ -693,15 +693,15 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               return (
                 <div
                   key={feature.title}
-                  className="bg-[#0C0C0C] border border-white/[0.08] hover:border-[#71B913]/40 rounded-2xl p-6 transition-all duration-200"
+                  className="glossy-card glossy-card-hover p-6"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center text-[#71B913] mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] mb-4">
                     <IconComp size={19} />
                   </div>
-                  <h3 className="font-display text-base sm:text-lg font-bold text-white mb-2">
+                  <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] mb-2">
                     {feature.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#999999] leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
                     {feature.description}
                   </p>
                 </div>
@@ -711,18 +711,18 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         </section>
 
         {/* 3. Compact Software Screenshots (User's 3 real screenshots) */}
-        <section id="screenshots" className="mb-16 pt-12 border-t border-white/[0.08]">
+        <section id="screenshots" className="mb-16 pt-12 border-t border-white/[0.09]">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#71B913] block mb-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#B7F34A] block mb-1.5">
                 Software Preview
               </span>
-              <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
                 Screenshots
               </h2>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 glass-tab-bar p-1 rounded-xl">
               {screenshots.map((shot, idx) => {
                 const isActive = activeScreenshot === idx;
                 return (
@@ -732,8 +732,8 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     onClick={() => setActiveScreenshot(idx)}
                     className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       isActive
-                        ? 'bg-[#71B913] text-black font-bold'
-                        : 'bg-white/[0.04] border border-white/10 text-[#AAAAAA] hover:text-white hover:border-white/25'
+                        ? 'bg-[#B7F34A] text-black font-bold'
+                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
                     {shot.label}
@@ -743,8 +743,8 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
           </div>
 
-          <div className="bg-[#0C0C0C] border border-white/[0.08] rounded-2xl p-3 sm:p-4 max-w-4xl">
-            <div className="aspect-video w-full rounded-xl overflow-hidden bg-black border border-white/10">
+          <div className="glossy-card p-3 sm:p-4 max-w-4xl">
+            <div className="aspect-video w-full rounded-xl overflow-hidden bg-[#0B0D0C] border border-white/[0.09]">
               <img
                 src={screenshots[activeScreenshot].image}
                 alt={screenshots[activeScreenshot].alt}
@@ -762,39 +762,39 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
 
             <div className="pt-3 px-1 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span className="font-bold text-white">{screenshots[activeScreenshot].label}</span>
-              <span className="text-[#888888]">{screenshots[activeScreenshot].caption}</span>
+              <span className="font-bold text-[#F5F7F2]">{screenshots[activeScreenshot].label}</span>
+              <span className="text-[#A1AAA2]">{screenshots[activeScreenshot].caption}</span>
             </div>
           </div>
         </section>
 
         {/* 4. How to Install MirrorPOS (Bangla + English) */}
-        <section id="install-mirrorpos" className="mb-16 pt-14 border-t border-white/[0.08]">
-          <div className="bg-[#0C0C0C] border border-white/[0.08] rounded-3xl p-6 sm:p-10">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 pb-6 border-b border-white/[0.08]">
+        <section id="install-mirrorpos" className="mb-16 pt-14 border-t border-white/[0.09]">
+          <div className="glossy-card p-6 sm:p-10">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 pb-6 border-b border-white/[0.09]">
               <div className="max-w-2xl">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#71B913] mb-2">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#B7F34A] mb-2">
                   <Laptop size={14} />
                   <span>Windows Desktop App Installation</span>
                 </div>
-                <h2 className="font-display text-2xl sm:text-4xl font-bold text-white tracking-tight mb-2">
+                <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight mb-2">
                   {activeGuide.heading}
                 </h2>
-                <p className="text-sm text-[#AAAAAA] leading-relaxed">
+                <p className="text-sm text-[#A1AAA2] leading-relaxed">
                   {activeGuide.sub}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 self-start lg:self-end">
                 {/* Language Switcher (বাংলা / English) */}
-                <div className="flex items-center gap-1 p-1 bg-[#070707] border border-white/10 rounded-xl">
+                <div className="flex items-center gap-1 p-1 glass-tab-bar rounded-xl">
                   <button
                     type="button"
                     onClick={() => setGuideLang('bn')}
                     className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                       guideLang === 'bn'
-                        ? 'bg-white text-black'
-                        : 'text-[#AAAAAA] hover:text-white'
+                        ? 'bg-[#F5F7F2] text-black'
+                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
                     <Languages size={13} />
@@ -805,8 +805,8 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     onClick={() => setGuideLang('en')}
                     className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       guideLang === 'en'
-                        ? 'bg-white text-black'
-                        : 'text-[#AAAAAA] hover:text-white'
+                        ? 'bg-[#F5F7F2] text-black'
+                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
                     English
@@ -814,14 +814,14 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 </div>
 
                 {/* Browser Switcher */}
-                <div className="flex items-center gap-1.5 p-1 bg-[#070707] border border-white/10 rounded-xl">
+                <div className="flex items-center gap-1.5 p-1 glass-tab-bar rounded-xl">
                   <button
                     type="button"
                     onClick={() => setBrowserTab('chrome')}
                     className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                       browserTab === 'chrome'
-                        ? 'bg-[#71B913] text-black'
-                        : 'text-[#AAAAAA] hover:text-white'
+                        ? 'bg-[#B7F34A] text-black'
+                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
                     <Chrome size={14} />
@@ -832,8 +832,8 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     onClick={() => setBrowserTab('edge')}
                     className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                       browserTab === 'edge'
-                        ? 'bg-[#71B913] text-black'
-                        : 'text-[#AAAAAA] hover:text-white'
+                        ? 'bg-[#B7F34A] text-black'
+                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
                     <Globe size={14} />
@@ -847,31 +847,31 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               {activeSteps.map((item) => (
                 <div
                   key={item.step}
-                  className="p-5 rounded-2xl bg-[#070707] border border-white/[0.08] hover:border-[#71B913]/35 transition-all"
+                  className="p-5 rounded-2xl bg-[#121614] border border-white/[0.09] hover:border-[#B7F34A]/35 transition-all"
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#71B913] tabular-nums">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#B7F34A] tabular-nums">
                       {item.step}
                     </span>
-                    <span className="text-[11px] text-[#777777]">
+                    <span className="text-[11px] text-[#707A72]">
                       {browserTab === 'chrome' ? 'Google Chrome' : 'Microsoft Edge'}
                     </span>
                   </div>
-                  <h3 className="font-display text-base font-bold text-white mb-1.5">
+                  <h3 className="font-display text-base font-bold text-[#F5F7F2] mb-1.5">
                     {item.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#999999] leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
                     {item.detail}
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#121614] border border-white/[0.09] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start sm:items-center gap-3">
-                <ShieldCheck size={18} className="text-[#71B913] shrink-0 mt-0.5 sm:mt-0" />
-                <div className="text-xs sm:text-sm text-[#CCCCCC] leading-relaxed">
-                  <strong className="text-white">{activeGuide.sysReqLabel}</strong> {activeGuide.sysReqText}
+                <ShieldCheck size={18} className="text-[#B7F34A] shrink-0 mt-0.5 sm:mt-0" />
+                <div className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
+                  <strong className="text-[#F5F7F2]">{activeGuide.sysReqLabel}</strong> {activeGuide.sysReqText}
                 </div>
               </div>
 
@@ -879,7 +879,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 href={MIRRORPOS_APP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-5 py-2.5 rounded-xl bg-[#71B913] hover:bg-[#82d119] text-black text-xs font-bold uppercase tracking-wider transition-all inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                className="glossy-btn px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
               >
                 <span>{activeGuide.openBtn}</span>
                 <ExternalLink size={13} />
@@ -889,30 +889,30 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         </section>
 
         {/* 5. User Manual (Bangla + English, Last Major Section) */}
-        <section id="user-manual" className="mb-16 pt-14 border-t border-white/[0.08]">
+        <section id="user-manual" className="mb-16 pt-14 border-t border-white/[0.09]">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#71B913] mb-2">
+              <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
                 <BookOpen size={14} />
                 <span>{activeManual.badge}</span>
               </div>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
                 {activeManual.heading}
               </h2>
-              <p className="text-sm text-[#999999] mt-2 max-w-2xl leading-relaxed">
+              <p className="text-sm text-[#A1AAA2] mt-2 max-w-2xl leading-relaxed">
                 {activeManual.sub}
               </p>
             </div>
 
             {/* Language Switcher for Manual */}
-            <div className="flex items-center gap-1 p-1 bg-[#0C0C0C] border border-white/10 rounded-xl self-start md:self-end shrink-0">
+            <div className="glass-tab-bar self-start md:self-end shrink-0">
               <button
                 type="button"
                 onClick={() => setGuideLang('bn')}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                   guideLang === 'bn'
-                    ? 'bg-[#71B913] text-black'
-                    : 'text-[#AAAAAA] hover:text-white'
+                    ? 'bg-[#B7F34A] text-[#0B0D0C]'
+                    : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                 }`}
               >
                 <Languages size={13} />
@@ -921,10 +921,10 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               <button
                 type="button"
                 onClick={() => setGuideLang('en')}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   guideLang === 'en'
-                    ? 'bg-[#71B913] text-black'
-                    : 'text-[#AAAAAA] hover:text-white'
+                    ? 'bg-[#B7F34A] text-[#0B0D0C]'
+                    : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                 }`}
               >
                 English
@@ -933,14 +933,14 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </div>
 
           {/* What You Get Inside MirrorPOS Highlights Strip */}
-          <div className="mb-6 p-5 sm:p-6 rounded-2xl bg-[#0C0C0C] border border-white/[0.08]">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#71B913] mb-3">
+          <div className="mb-6 p-5 sm:p-6 rounded-2xl glossy-card">
+            <h3 className="text-xs font-bold tracking-wide text-[#B7F34A] mb-3">
               {activeManual.includedTitle}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {activeManual.includedHighlights.map((item) => (
-                <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-[#DDDDDD]">
-                  <CheckCircle2 size={14} className="text-[#71B913] shrink-0" />
+                <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-[#F5F7F2]">
+                  <CheckCircle2 size={14} className="text-[#B7F34A] shrink-0" />
                   <span>{item}</span>
                 </div>
               ))}
@@ -958,14 +958,14 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     onClick={() => setActiveManualChapter(idx)}
                     className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
                       isActive
-                        ? 'bg-[#71B913]/10 border-[#71B913]/60 text-white'
-                        : 'bg-[#0C0C0C] border-white/[0.08] hover:border-white/20 text-[#AAAAAA] hover:text-white'
+                        ? 'bg-[#B7F34A]/10 border-[#B7F34A]/50 text-[#F5F7F2]'
+                        : 'bg-[#171C19] border-white/[0.09] hover:border-white/20 text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
                         className={`font-display text-sm font-bold tabular-nums shrink-0 ${
-                          isActive ? 'text-[#71B913]' : 'text-[#666666]'
+                          isActive ? 'text-[#B7F34A]' : 'text-[#707A72]'
                         }`}
                       >
                         {chapter.number}.
@@ -974,22 +974,22 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     </div>
                     <ChevronRight
                       size={15}
-                      className={`shrink-0 ${isActive ? 'text-[#71B913]' : 'text-[#555555]'}`}
+                      className={`shrink-0 ${isActive ? 'text-[#B7F34A]' : 'text-[#707A72]'}`}
                     />
                   </button>
                 );
               })}
             </div>
 
-            <div className="lg:col-span-8 bg-[#0C0C0C] border border-white/[0.08] rounded-3xl p-6 sm:p-9">
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-5 border-b border-white/[0.08]">
+            <div className="lg:col-span-8 glossy-card rounded-2xl p-6 sm:p-9">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-5 border-b border-white/[0.09]">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#71B913] tabular-nums">
+                  <span className="text-xs font-bold tracking-wide text-[#B7F34A] tabular-nums">
                     {guideLang === 'bn'
                       ? `অধ্যায় ${currentManual.number} / ০৫`
                       : `Chapter ${currentManual.number} of 05`}
                   </span>
-                  <h3 className="font-display text-xl sm:text-2xl font-bold text-white mt-1">
+                  <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2] mt-1">
                     {currentManual.title}
                   </h3>
                 </div>
@@ -1002,7 +1002,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                         prev > 0 ? prev - 1 : activeManual.chapters.length - 1
                       )
                     }
-                    className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-[#CCCCCC] cursor-pointer"
+                    className="glossy-btn-secondary px-3 py-1.5 rounded-xl text-xs font-medium text-[#F5F7F2] cursor-pointer"
                   >
                     {guideLang === 'bn' ? 'পূর্ববর্তী' : 'Previous'}
                   </button>
@@ -1013,14 +1013,14 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                         prev < activeManual.chapters.length - 1 ? prev + 1 : 0
                       )
                     }
-                    className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-[#CCCCCC] cursor-pointer"
+                    className="glossy-btn-secondary px-3 py-1.5 rounded-xl text-xs font-medium text-[#F5F7F2] cursor-pointer"
                   >
                     {guideLang === 'bn' ? 'পরবর্তী' : 'Next'}
                   </button>
                 </div>
               </div>
 
-              <p className="text-sm text-[#CCCCCC] leading-relaxed mb-5">
+              <p className="text-sm text-[#A1AAA2] leading-relaxed mb-5">
                 {currentManual.summary}
               </p>
 
@@ -1028,19 +1028,19 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 {currentManual.steps.map((stepText, index) => (
                   <li
                     key={index}
-                    className="flex items-start gap-3 p-4 rounded-2xl bg-[#070707] border border-white/[0.06]"
+                    className="flex items-start gap-3 p-4 rounded-xl bg-[#121614] border border-white/[0.08]"
                   >
-                    <span className="w-6 h-6 rounded-full bg-[#71B913]/15 border border-[#71B913]/40 text-[#71B913] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
+                    <span className="w-6 h-6 rounded-full bg-[#B7F34A]/15 border border-[#B7F34A]/40 text-[#B7F34A] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
                       {index + 1}
                     </span>
-                    <span className="text-xs sm:text-sm text-[#DDDDDD] leading-relaxed">{stepText}</span>
+                    <span className="text-xs sm:text-sm text-[#F5F7F2] leading-relaxed">{stepText}</span>
                   </li>
                 ))}
               </ol>
 
-              <div className="mt-6 pt-5 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-xs text-[#888888]">
-                  <CheckCircle2 size={14} className="text-[#71B913]" />
+              <div className="mt-6 pt-5 border-t border-white/[0.09] flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-xs text-[#A1AAA2]">
+                  <CheckCircle2 size={14} className="text-[#B7F34A]" />
                   <span>
                     {guideLang === 'bn'
                       ? 'কম্পিউটার, ট্যাবলেট ও মোবাইল সব ডিভাইসে কাজ করে'
@@ -1052,7 +1052,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   href={MIRRORPOS_APP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-bold text-[#71B913] hover:underline inline-flex items-center gap-1.5"
+                  className="text-xs font-bold text-[#B7F34A] hover:underline inline-flex items-center gap-1.5"
                 >
                   <span>Launch MirrorPOS</span>
                   <ArrowRight size={13} />
@@ -1063,12 +1063,12 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         </section>
 
         {/* Bottom Action Bar */}
-        <section className="bg-[#0C0C0C] border border-[#71B913]/30 rounded-3xl p-8 text-center">
+        <section className="glossy-card border-[#B7F34A]/25 rounded-2xl p-8 text-center">
           <div className="max-w-xl mx-auto space-y-4">
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
               Start using MirrorPOS today
             </h2>
-            <p className="text-xs sm:text-sm text-[#AAAAAA] leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
               Launch MirrorPOS directly in your browser or install it on Windows Desktop via Chrome or Edge.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
@@ -1076,7 +1076,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 href={MIRRORPOS_APP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#71B913] hover:bg-[#82d119] text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                className="glossy-btn w-full sm:w-auto px-7 py-3.5 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
               >
                 <span>Launch MirrorPOS</span>
                 <ExternalLink size={14} />
@@ -1086,9 +1086,9 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 <button
                   type="button"
                   onClick={onStartProject}
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                  className="glossy-btn-secondary w-full sm:w-auto px-6 py-3.5 rounded-xl text-xs font-semibold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  <Layers size={14} className="text-[#71B913]" />
+                  <Layers size={14} className="text-[#B7F34A]" />
                   <span>Custom Enterprise Setup</span>
                 </button>
               )}
@@ -1096,7 +1096,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               <button
                 type="button"
                 onClick={onNavigateHome}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/10 text-[#AAAAAA] hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap shrink-0"
               >
                 Back to MirrorBook
               </button>

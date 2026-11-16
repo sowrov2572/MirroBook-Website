@@ -34,9 +34,11 @@ export async function syncProductsToSheet(
   sheetUrl: string,
   products: ProductItem[]
 ): Promise<SyncResult> {
-  // Always save to localStorage first for instant reliability
+  const sanitizedProducts = sanitizeProductsForPublic(products);
+
+  // Always save sanitized public metadata only to localStorage
   try {
-    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(sanitizedProducts));
   } catch (err) {
     console.error('LocalStorage error', err);
   }
@@ -46,14 +48,14 @@ export async function syncProductsToSheet(
       success: true,
       message: 'Saved to local storage (Google Sheet URL not configured).',
       source: 'local-storage',
-      items: products,
+      items: sanitizedProducts,
     };
   }
 
   const payloadStr = JSON.stringify({
     action: 'saveProducts',
     timestamp: new Date().toISOString(),
-    products,
+    products: sanitizedProducts,
   });
 
   const response = await executeSheetRequest<{ success: boolean; message: string }>({
@@ -71,7 +73,7 @@ export async function syncProductsToSheet(
       success: true,
       message: response.data?.message || 'Synced successfully with Google Sheet Web App.',
       source: 'google-sheets',
-      items: products,
+      items: sanitizedProducts,
     };
   }
 
@@ -86,7 +88,7 @@ export async function syncProductsToSheet(
     success: true,
     message: `Saved locally. Remote sync: ${response.error || 'Network error'}`,
     source: 'local-storage',
-    items: products,
+    items: sanitizedProducts,
   };
 }
 
@@ -95,7 +97,9 @@ export async function syncProductsToSheet(
  */
 export async function fetchProductsFromSheet(sheetUrl: string): Promise<SyncResult> {
   const localRaw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-  const localProducts: ProductItem[] = localRaw ? JSON.parse(localRaw) : [];
+  const localProducts: ProductItem[] = localRaw
+    ? sanitizeProductsForPublic(JSON.parse(localRaw))
+    : [];
 
   if (!sheetUrl || !sheetUrl.trim().startsWith('http')) {
     return {
@@ -133,20 +137,22 @@ export async function fetchProductsFromSheet(sheetUrl: string): Promise<SyncResu
   if (response.ok && response.data) {
     const data = response.data;
     if (Array.isArray(data) && data.length > 0) {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(data));
+      const safeList = sanitizeProductsForPublic(data);
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(safeList));
       return {
         success: true,
-        message: `Loaded ${data.length} products from Google Sheet.`,
+        message: `Loaded ${safeList.length} products from Google Sheet.`,
         source: 'google-sheets',
-        items: data,
+        items: safeList,
       };
     } else if (Array.isArray(data.products) && data.products.length > 0) {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(data.products));
+      const safeList = sanitizeProductsForPublic(data.products);
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(safeList));
       return {
         success: true,
-        message: `Loaded ${data.products.length} products from Google Sheet.`,
+        message: `Loaded ${safeList.length} products from Google Sheet.`,
         source: 'google-sheets',
-        items: data.products,
+        items: safeList,
       };
     }
   }
@@ -154,17 +160,19 @@ export async function fetchProductsFromSheet(sheetUrl: string): Promise<SyncResu
   // Handle empty or error response gracefully
   return {
     success: true,
-    message: response.ok ? 'Google Sheet returned 0 items; loaded local cache.' : `Remote fetch failed (${response.error || 'Transient issue'}); loaded local cache.`,
+    message: response.ok
+      ? 'Google Sheet returned 0 items; loaded local cache.'
+      : `Remote fetch failed (${response.error || 'Transient issue'}); loaded local cache.`,
     source: 'local-storage',
     items: localProducts,
   };
 }
 
 /**
- * Sample Google Apps Script code snippet for the user to copy-paste into Google Sheets
+ * Sample Google Apps Script code snippet for catalog storage only (never exposes paid protectedUrl values).
  */
 export const SAMPLE_APPS_SCRIPT = `/**
- * MirrorBook Google Apps Script Web App Endpoint
+ * MirrorBook Google Apps Script Web App Endpoint (Public Catalog Sync Only)
  * Paste this in Google Sheets: Extensions -> Apps Script
  * Deploy -> New Deployment -> Web App (Execute as: Me, Access: Anyone)
  */
@@ -188,6 +196,9 @@ function doGet(e) {
       obj[headers[j]] = row[j];
     }
     obj.price = Number(obj.price) || 0;
+    if (obj.price > 0) {
+      delete obj.protectedUrl;
+    }
     products.push(obj);
   }
   
@@ -208,15 +219,16 @@ function doPost(e) {
     
     for (var i = 0; i < products.length; i++) {
       var p = products[i];
+      var priceNum = Number(p.price) || 0;
       sheet.appendRow([
         p.id || '',
         p.type || '',
         p.category || '',
         p.title || '',
         p.description || '',
-        p.price || 0,
+        priceNum,
         p.priceDisplay || '',
-        p.protectedUrl || '',
+        priceNum === 0 ? (p.protectedUrl || '') : '',
         p.thumbnailUrl || '',
         p.duration || '',
         p.instructor || '',

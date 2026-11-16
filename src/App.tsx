@@ -40,7 +40,7 @@ import {
   loadPaymentConfig,
   savePaymentConfig,
   logUserLoginToGoogleSheet,
-  fetchUserPurchasesFromGoogleSheet,
+  adminApproveOrderApi,
 } from './utils/paymentService';
 import {
   sanitizeProductsForPublic,
@@ -50,7 +50,9 @@ import {
   PRODUCTS_STORAGE_KEY,
 } from './utils/syncService';
 import {
+  auth,
   subscribeToProducts,
+  subscribeToProductSecrets,
   saveProductToFirestore,
   deleteProductFromFirestore,
   subscribeToPaymentConfig,
@@ -58,7 +60,6 @@ import {
   savePaymentConfigToFirestore,
   subscribeToOrders,
   subscribeToUserOrders,
-  updateOrderInFirestore,
   deleteOrderFromFirestore,
   signInWithGoogle,
   signInWithEmail,
@@ -116,9 +117,10 @@ export default function App() {
   const [packageInquiryData, setPackageInquiryData] = useState<PackageInquiryData | null>(null);
   const [secureDownloadTarget, setSecureDownloadTarget] = useState<SecureDownloadTarget | null>(null);
 
-  // Scoped Orders & Customers state (adminOrders only populated for verified owner)
+  // Scoped Orders, Secrets & Customers state (strictly populated for verified owner)
   const [adminOrders, setAdminOrders] = useState<Order[]>([]);
   const [allCustomers, setAllCustomers] = useState<CustomerProfile[]>([]);
+  const [productSecrets, setProductSecrets] = useState<Record<string, string>>({});
 
   // Verified User Auth & Customer Profile state
   const [user, setUser] = useState<AppUser | null>(null);
@@ -127,20 +129,21 @@ export default function App() {
 
   const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [firestorePurchases, setFirestorePurchases] = useState<UserPurchase[]>([]);
-  const [sheetPurchases, setSheetPurchases] = useState<UserPurchase[]>([]);
   const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
 
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(loadPaymentConfig);
 
-  // Dynamic Products and Google Sheets state
+  // Dynamic Products and Google Sheets state (paid protectedUrl always stripped before storing)
   const [products, setProducts] = useState<ProductItem[]>(() => {
     try {
       const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
       if (raw) {
         const parsed: ProductItem[] = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.filter((p) => !OBSOLETE_PRODUCT_IDS.has(p.id));
+          const cleaned = sanitizeProductsForPublic(
+            parsed.filter((p) => !OBSOLETE_PRODUCT_IDS.has(p.id))
+          );
           const hasNewTutorials = cleaned.some((p) => p.id === 'tut-bangladeshi-money-explosion');
           if (hasNewTutorials) {
             try {
@@ -150,7 +153,7 @@ export default function App() {
           }
           const nonTutorials = cleaned.filter((p) => p.type !== 'Free Tutorial');
           const canonicalTutorials = INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial');
-          const merged = [...nonTutorials, ...canonicalTutorials];
+          const merged = sanitizeProductsForPublic([...nonTutorials, ...canonicalTutorials]);
           try {
             localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(merged));
           } catch {}
@@ -160,7 +163,7 @@ export default function App() {
     } catch {
       // fallback
     }
-    return INITIAL_PRODUCTS;
+    return sanitizeProductsForPublic(INITIAL_PRODUCTS);
   });
   const [sheetsUrl, setSheetsUrl] = useState<string>(() => {
     try {
@@ -215,10 +218,10 @@ export default function App() {
         setUserProfile(null);
         setUserOrders([]);
         setFirestorePurchases([]);
-        setSheetPurchases([]);
         setDownloadHistory([]);
         setAdminOrders([]);
         setAllCustomers([]);
+        setProductSecrets({});
         setAuthReady(true);
         return;
       }
@@ -275,12 +278,11 @@ export default function App() {
     }
   }, [authReady, user, currentPath, navigateTo]);
 
-  // 2. Customer-scoped Firestore Subscriptions (Purchases, Orders, Downloads) + Sheet recovery
+  // 2. Customer-scoped Firestore Subscriptions (Purchases, Orders, Downloads)
   useEffect(() => {
     if (!user) {
       setUserOrders([]);
       setFirestorePurchases([]);
-      setSheetPurchases([]);
       setDownloadHistory([]);
       return;
     }
@@ -300,33 +302,20 @@ export default function App() {
       setDownloadHistory(logs);
     });
 
-    const targetUrl = paymentConfig.webAppUrl || sheetsUrl;
-    if (user.email && targetUrl) {
-      fetchUserPurchasesFromGoogleSheet(targetUrl, user.email)
-        .then((recovered) => {
-          if (recovered.length > 0) {
-            setSheetPurchases(recovered);
-          }
-        })
-        .catch(() => {});
-    }
-
     return () => {
       unsubPurchases();
       unsubUserOrders();
       unsubDownloads();
     };
-  }, [user?.uid, user?.email, user?.emailVerified, paymentConfig.webAppUrl, sheetsUrl]);
+  }, [user?.uid, user?.email, user?.emailVerified]);
 
-  // Compute merged customer purchases from Firestore purchases, verified user orders, and sheet recovery
+  // Compute merged customer purchases strictly from authenticated Firestore purchases & verified orders
   const userPurchases = useMemo(() => {
     if (!user) return [];
     const map = new Map<string, UserPurchase>();
 
-    sheetPurchases.forEach((p) => map.set(p.id, p));
-
     userOrders.forEach((o) => {
-      if (o.downloadUrl && (o.status === 'Verified' || o.status === 'Completed')) {
+      if (o.downloadUrl && (o.status === 'Verified' || o.status === 'Completed' || o.status === 'Paid')) {
         map.set(o.id, {
           id: o.id,
           productId: o.productId || o.id,
@@ -352,7 +341,7 @@ export default function App() {
     });
 
     return Array.from(map.values());
-  }, [user, firestorePurchases, userOrders, sheetPurchases]);
+  }, [user, firestorePurchases, userOrders]);
 
   const isAdminVerified = isVerifiedAdminUser(user);
 
@@ -361,9 +350,11 @@ export default function App() {
     const unsubscribeProducts = subscribeToProducts((cloudProducts) => {
       if (cloudProducts.length > 0) {
         const hasTutorials = cloudProducts.some((p) => p.type === 'Free Tutorial');
-        const finalProducts = hasTutorials
-          ? cloudProducts
-          : [...cloudProducts, ...INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial')];
+        const finalProducts = sanitizeProductsForPublic(
+          hasTutorials
+            ? cloudProducts
+            : [...cloudProducts, ...INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial')]
+        );
         setProducts(finalProducts);
         try {
           localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(finalProducts));
@@ -391,6 +382,7 @@ export default function App() {
     if (!isAdminVerified) {
       setAdminOrders([]);
       setAllCustomers([]);
+      setProductSecrets({});
       return;
     }
 
@@ -399,6 +391,9 @@ export default function App() {
     });
     const unsubUsers = subscribeToAllUsers((usersList) => {
       setAllCustomers(usersList);
+    });
+    const unsubSecrets = subscribeToProductSecrets((secretsMap) => {
+      setProductSecrets(secretsMap);
     });
     const unsubAdminCfg = subscribeToAdminConfig((adminPart) => {
       setPaymentConfig((prev) => {
@@ -417,6 +412,7 @@ export default function App() {
     return () => {
       unsubOrders();
       unsubUsers();
+      unsubSecrets();
       unsubAdminCfg();
     };
   }, [isAdminVerified]);
@@ -461,6 +457,15 @@ export default function App() {
   const publicProducts = useMemo(() => {
     return sanitizeProductsForPublic(products);
   }, [products]);
+
+  // Admin-only catalog view merges protectedUrl from admin-only /productSecrets collection
+  const adminProducts = useMemo(() => {
+    if (!isAdminVerified) return publicProducts;
+    return products.map((p) => {
+      const secretUrl = productSecrets[p.id];
+      return secretUrl ? { ...p, protectedUrl: secretUrl } : p;
+    });
+  }, [products, productSecrets, isAdminVerified, publicProducts]);
 
   const publicPackages = useMemo(
     () => publicProducts.filter((p) => p.type === 'Agency Package'),
@@ -540,12 +545,6 @@ export default function App() {
         authProvider: providerLabel,
         uid: firebaseUser.uid,
       }).catch(() => {});
-
-      fetchUserPurchasesFromGoogleSheet(targetUrl, firebaseUser.email)
-        .then((recovered) => {
-          if (recovered.length > 0) setSheetPurchases(recovered);
-        })
-        .catch(() => {});
     }
 
     showToast(`✓ Welcome, ${appUser.displayName || firebaseUser.email}!`);
@@ -679,10 +678,10 @@ export default function App() {
     setUserProfile(null);
     setUserOrders([]);
     setFirestorePurchases([]);
-    setSheetPurchases([]);
     setDownloadHistory([]);
     setAdminOrders([]);
     setAllCustomers([]);
+    setProductSecrets({});
     showToast('Signed out of account.', 'info');
   };
 
@@ -692,15 +691,24 @@ export default function App() {
       ...newProduct,
       updatedAt: new Date().toISOString(),
     };
-    const updated = [itemWithTime, ...products.filter((p) => p.id !== newProduct.id)];
-    setProducts(updated);
+    const sanitized = sanitizeProductsForPublic([
+      itemWithTime,
+      ...products.filter((p) => p.id !== newProduct.id),
+    ]);
+    setProducts(sanitized);
+    if (isAdminVerified && itemWithTime.price > 0 && itemWithTime.protectedUrl) {
+      setProductSecrets((prev) => ({
+        ...prev,
+        [itemWithTime.id]: itemWithTime.protectedUrl!,
+      }));
+    }
     try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(sanitized));
     } catch {}
     saveProductToFirestore(itemWithTime).catch((err) => console.warn('Firestore add error', err));
     const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
     if (targetUrl) {
-      syncProductsToSheet(targetUrl, updated).catch(() => {});
+      syncProductsToSheet(targetUrl, sanitized).catch(() => {});
     }
     showToast(`✓ "${newProduct.title}" added to catalog.`);
   };
@@ -721,8 +729,21 @@ export default function App() {
       }
       return p;
     });
-    const finalProducts = found ? updated : [itemWithTime, ...products];
+    const finalProducts = sanitizeProductsForPublic(
+      found ? updated : [itemWithTime, ...products]
+    );
     setProducts(finalProducts);
+    if (isAdminVerified && itemWithTime.price > 0) {
+      setProductSecrets((prev) => {
+        const next = { ...prev };
+        if (itemWithTime.protectedUrl) {
+          next[itemWithTime.id] = itemWithTime.protectedUrl;
+        } else {
+          delete next[itemWithTime.id];
+        }
+        return next;
+      });
+    }
     try {
       localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(finalProducts));
     } catch {}
@@ -735,8 +756,13 @@ export default function App() {
   };
 
   const handleDeleteProduct = (id: string) => {
-    const updated = products.filter((p) => p.id !== id);
+    const updated = sanitizeProductsForPublic(products.filter((p) => p.id !== id));
     setProducts(updated);
+    setProductSecrets((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     try {
       localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
@@ -779,10 +805,34 @@ export default function App() {
     }
   };
 
-  const handleUpdateOrder = async (updatedOrder: Order) => {
-    await updateOrderInFirestore(updatedOrder);
-    setAdminOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
-    showToast(`✓ Order ${updatedOrder.id} approved & license activated.`);
+  const handleApproveOrder = async (
+    orderId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    if (!auth.currentUser || !isAdminVerified) {
+      return { success: false, message: 'Admin authentication required to approve orders.' };
+    }
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await adminApproveOrderApi(orderId, idToken);
+      if (!res.success || !res.order) {
+        const msg = res.error || res.message || 'Failed to approve order.';
+        showToast(msg, 'error');
+        return { success: false, message: msg };
+      }
+
+      setAdminOrders((prev) =>
+        prev.map((o) => (o.id === res.order!.id ? res.order! : o))
+      );
+      showToast(`✓ Order ${res.order.id} approved & license activated via Admin API.`);
+      return {
+        success: true,
+        message: res.message || `Order ${res.order.id} approved and unlocked.`,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Admin approval failed.';
+      showToast(msg, 'error');
+      return { success: false, message: msg };
+    }
   };
 
   const handleDeleteOrder = (id: string) => {
@@ -817,7 +867,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070707] text-white flex flex-col selection:bg-[#71B913] selection:text-black">
+    <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2] flex flex-col selection:bg-[#B7F34A] selection:text-[#0B0D0C]">
       {/* 1. Header with Customer Account & Verified Admin Access */}
       <Header
         onStartProject={() => setIsStartProjectOpen(true)}
@@ -867,9 +917,9 @@ export default function App() {
             orders={adminOrders}
             customers={allCustomers}
             onDeleteOrder={handleDeleteOrder}
-            onUpdateOrder={handleUpdateOrder}
+            onApproveOrder={handleApproveOrder}
             onClearOrders={handleClearOrders}
-            products={products}
+            products={adminProducts}
             onAddProduct={handleAddProduct}
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
@@ -987,7 +1037,7 @@ export default function App() {
         onClose={() => setCheckoutItem(null)}
         onOrderSuccess={handleOrderSuccess}
         paymentConfig={paymentConfig}
-        allProducts={products}
+        allProducts={publicProducts}
         user={user}
         onSignIn={() => setIsAuthModalOpen(true)}
         onOpenVault={() => navigateTo('/account')}
@@ -1076,8 +1126,8 @@ export default function App() {
               toastNotification.type === 'error'
                 ? 'bg-red-950/90 border-red-500/40 text-red-200'
                 : toastNotification.type === 'info'
-                ? 'bg-neutral-900/90 border-white/20 text-white'
-                : 'bg-black/90 border-[#71B913]/50 text-white shadow-[0_0_25px_rgba(113,185,19,0.25)]'
+                ? 'bg-[#171C19]/95 border-white/15 text-[#F5F7F2]'
+                : 'bg-[#121614]/95 border-[#B7F34A]/40 text-[#F5F7F2] shadow-[0_14px_34px_rgba(0,0,0,0.65)]'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -1086,14 +1136,14 @@ export default function App() {
               ) : toastNotification.type === 'info' ? (
                 <Sparkles size={16} className="text-yellow-400 shrink-0" />
               ) : (
-                <CheckCircle2 size={16} className="text-[#71B913] shrink-0" />
+                <CheckCircle2 size={16} className="text-[#B7F34A] shrink-0" />
               )}
               <span>{toastNotification.message}</span>
             </div>
             <button
               type="button"
               onClick={() => setToastNotification(null)}
-              className="text-[#888888] hover:text-white cursor-pointer px-1 text-sm font-bold"
+              className="text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer px-1 text-sm font-bold"
             >
               ×
             </button>

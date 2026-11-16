@@ -70,95 +70,93 @@ export const Packages: React.FC<PackagesProps> = ({
   return (
     <section
       id="packages"
-      className="py-16 sm:py-20 px-6 bg-[#070707] text-white bg-grid-subtle border-b border-white/[0.08] relative overflow-hidden"
+      className="py-16 sm:py-20 px-5 sm:px-6 lg:px-8 bg-[#121614] text-[#F5F7F2] border-b border-white/[0.09] relative overflow-hidden"
     >
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-xs font-semibold text-[#71B913] uppercase tracking-wider">
-              Reflecting Creativity • MirrorBook
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-5 border-b border-white/[0.09]">
+          <div>
+            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
+              Reflecting Creativity · MirrorBook
             </span>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
+              Monthly Service Packages
+            </h2>
           </div>
 
-          <h2 className="font-display text-3xl sm:text-5xl font-bold text-white tracking-tight leading-tight">
-            Monthly Service Packages
-          </h2>
-
-          <p className="text-sm sm:text-base text-[#AAAAAA] leading-relaxed">
-            Consistent creative production starting from <strong className="text-white font-semibold">৳25,000/month</strong>.
+          <p className="text-sm sm:text-base text-[#A1AAA2] leading-relaxed">
+            Consistent creative production starting from{' '}
+            <strong className="text-[#F5F7F2] font-semibold tabular-nums">৳25,000/month</strong>.
           </p>
         </div>
 
-        {/* The Two Compact Monthly Subscription Services */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          {/* PACKAGE 01: Monthly Graphic Design */}
-          <div className="bg-[#0D0D0D] border border-white/[0.08] hover:border-[#71B913]/40 rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all duration-300">
+        {/* Equal-Height Subscription Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* Package 01: Monthly Graphic Design */}
+          <div className="glossy-card glossy-card-hover p-7 sm:p-8 flex flex-col justify-between h-full">
             <div>
-              {/* Header Badge */}
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.06] border border-white/10 text-xs font-bold text-white uppercase tracking-wider">
-                  <Palette size={13} className="text-[#71B913]" />
-                  <span>PACKAGE 01</span>
-                </div>
-
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#71B913]/15 border border-[#71B913]/30 text-[11px] font-semibold text-[#71B913]">
-                  <Sliders size={11} />
+              {/* Quiet Inline Metadata Row (No Badge Sandwich) */}
+              <div className="flex items-center justify-between gap-3 mb-4 text-xs">
+                <span className="inline-flex items-center gap-2 font-semibold text-[#F5F7F2]">
+                  <Palette size={15} className="text-[#B7F34A]" />
+                  <span>Package 01</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[#B7F34A] font-medium">
+                  <Sliders size={12} />
                   <span>Customizable</span>
                 </span>
               </div>
 
-              {/* Title */}
-              <h3 className="font-display text-2xl sm:text-3xl font-bold text-white mb-2">
+              <h3 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] mb-2">
                 Monthly Graphic Design
               </h3>
 
-              {/* Short Description */}
-              <p className="text-xs sm:text-sm text-[#AAAAAA] leading-relaxed mb-5">
+              <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-6">
                 4 custom designs/day (~120 designs/month) tailored to your brand identity and social media growth.
               </p>
 
               {/* Price Lockup */}
-              <div className="p-5 rounded-2xl bg-black/60 border border-white/[0.08] mb-5">
-                <span className="text-[11px] uppercase tracking-wider text-[#888888] block mb-1 font-semibold">
+              <div className="p-5 rounded-xl bg-[#0B0D0C]/75 border border-white/[0.09] mb-6">
+                <span className="text-xs text-[#A1AAA2] block mb-1 font-medium">
                   Monthly Subscription
                 </span>
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-xs text-[#AAAAAA] font-medium">Starting From</span>
-                  <span className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight tabular-nums">
+                  <span className="text-xs text-[#A1AAA2] font-medium">Starting From</span>
+                  <span className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight tabular-nums">
                     ৳25,000
                   </span>
-                  <span className="text-xs text-[#71B913] font-semibold uppercase">
-                    / month
-                  </span>
+                  <span className="text-xs text-[#B7F34A] font-semibold">/ month</span>
                 </div>
               </div>
 
               {/* Expandable Full Details */}
               {expandedDesign && (
-                <div className="space-y-5 mb-6 pt-2 border-t border-white/[0.08]">
-                  <div className="space-y-3 pt-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-[#71B913]" />
-                      <span>What&apos;s Included:</span>
+                <div className="space-y-4 mb-6 pt-4 border-t border-white/[0.09]">
+                  <div className="space-y-2.5">
+                    <h4 className="text-xs font-bold text-[#F5F7F2] flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-[#B7F34A]" />
+                      <span>What&apos;s Included</span>
                     </h4>
 
                     <ul className="space-y-2">
                       {graphicDesignFeatures.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5 text-xs text-[#CCCCCC] leading-relaxed">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#71B913] mt-1.5 shrink-0" />
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2.5 text-xs text-[#A1AAA2] leading-relaxed"
+                        >
+                          <CheckCircle2 size={13} className="text-[#B7F34A] mt-0.5 shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-                    <h5 className="text-xs font-bold text-[#71B913] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <div className="pt-3 border-t border-white/[0.07]">
+                    <h5 className="text-xs font-semibold text-[#B7F34A] mb-1 flex items-center gap-1.5">
                       <Sparkles size={13} />
-                      <span>Our Creative Approach:</span>
+                      <span>Our Creative Approach</span>
                     </h5>
-                    <p className="text-xs text-[#999999] leading-relaxed">
+                    <p className="text-xs text-[#A1AAA2] leading-relaxed">
                       Every design is created with the brand&apos;s identity, target audience, marketing goals, and visual consistency in mind. We don&apos;t just create ordinary posts; we develop creative concepts that represent the brand.
                     </p>
                   </div>
@@ -167,11 +165,13 @@ export const Packages: React.FC<PackagesProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-2.5 pt-4 border-t border-white/[0.08]">
+            <div className="space-y-2.5 pt-5 border-t border-white/[0.09]">
               <button
                 type="button"
-                onClick={() => handlePackageCTA('Monthly Graphic Design', 'Starting From ৳25,000/month')}
-                className="w-full py-3.5 text-xs font-bold uppercase tracking-wider text-black bg-[#71B913] hover:bg-[#82d119] active:scale-[0.99] transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() =>
+                  handlePackageCTA('Monthly Graphic Design', 'Starting From ৳25,000/month')
+                }
+                className="w-full py-3.5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Get Started</span>
                 <ArrowRight size={14} />
@@ -181,7 +181,7 @@ export const Packages: React.FC<PackagesProps> = ({
                 <button
                   type="button"
                   onClick={() => setExpandedDesign((prev) => !prev)}
-                  className="w-full py-2.5 text-xs font-semibold text-white hover:text-[#71B913] bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>{expandedDesign ? 'Hide Details' : 'More'}</span>
                   {expandedDesign ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -194,82 +194,80 @@ export const Packages: React.FC<PackagesProps> = ({
                       onOpenCustomizer('Monthly Graphic Design');
                     }
                   }}
-                  className="w-full py-2.5 text-xs font-semibold text-[#CCCCCC] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Sliders size={13} className="text-[#71B913]" />
+                  <Sliders size={13} className="text-[#B7F34A]" />
                   <span>Customize</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* PACKAGE 02: Monthly Video Editing & Reels */}
-          <div className="bg-[#0D0D0D] border border-white/[0.08] hover:border-[#71B913]/40 rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all duration-300">
+          {/* Package 02: Monthly Video Editing & Reels */}
+          <div className="glossy-card glossy-card-hover p-7 sm:p-8 flex flex-col justify-between h-full">
             <div>
-              {/* Header Badge */}
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/[0.06] border border-white/10 text-xs font-bold text-white uppercase tracking-wider">
-                  <Film size={13} className="text-[#71B913]" />
-                  <span>PACKAGE 02</span>
-                </div>
-
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#71B913]/15 border border-[#71B913]/30 text-[11px] font-semibold text-[#71B913]">
-                  <Sliders size={11} />
+              {/* Quiet Inline Metadata Row */}
+              <div className="flex items-center justify-between gap-3 mb-4 text-xs">
+                <span className="inline-flex items-center gap-2 font-semibold text-[#F5F7F2]">
+                  <Film size={15} className="text-[#B7F34A]" />
+                  <span>Package 02</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[#B7F34A] font-medium">
+                  <Sliders size={12} />
                   <span>Customizable</span>
                 </span>
               </div>
 
-              {/* Title */}
-              <h3 className="font-display text-2xl sm:text-3xl font-bold text-white mb-2">
+              <h3 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] mb-2">
                 Monthly Video Editing &amp; Reels
               </h3>
 
-              {/* Short Description */}
-              <p className="text-xs sm:text-sm text-[#AAAAAA] leading-relaxed mb-5">
+              <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-6">
                 2 edited reels/day (~60 reels/month) with motion graphics, captions, sound design, and color grading.
               </p>
 
               {/* Price Lockup */}
-              <div className="p-5 rounded-2xl bg-black/60 border border-white/[0.08] mb-5">
-                <span className="text-[11px] uppercase tracking-wider text-[#888888] block mb-1 font-semibold">
+              <div className="p-5 rounded-xl bg-[#0B0D0C]/75 border border-white/[0.09] mb-6">
+                <span className="text-xs text-[#A1AAA2] block mb-1 font-medium">
                   Monthly Subscription
                 </span>
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-xs text-[#AAAAAA] font-medium">Starting From</span>
-                  <span className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight tabular-nums">
+                  <span className="text-xs text-[#A1AAA2] font-medium">Starting From</span>
+                  <span className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight tabular-nums">
                     ৳25,000
                   </span>
-                  <span className="text-xs text-[#71B913] font-semibold uppercase">
-                    / month
-                  </span>
+                  <span className="text-xs text-[#B7F34A] font-semibold">/ month</span>
                 </div>
               </div>
 
               {/* Expandable Full Details */}
               {expandedVideo && (
-                <div className="space-y-5 mb-6 pt-2 border-t border-white/[0.08]">
-                  <div className="space-y-3 pt-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-[#71B913]" />
-                      <span>What&apos;s Included:</span>
+                <div className="space-y-4 mb-6 pt-4 border-t border-white/[0.09]">
+                  <div className="space-y-2.5">
+                    <h4 className="text-xs font-bold text-[#F5F7F2] flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-[#B7F34A]" />
+                      <span>What&apos;s Included</span>
                     </h4>
 
                     <ul className="space-y-2">
                       {videoEditingFeatures.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5 text-xs text-[#CCCCCC] leading-relaxed">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#71B913] mt-1.5 shrink-0" />
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2.5 text-xs text-[#A1AAA2] leading-relaxed"
+                        >
+                          <CheckCircle2 size={13} className="text-[#B7F34A] mt-0.5 shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-                    <h5 className="text-xs font-bold text-[#71B913] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <div className="pt-3 border-t border-white/[0.07]">
+                    <h5 className="text-xs font-semibold text-[#B7F34A] mb-1 flex items-center gap-1.5">
                       <Sparkles size={13} />
-                      <span>Our Creative Approach:</span>
+                      <span>Our Creative Approach</span>
                     </h5>
-                    <p className="text-xs text-[#999999] leading-relaxed">
+                    <p className="text-xs text-[#A1AAA2] leading-relaxed">
                       Engineered with psychological retention hooks, seamless pacing, and Hollywood color grading to turn fleeting TikTok, Instagram, and YouTube viewers into dedicated brand followers.
                     </p>
                   </div>
@@ -278,11 +276,13 @@ export const Packages: React.FC<PackagesProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-2.5 pt-4 border-t border-white/[0.08]">
+            <div className="space-y-2.5 pt-5 border-t border-white/[0.09]">
               <button
                 type="button"
-                onClick={() => handlePackageCTA('Monthly Video Editing & Reels', 'Starting From ৳25,000/month')}
-                className="w-full py-3.5 text-xs font-bold uppercase tracking-wider text-black bg-[#71B913] hover:bg-[#82d119] active:scale-[0.99] transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() =>
+                  handlePackageCTA('Monthly Video Editing & Reels', 'Starting From ৳25,000/month')
+                }
+                className="w-full py-3.5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Get Started</span>
                 <ArrowRight size={14} />
@@ -292,7 +292,7 @@ export const Packages: React.FC<PackagesProps> = ({
                 <button
                   type="button"
                   onClick={() => setExpandedVideo((prev) => !prev)}
-                  className="w-full py-2.5 text-xs font-semibold text-white hover:text-[#71B913] bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>{expandedVideo ? 'Hide Details' : 'More'}</span>
                   {expandedVideo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -305,9 +305,9 @@ export const Packages: React.FC<PackagesProps> = ({
                       onOpenCustomizer('Monthly Video Editing & Reels');
                     }
                   }}
-                  className="w-full py-2.5 text-xs font-semibold text-[#CCCCCC] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Sliders size={13} className="text-[#71B913]" />
+                  <Sliders size={13} className="text-[#B7F34A]" />
                   <span>Customize</span>
                 </button>
               </div>

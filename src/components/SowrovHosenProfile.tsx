@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Film,
   Sparkles,
@@ -20,7 +20,8 @@ import {
   Calendar,
   MapPin,
   Briefcase,
-  Share2
+  Share2,
+  Check
 } from 'lucide-react';
 
 interface SowrovHosenProfileProps {
@@ -32,6 +33,8 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
   onNavigateHome,
   onStartProject,
 }) => {
+  const [copiedProfileLink, setCopiedProfileLink] = useState(false);
+
   // Update document title and SEO metadata on mount
   useEffect(() => {
     const originalTitle = document.title;
@@ -169,8 +172,13 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         // User cancelled share
       }
     } else if (navigator.clipboard) {
-      await navigator.clipboard.writeText(url);
-      alert('Profile link copied to clipboard: ' + url);
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopiedProfileLink(true);
+        setTimeout(() => setCopiedProfileLink(false), 2500);
+      } catch {
+        // Ignore clipboard errors
+      }
     }
   };
 
@@ -274,37 +282,46 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#070707] text-white">
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 md:py-16">
+    <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2]">
+      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-12 md:py-16">
         {/* Navigation Breadcrumb & Back Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-6 border-b border-white/[0.08]">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#888888]">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-6 border-b border-white/[0.09]">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#707A72]">
             <a
               href="/"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigateHome();
               }}
-              className="hover:text-[#71B913] transition-colors flex items-center gap-1.5"
+              className="hover:text-[#B7F34A] transition-colors flex items-center gap-1.5"
             >
               <ArrowLeft size={14} />
               <span>MirrorBook Home</span>
             </a>
             <span>/</span>
-            <span className="text-[#AAAAAA]">Leadership</span>
+            <span className="text-[#A1AAA2]">Leadership</span>
             <span>/</span>
-            <span className="text-[#71B913] font-medium">Sowrov Hosen</span>
+            <span className="text-[#B7F34A] font-medium">Sowrov Hosen</span>
           </nav>
 
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-[#CCCCCC] hover:text-white transition-all cursor-pointer"
+              className="glossy-btn-secondary inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium text-[#F5F7F2] cursor-pointer"
               title="Share profile"
             >
-              <Share2 size={13} className="text-[#71B913]" />
-              <span>Share Profile</span>
+              {copiedProfileLink ? (
+                <>
+                  <Check size={13} className="text-[#B7F34A]" />
+                  <span className="text-[#B7F34A]">Link Copied</span>
+                </>
+              ) : (
+                <>
+                  <Share2 size={13} className="text-[#B7F34A]" />
+                  <span>Share Profile</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -313,10 +330,10 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start mb-16">
           {/* Column 1: Profile Photo Area */}
           <div className="lg:col-span-5 flex flex-col items-center">
-            <div className="w-full max-w-[340px] rounded-3xl border border-white/10 overflow-hidden bg-[#0E0E0E] p-6 text-center">
+            <div className="w-full max-w-[340px] glossy-card rounded-2xl p-6 text-center">
               {/* Professional Portrait HTML img Element */}
               <figure className="w-full flex flex-col items-center mb-4">
-                <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border border-white/15">
+                <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border border-white/[0.12]">
                   <img
                       src="https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg"
                       alt="Sowrov Hosen, Founder of MirrorBook"
@@ -335,70 +352,69 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                       className="w-full h-full object-cover object-top"
                     />
                   </div>
-                  <figcaption className="text-[11px] text-[#AAAAAA] text-center font-medium mt-2">
+                  <figcaption className="text-[11px] text-[#A1AAA2] text-center font-medium mt-2">
                     Sowrov Hosen, Founder of MirrorBook
                   </figcaption>
                 </figure>
 
                 {/* Founder Name & Identity Lockup */}
                 <div className="relative z-10 space-y-1">
-                  <h2 className="text-xl font-bold text-white tracking-tight">Sowrov Hosen</h2>
-                  <p className="text-xs font-semibold text-[#71B913]">Founder of MirrorBook</p>
-                  <p className="text-[11px] text-[#888888] flex items-center justify-center gap-1 pt-1">
-                    <MapPin size={11} className="text-[#71B913]" />
+                  <h2 className="text-xl font-bold text-[#F5F7F2] tracking-tight">Sowrov Hosen</h2>
+                  <p className="text-xs font-semibold text-[#B7F34A]">Founder of MirrorBook</p>
+                  <p className="text-[11px] text-[#707A72] flex items-center justify-center gap-1 pt-1">
+                    <MapPin size={11} className="text-[#B7F34A]" />
                     <span>Dhaka, Bangladesh</span>
                   </p>
                 </div>
 
                 {/* Verified Founder Badge */}
-                <div className="relative z-10 mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#71B913]/15 border border-[#71B913]/30 text-[11px] font-semibold text-[#8FD82A]">
-                  <CheckCircle2 size={12} className="text-[#71B913]" />
+                <div className="relative z-10 mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#B7F34A]/15 border border-[#B7F34A]/30 text-[11px] font-semibold text-[#B7F34A]">
+                  <CheckCircle2 size={12} className="text-[#B7F34A]" />
                   <span>Verified Founder</span>
                 </div>
               </div>
 
             {/* Quick Metadata Pill list below photo */}
-            <div className="w-full max-w-[320px] mt-4 space-y-2">
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between text-xs">
-                <span className="text-[#888888] flex items-center gap-1.5">
-                  <Briefcase size={13} className="text-[#71B913]" />
+            <div className="w-full max-w-[340px] mt-4 space-y-2">
+              <div className="p-3 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-between text-xs">
+                <span className="text-[#A1AAA2] flex items-center gap-1.5">
+                  <Briefcase size={13} className="text-[#B7F34A]" />
                   Agency
                 </span>
-                <span className="text-white font-medium">MirrorBook</span>
+                <span className="text-[#F5F7F2] font-medium">MirrorBook</span>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between text-xs">
-                <span className="text-[#888888] flex items-center gap-1.5">
-                  <Calendar size={13} className="text-[#71B913]" />
+              <div className="p-3 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-between text-xs">
+                <span className="text-[#A1AAA2] flex items-center gap-1.5">
+                  <Calendar size={13} className="text-[#B7F34A]" />
                   Experience
                 </span>
-                <span className="text-white font-medium">5+ Years Industry</span>
+                <span className="text-[#F5F7F2] font-medium">5+ Years Industry</span>
               </div>
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between text-xs">
-                <span className="text-[#888888] flex items-center gap-1.5">
-                  <Award size={13} className="text-[#71B913]" />
+              <div className="p-3 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-between text-xs">
+                <span className="text-[#A1AAA2] flex items-center gap-1.5">
+                  <Award size={13} className="text-[#B7F34A]" />
                   Specialty
                 </span>
-                <span className="text-white font-medium">Cinematic Post-Production</span>
+                <span className="text-[#F5F7F2] font-medium">Cinematic Post-Production</span>
               </div>
             </div>
           </div>
 
           {/* Column 2: Introduction & Vision */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#71B913]" />
-              <span className="text-xs font-semibold text-[#71B913] uppercase tracking-wider">
+            <div>
+              <span className="text-xs font-semibold text-[#B7F34A] tracking-wide">
                 Founder &amp; Creative Lead
               </span>
             </div>
 
             {/* Main H1 for SEO */}
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F7F2] leading-tight">
               Sowrov Hosen
             </h1>
 
-            <p className="text-lg sm:text-xl text-[#CCCCCC] font-normal leading-relaxed">
-              Founder &amp; Creative Director of <span className="text-white font-semibold">MirrorBook</span>. A multi-disciplinary visual artist and post-production specialist based in Bangladesh, dedicated to elevating brands and creators through cinematic video editing, brand identity systems, and motion design.
+            <p className="text-lg sm:text-xl text-[#A1AAA2] font-normal leading-relaxed">
+              Founder &amp; Creative Director of <span className="text-[#F5F7F2] font-semibold">MirrorBook</span>. A multi-disciplinary visual artist and post-production specialist based in Bangladesh, dedicated to elevating brands and creators through cinematic video editing, brand identity systems, and motion design.
             </p>
 
             {/* Action CTA Buttons */}
@@ -407,7 +423,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 href="https://sowrovhosenstudio.netlify.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 rounded-xl bg-[#71B913] hover:bg-[#82d119] text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer font-medium"
+                className="glossy-btn px-6 py-3 rounded-xl text-xs font-bold tracking-wide flex items-center gap-2 cursor-pointer"
               >
                 <span>Visit Portfolio Studio</span>
                 <ExternalLink size={14} />
@@ -417,67 +433,67 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 <button
                   type="button"
                   onClick={onStartProject}
-                  className="px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+                  className="glossy-btn-secondary px-6 py-3 rounded-xl text-xs font-semibold tracking-wide flex items-center gap-2 cursor-pointer"
                 >
-                  <Mail size={14} className="text-[#71B913]" />
+                  <Mail size={14} className="text-[#B7F34A]" />
                   <span>Start A Project</span>
                 </button>
               )}
 
               <a
                 href="https://mirrorbook.site/#services"
-                className="px-6 py-3 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/10 text-[#AAAAAA] hover:text-white text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer"
+                className="px-6 py-3 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer"
               >
                 <span>Explore Agency Services →</span>
               </a>
             </div>
 
             {/* Section 1: Professional Introduction */}
-            <div className="pt-6 space-y-4 text-sm text-[#AAAAAA] leading-relaxed border-t border-white/[0.08]">
-              <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <div className="pt-6 space-y-4 text-sm text-[#A1AAA2] leading-relaxed border-t border-white/[0.09]">
+              <h2 className="text-xl font-bold text-[#F5F7F2] tracking-tight flex items-center gap-2">
                 <span>Professional Background</span>
               </h2>
               <p>
                 Sowrov Hosen is a visionary digital creator and director with a deep focus on the psychology of visual pacing, sound design, and narrative retention. Having worked on hundreds of commercial projects, YouTube masterclasses, and corporate campaigns, he combines technical rigor with an unmistakable cinematic aesthetic.
               </p>
               <p>
-                His work spans from fine-tuned timeline editing in Adobe Premiere Pro and DaVinci Resolve, to bespoke motion design in After Effects, to high-conversion visual marketing designs crafted in Photoshop. He advocates for the philosophy of <em>"Reflecting Creativity"</em> — ensuring every frame produced by MirrorBook mirrors the authentic voice and ambitions of the client.
+                His work spans from fine-tuned timeline editing in Adobe Premiere Pro and DaVinci Resolve, to bespoke motion design in After Effects, to high-conversion visual marketing designs crafted in Photoshop. He advocates for the philosophy of <em className="text-[#F5F7F2]">&ldquo;Reflecting Creativity&rdquo;</em> — ensuring every frame produced by MirrorBook mirrors the authentic voice and ambitions of the client.
               </p>
             </div>
           </div>
         </section>
 
         {/* Section 2: Founder of MirrorBook Agency */}
-        <section className="mb-16 bg-[#0C0C0C] border border-white/[0.08] rounded-3xl p-8 md:p-10 relative overflow-hidden">
+        <section className="mb-16 glossy-card rounded-2xl p-8 md:p-10 relative overflow-hidden">
           <div className="max-w-3xl space-y-4 relative z-10">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#71B913]">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A]">
               <Briefcase size={14} />
               <span>Agency Leadership</span>
             </div>
 
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
               Founder of MirrorBook Agency
             </h2>
 
-            <p className="text-sm sm:text-base text-[#AAAAAA] leading-relaxed">
-              Sowrov Hosen founded <a href="https://mirrorbook.site/" className="text-[#71B913] hover:underline font-medium">MirrorBook Agency</a> (
-              <a href="https://mirrorbook.site/" className="text-white hover:text-[#71B913] underline font-medium">https://mirrorbook.site/</a>
+            <p className="text-sm sm:text-base text-[#A1AAA2] leading-relaxed">
+              Sowrov Hosen founded <a href="https://mirrorbook.site/" className="text-[#B7F34A] hover:underline font-medium">MirrorBook Agency</a> (
+              <a href="https://mirrorbook.site/" className="text-[#F5F7F2] hover:text-[#B7F34A] underline font-medium">https://mirrorbook.site/</a>
               ) to establish a benchmark for high-caliber digital creative production in Bangladesh. The agency delivers comprehensive video editing, graphic branding, motion graphics, and tailored software tools for content creators and modern businesses worldwide.
             </p>
 
-            <p className="text-sm text-[#888888] leading-relaxed">
+            <p className="text-sm text-[#A1AAA2] leading-relaxed">
               Under Sowrov&apos;s creative leadership, MirrorBook has expanded from a boutique post-production outfit into an integrated digital studio featuring workflow plugins, digital asset libraries, and educational tutorials for the next generation of editors.
             </p>
 
             <div className="pt-4 flex flex-wrap items-center gap-4">
               <a
                 href="https://mirrorbook.site/"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 text-xs font-bold text-white transition-all cursor-pointer"
+                className="glossy-btn-secondary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer"
               >
                 <span>Visit MirrorBook Agency Homepage</span>
-                <ExternalLink size={13} className="text-[#71B913]" />
+                <ExternalLink size={13} className="text-[#B7F34A]" />
               </a>
-              <span className="text-xs text-[#666666]">Official Portal: mirrorbook.site</span>
+              <span className="text-xs text-[#707A72]">Official Portal: mirrorbook.site</span>
             </div>
           </div>
         </section>
@@ -486,58 +502,58 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         <section className="mb-16">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
-              <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#71B913] mb-2">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
                 <Sparkles size={14} />
                 <span>Core Competencies</span>
               </div>
-              <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
                 Professional Skills &amp; Creative Expertise
               </h2>
             </div>
-            <p className="text-xs text-[#888888] max-w-sm">
+            <p className="text-xs text-[#A1AAA2] max-w-sm">
               Hands-on mastery across modern post-production pipelines, digital brand architecture, and visual storytelling.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
             {skillsList.map((skill, index) => {
               const IconComponent = skill.icon;
               return (
                 <div
                   key={skill.title}
-                  className={`p-6 rounded-2xl bg-[#0C0C0C] border transition-all hover:-translate-y-1 ${
-                    index === 0
-                      ? 'border-[#71B913]/40 shadow-[0_0_25px_rgba(113,185,19,0.12)]'
-                      : 'border-white/[0.08] hover:border-white/20'
+                  className={`p-6 rounded-2xl glossy-card glossy-card-hover flex flex-col justify-between ${
+                    index === 0 ? 'border-[#B7F34A]/35' : ''
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center text-[#71B913] mb-4">
-                    <IconComponent size={20} />
+                  <div>
+                    <div className="w-10 h-10 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] mb-4">
+                      <IconComponent size={20} />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <h3 className="text-base font-bold text-[#F5F7F2]">{skill.title}</h3>
+                      <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-[#121614] border border-white/[0.09] text-[#A1AAA2]">
+                        {skill.level}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[#A1AAA2] leading-relaxed mb-4">
+                      {skill.description}
+                    </p>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="text-base font-bold text-white">{skill.title}</h3>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-[#AAAAAA]">
-                      {skill.level}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-[#888888] leading-relaxed mb-4">
-                    {skill.description}
-                  </p>
-
-                  <div className="space-y-2 pt-3 border-t border-white/[0.06] text-xs">
+                  <div className="space-y-2 pt-3 border-t border-white/[0.09] text-xs">
                     <div className="flex flex-wrap gap-1.5">
                       {skill.toolset.map((tool) => (
                         <span
                           key={tool}
-                          className="px-2 py-0.5 rounded-md bg-white/[0.04] text-[11px] text-[#CCCCCC] font-mono"
+                          className="px-2 py-0.5 rounded-md bg-[#121614] border border-white/[0.06] text-[11px] text-[#F5F7F2] font-mono"
                         >
                           {tool}
                         </span>
                       ))}
                     </div>
-                    <p className="text-[11px] text-[#71B913] font-medium pt-1">
+                    <p className="text-[11px] text-[#B7F34A] font-medium pt-1">
                       {skill.highlights}
                     </p>
                   </div>
@@ -550,14 +566,14 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         {/* Section 4: Social Media Profile Links */}
         <section className="mb-16">
           <div className="mb-8">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#71B913] mb-2">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
               <Globe size={14} />
               <span>Connect &amp; Social Media</span>
             </div>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
               Social Media &amp; Verified Portfolios
             </h2>
-            <p className="text-xs text-[#888888] mt-1">
+            <p className="text-xs text-[#A1AAA2] mt-1">
               Explore official profiles, studio showcases, and community channels.
             </p>
           </div>
@@ -573,29 +589,29 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                   rel="noopener noreferrer"
                   className={`p-4 rounded-xl border transition-all flex items-center justify-between group ${
                     item.isPrimary
-                      ? 'bg-[#71B913]/10 border-[#71B913]/40 hover:bg-[#71B913]/20 shadow-[0_0_20px_rgba(113,185,19,0.15)]'
-                      : 'bg-[#0B0B0B] border-white/[0.08] hover:border-white/20 hover:bg-white/[0.03]'
+                      ? 'bg-[#B7F34A]/10 border-[#B7F34A]/35 hover:bg-[#B7F34A]/15'
+                      : 'bg-[#171C19] border-white/[0.09] hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center text-[#71B913] group-hover:scale-110 transition-transform">
+                    <div className="w-9 h-9 rounded-lg bg-[#121614] border border-white/[0.09] flex items-center justify-center text-[#B7F34A]">
                       <IconComp size={18} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-white group-hover:text-[#71B913] transition-colors">
+                      <h4 className="text-xs font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors">
                         {item.name}
                       </h4>
-                      <p className="text-[11px] text-[#777777] font-mono">{item.handle}</p>
+                      <p className="text-[11px] text-[#707A72] font-mono">{item.handle}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[#888888] font-medium hidden sm:inline">
+                    <span className="text-[10px] text-[#A1AAA2] font-medium hidden sm:inline">
                       {item.status}
                     </span>
                     <ExternalLink
                       size={13}
-                      className="text-[#666666] group-hover:text-white transition-colors"
+                      className="text-[#707A72] group-hover:text-[#F5F7F2] transition-colors"
                     />
                   </div>
                 </a>
@@ -605,18 +621,18 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         </section>
 
         {/* Section 5: Direct Contact / Work With Sowrov CTA */}
-        <section className="bg-[#0B0B0B] border border-white/[0.08] rounded-3xl p-8 text-center relative overflow-hidden">
+        <section className="glossy-card rounded-2xl p-8 text-center relative overflow-hidden">
           <div className="max-w-xl mx-auto space-y-4">
-            <h3 className="font-display text-2xl font-bold text-white">
+            <h3 className="font-display text-2xl font-bold text-[#F5F7F2]">
               Ready to collaborate with Sowrov Hosen?
             </h3>
-            <p className="text-xs sm:text-sm text-[#888888] leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
               Whether you need high-end commercial video editing, a complete brand identity revamp, or custom motion graphics for your upcoming campaign, reach out directly.
             </p>
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               <a
                 href="mailto:miirorbook.tech@gmail.com"
-                className="px-6 py-3 rounded-xl bg-[#71B913] hover:bg-[#82d119] text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(113,185,19,0.3)]"
+                className="glossy-btn px-6 py-3 rounded-xl text-xs font-bold tracking-wide flex items-center gap-2 cursor-pointer"
               >
                 <Mail size={14} />
                 <span>Email: miirorbook.tech@gmail.com</span>
@@ -624,7 +640,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
               <button
                 type="button"
                 onClick={onNavigateHome}
-                className="px-6 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                className="glossy-btn-secondary px-6 py-3 rounded-xl text-xs font-semibold tracking-wide cursor-pointer"
               >
                 <span>Back To MirrorBook</span>
               </button>

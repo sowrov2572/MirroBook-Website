@@ -85,7 +85,7 @@ export const SHOWCASES: ShowcaseItem[] = [
 ];
 
 export const INITIAL_PRODUCTS: ProductItem[] = [
-  // Courses
+  // Courses (paid download/access URLs stored exclusively in server-only /productSecrets)
   {
     id: 'course-video-reels',
     type: 'Course',
@@ -94,7 +94,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     description: 'Pacing, sound design, color grade workflows, and viral hook framing.',
     price: 1500,
     priceDisplay: '৳1,500',
-    protectedUrl: 'https://drive.google.com/drive/folders/1MB_VideoReelsCourse_MasterClass_Protected',
     createdAt: '2026-09-25'
   },
   {
@@ -105,7 +104,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     description: 'Branding fundamentals, spatial grids, typography, and generative AI asset integration.',
     price: 1200,
     priceDisplay: '৳1,200',
-    protectedUrl: 'https://drive.google.com/drive/folders/1MB_GraphicDesignAI_Course_Protected',
     createdAt: '2026-09-26'
   },
   {
@@ -116,11 +114,10 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     description: 'Scripting Adobe extensions, CEP panels, and modern generative AI microservices.',
     price: 2000,
     priceDisplay: '৳2,000',
-    protectedUrl: 'https://drive.google.com/drive/folders/1MB_PluginCreation_SoftwareCourse_Protected',
     createdAt: '2026-09-28'
   },
 
-  // PC & Phone Software
+  // PC & Phone Software (paid download/access URLs stored exclusively in server-only /productSecrets)
   {
     id: 'software-mirrorflow-studio',
     type: 'Software',
@@ -130,7 +127,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     price: 1999,
     priceDisplay: '৳1,999',
     thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
     createdAt: '2026-10-10'
   },
   {
@@ -142,7 +138,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     price: 499,
     priceDisplay: '৳499',
     thumbnailUrl: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
     createdAt: '2026-10-11'
   },
   {
@@ -154,7 +149,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     price: 899,
     priceDisplay: '৳899',
     thumbnailUrl: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
     createdAt: '2026-10-12'
   },
   {
@@ -166,7 +160,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     price: 350,
     priceDisplay: '৳350',
     thumbnailUrl: 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=800&q=80',
-    protectedUrl: 'https://drive.google.com/drive/folders/1bJ7CxftRuaE8FRPXQevZtBk6yZncsu3v?usp=drive_link',
     createdAt: '2026-10-13'
   },
 

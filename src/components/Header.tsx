@@ -57,9 +57,9 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-[#080808]/85 border-b border-white/[0.08] transition-all">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
-        {/* Brand Lockup with MirrorBook Official Icon & Typography */}
+    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#0B0D0C]/85 border-b border-white/[0.09] transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-4">
+        {/* Brand Lockup with MirrorBook Official Icon */}
         <a
           href="/"
           onClick={(e) => {
@@ -70,13 +70,13 @@ export const Header: React.FC<HeaderProps> = ({
               window.location.href = '/';
             }
           }}
-          className="flex items-center gap-3.5 group text-left cursor-pointer shrink-0"
+          className="flex items-center gap-3 group text-left cursor-pointer shrink-0"
         >
           <img
             src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
             alt="MirrorBook Official Logo"
-            width={40}
-            height={40}
+            width={36}
+            height={36}
             loading="eager"
             decoding="async"
             referrerPolicy="no-referrer"
@@ -86,21 +86,24 @@ export const Header: React.FC<HeaderProps> = ({
                 target.src = 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png';
               }
             }}
-            className="w-10 h-10 rounded-xl object-contain group-hover:scale-105 transition-transform"
+            className="w-9 h-9 rounded-xl object-contain transition-transform duration-150 group-hover:scale-105"
           />
 
           <div className="flex flex-col">
-            <span className="font-display text-xl font-bold tracking-normal text-white group-hover:text-[#71B913] transition-colors leading-tight whitespace-nowrap">
+            <span className="font-display text-lg font-bold tracking-tight text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight whitespace-nowrap">
               MirrorBook
             </span>
-            <span className="text-xs text-[#999999] font-normal tracking-normal leading-tight mt-0.5 whitespace-nowrap">
+            <span className="text-[11px] text-[#A1AAA2] font-normal leading-tight whitespace-nowrap hidden sm:block">
               Reflecting Creativity
             </span>
           </div>
         </a>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.08] px-3 py-1.5 rounded-full">
+        <nav
+          aria-label="Primary Navigation"
+          className="hidden lg:flex items-center gap-1 bg-[#121614]/80 border border-white/[0.09] px-2 py-1 rounded-xl"
+        >
           {navLinks.map((link) => {
             const isCurrent =
               link.href === currentPath ||
@@ -110,10 +113,10 @@ export const Header: React.FC<HeaderProps> = ({
                 key={link.name}
                 href={link.href}
                 onClick={(e) => handleLinkClick(e, link.href)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 whitespace-nowrap shrink-0 ${
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 ${
                   isCurrent
-                    ? 'text-[#71B913] bg-white/[0.08] font-semibold'
-                    : 'text-[#CCCCCC] hover:text-[#71B913] hover:bg-white/[0.06]'
+                    ? 'text-[#0B0D0C] bg-[#B7F34A] font-semibold'
+                    : 'text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/[0.06]'
                 }`}
               >
                 {link.name}
@@ -124,42 +127,43 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Buttons & User Account Lockup */}
         <div className="hidden lg:flex items-center gap-2.5 shrink-0">
-          {/* Studio Owner Console Access (Google AI Studio Verified) */}
+          {/* Studio Owner Console Access */}
           {isOwner && onOpenAdmin && (
             <button
               type="button"
               onClick={onOpenAdmin}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-xs font-semibold text-yellow-300 transition-all cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.25)] whitespace-nowrap shrink-0"
-              title="Studio Owner Console (Google AI Studio Verified)"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-semibold text-amber-300 transition-all cursor-pointer whitespace-nowrap shrink-0"
+              title="Studio Owner Console"
             >
-              <ShieldAlert size={13} className="text-yellow-400" />
+              <ShieldAlert size={13} className="text-amber-400" />
               <span>Studio Console</span>
             </button>
           )}
 
-          {/* Creator Account / Vault Button */}
+          {/* Customer Account / Vault Button */}
           {user ? (
             <button
+              type="button"
               onClick={onOpenVault}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 hover:border-[#71B913]/50 text-xs text-white transition-all cursor-pointer group whitespace-nowrap shrink-0"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#171C19] hover:bg-[#1E2521] border border-white/[0.09] hover:border-[#B7F34A]/40 text-xs text-[#F5F7F2] transition-all cursor-pointer group whitespace-nowrap shrink-0"
               title="Creator Vault & Downloads"
             >
               {user.photoURL ? (
                 <img
                   src={user.photoURL}
                   alt={user.displayName || 'User'}
-                  className="w-6 h-6 rounded-full object-cover border border-[#71B913]"
+                  className="w-6 h-6 rounded-lg object-cover border border-[#B7F34A]/60"
                 />
               ) : (
-                <div className="w-6 h-6 rounded-full bg-[#71B913] text-black text-[10px] font-bold flex items-center justify-center">
+                <div className="w-6 h-6 rounded-lg bg-[#B7F34A] text-[#0B0D0C] text-[10px] font-bold flex items-center justify-center">
                   {(user.displayName || user.email || 'U')[0].toUpperCase()}
                 </div>
               )}
-              <span className="font-medium group-hover:text-[#71B913] transition-colors">
+              <span className="font-medium group-hover:text-[#B7F34A] transition-colors">
                 My Account
               </span>
               {purchaseCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-[#71B913] text-black text-[10px] font-bold">
+                <span className="px-1.5 py-0.5 rounded-md bg-[#B7F34A] text-[#0B0D0C] text-[10px] font-bold tabular-nums leading-none">
                   {purchaseCount}
                 </span>
               )}
@@ -168,29 +172,31 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onSignIn}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-[#CCCCCC] hover:text-white transition-all cursor-pointer whitespace-nowrap shrink-0"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glossy-btn-secondary text-xs font-medium cursor-pointer whitespace-nowrap shrink-0"
             >
-              <UserIcon size={13} className="text-[#71B913]" />
+              <UserIcon size={13} className="text-[#B7F34A]" />
               <span>Sign In</span>
             </button>
           )}
 
           <button
+            type="button"
             onClick={onStartProject}
-            className="px-4 py-2.5 text-xs font-bold uppercase tracking-normal text-black bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.98] rounded-full transition-all duration-150 cursor-pointer shadow-[0_0_20px_rgba(113,185,19,0.3)] flex items-center gap-1.5 whitespace-nowrap shrink-0"
+            className="px-4 py-2 text-xs glossy-btn rounded-xl flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <span>Start a Project</span>
             <ArrowRight size={13} />
           </button>
         </div>
 
-        {/* Mobile Hamburger & Quick Account */}
+        {/* Mobile Quick Account & Menu Toggle */}
         <div className="flex lg:hidden items-center gap-2">
           {user ? (
             <button
+              type="button"
               onClick={onOpenVault}
-              className="p-1.5 rounded-full bg-white/10 text-[#71B913]"
-              title="My Vault"
+              className="p-2 rounded-xl bg-[#171C19] border border-white/[0.09] text-[#B7F34A] cursor-pointer"
+              title="My Account"
             >
               <FolderDown size={18} />
             </button>
@@ -198,7 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onSignIn}
-              className="p-1.5 rounded-full bg-white/5 text-[#CCCCCC]"
+              className="p-2 rounded-xl bg-[#171C19] border border-white/[0.09] text-[#F5F7F2] cursor-pointer"
               title="Sign In"
             >
               <UserIcon size={18} />
@@ -206,19 +212,20 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-[#888888] hover:text-white transition-colors focus:outline-none"
+            className="p-2 rounded-xl text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/[0.05] transition-colors cursor-pointer"
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b border-white/[0.08] bg-[#0C0C0C]/95 backdrop-blur-3xl px-6 py-6 space-y-4">
-          <div className="flex flex-col space-y-3">
+        <div className="lg:hidden border-b border-white/[0.09] bg-[#121614]/98 backdrop-blur-2xl px-5 sm:px-6 py-5 space-y-4">
+          <div className="flex flex-col space-y-1.5">
             {navLinks.map((link) => {
               const isCurrent =
                 link.href === currentPath ||
@@ -231,10 +238,10 @@ export const Header: React.FC<HeaderProps> = ({
                     setMobileMenuOpen(false);
                     handleLinkClick(e, link.href);
                   }}
-                  className={`text-sm font-medium transition-colors py-1 ${
+                  className={`text-sm font-medium transition-colors px-3 py-2 rounded-xl ${
                     isCurrent
-                      ? 'text-[#71B913] font-semibold'
-                      : 'text-[#AAAAAA] hover:text-[#71B913]'
+                      ? 'text-[#0B0D0C] bg-[#B7F34A] font-semibold'
+                      : 'text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/[0.05]'
                   }`}
                 >
                   {link.name}
@@ -243,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
             })}
           </div>
 
-          <div className="pt-4 border-t border-white/[0.08] space-y-2">
+          <div className="pt-4 border-t border-white/[0.09] space-y-2.5">
             {isOwner && onOpenAdmin && (
               <button
                 type="button"
@@ -251,22 +258,23 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   onOpenAdmin();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-yellow-300 bg-yellow-500/15 border border-yellow-500/30 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.2)]"
+                className="w-full py-2.5 text-center text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
-                <ShieldAlert size={14} className="text-yellow-400" />
+                <ShieldAlert size={14} className="text-amber-400" />
                 <span>Studio Owner Console</span>
               </button>
             )}
 
             {user ? (
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onOpenVault();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-white bg-white/10 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
-                <FolderDown size={14} className="text-[#71B913]" />
+                <FolderDown size={14} className="text-[#B7F34A]" />
                 <span>My Account Dashboard ({purchaseCount} items)</span>
               </button>
             ) : (
@@ -276,19 +284,20 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   onSignIn();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-white bg-white/10 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
-                <UserIcon size={14} className="text-[#71B913]" />
+                <UserIcon size={14} className="text-[#B7F34A]" />
                 <span>Sign In / Create Account</span>
               </button>
             )}
 
             <button
+              type="button"
               onClick={() => {
                 setMobileMenuOpen(false);
                 onStartProject();
               }}
-              className="w-full py-3 text-center text-xs font-bold uppercase tracking-normal text-black bg-[#71B913] hover:bg-[#81cf17] rounded-xl transition-colors shadow-[0_0_20px_rgba(113,185,19,0.3)]"
+              className="w-full py-3 text-center text-xs glossy-btn rounded-xl cursor-pointer"
             >
               Start a Project
             </button>

@@ -8,41 +8,48 @@ interface ServicesProps {
 
 export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
   return (
-    <section id="services" className="py-14 sm:py-16 px-6 bg-[#71B913] text-black bg-grid-brand relative overflow-hidden">
+    <section
+      id="services"
+      className="py-16 sm:py-20 px-5 sm:px-6 lg:px-8 bg-[#121614] text-[#F5F7F2] border-b border-white/[0.09] relative overflow-hidden"
+    >
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Section Header: Compact "Services" */}
-        <div className="mb-8 pb-3 border-b border-black/20">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-black tracking-tight">
-            Services
-          </h2>
-          <p className="text-xs sm:text-sm text-black/80 font-medium max-w-2xl mt-1.5 leading-relaxed">
+        {/* Aligned Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-5 border-b border-white/[0.09]">
+          <div>
+            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
+              Studio Capabilities
+            </span>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
+              Services
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-[#A1AAA2] max-w-xl leading-relaxed">
             Full-spectrum digital marketing agency services in Bangladesh — from cinematic video editing and graphic design to responsive web development and AI software tools.
           </p>
         </div>
 
-        {/* Compact Minimal Service Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Equal-Height Elevated Dark Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
           {SERVICES.map((service) => (
             <div
               key={service.id}
               onClick={() => onSelectService?.(service.title)}
-              className="bg-[#0A0A0A] border border-black/15 hover:border-black/35 text-white rounded-xl p-5 flex flex-col justify-between group transition-all duration-200 hover:-translate-y-0.5 shadow-lg cursor-default"
+              className="glossy-card glossy-card-hover p-6 flex flex-col justify-between h-full group cursor-default"
             >
-              <div>
-                <h3 className="font-display text-base sm:text-lg font-bold text-white group-hover:text-[#71B913] transition-colors mb-1.5">
-                  {service.title}
-                </h3>
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-display text-lg font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-snug">
+                    {service.title}
+                  </h3>
+                  <ArrowUpRight
+                    size={16}
+                    className="text-[#707A72] group-hover:text-[#B7F34A] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0 mt-1"
+                  />
+                </div>
 
-                <p className="text-xs text-[#CCCCCC] leading-relaxed font-normal">
+                <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed font-normal">
                   {service.subtitle}
                 </p>
-              </div>
-
-              <div className="pt-3 mt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-[#888888]">
-                <span className="font-light">Professional Service</span>
-                <span className="text-[#71B913] font-semibold flex items-center gap-1">
-                  MirrorBook <ArrowUpRight size={12} />
-                </span>
               </div>
             </div>
           ))}

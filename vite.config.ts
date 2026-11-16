@@ -5,8 +5,28 @@ import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
 import { processPackageOrder } from './api/package-order';
 import { processAuthSession } from './api/auth/session';
+import { processPaymentSmsWebhook } from './api/payment-sms/receive';
+import { processGetPaymentSmsLogs } from './api/payment-sms/logs';
+import { processSubmitAndVerifyOrder } from './api/orders/submit-and-verify';
+import { processAdminApproveOrder } from './api/orders/admin-approve';
 
 dotenv.config();
+
+function readRequestBody(req: any): Promise<string> {
+  return new Promise((resolve) => {
+    let bodyStr = '';
+    req.on('data', (chunk: any) => {
+      bodyStr += chunk;
+    });
+    req.on('end', () => resolve(bodyStr));
+  });
+}
+
+function sendJson(res: any, status: number, data: unknown) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(data));
+}
 
 function apiDevServerPlugin(): Plugin {
   return {
@@ -16,95 +36,143 @@ function apiDevServerPlugin(): Plugin {
         const rawUrl = req.url || '';
         const [url, queryStr] = rawUrl.split('?');
 
+        const clientIp =
+          (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
+          req.socket?.remoteAddress ||
+          '127.0.0.1';
+
+        const authHeader =
+          typeof req.headers['authorization'] === 'string'
+            ? req.headers['authorization']
+            : undefined;
+
         if (url === '/api/auth/session') {
           if (req.method !== 'POST' && req.method !== 'GET') {
-            res.statusCode = 405;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ authenticated: false, error: 'Method not allowed.' }));
+            sendJson(res, 405, { authenticated: false, error: 'Method not allowed.' });
             return;
           }
 
-          let bodyStr = '';
-          req.on('data', (chunk) => {
-            bodyStr += chunk;
-          });
-          req.on('end', async () => {
-            try {
-              const params = new URLSearchParams(queryStr || '');
-              let intent = params.get('intent') || undefined;
-              if (bodyStr) {
-                try {
-                  const parsed = JSON.parse(bodyStr);
-                  if (typeof parsed?.intent === 'string') {
-                    intent = parsed.intent;
-                  }
-                } catch {
-                  // ignore optional body parse failure
+          const bodyStr = await readRequestBody(req);
+          try {
+            const params = new URLSearchParams(queryStr || '');
+            let intent = params.get('intent') || undefined;
+            if (bodyStr) {
+              try {
+                const parsed = JSON.parse(bodyStr);
+                if (typeof parsed?.intent === 'string') {
+                  intent = parsed.intent;
                 }
+              } catch {
+                // ignore optional body parse failure
               }
-
-              const authHeader =
-                typeof req.headers['authorization'] === 'string'
-                  ? req.headers['authorization']
-                  : undefined;
-
-              const result = await processAuthSession(authHeader, intent);
-              res.statusCode = result.status;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(result.data));
-            } catch (err: any) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(
-                JSON.stringify({
-                  authenticated: false,
-                  error: err?.message || 'Session verification error.',
-                })
-              );
             }
-          });
+
+            const result = await processAuthSession(authHeader, intent);
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, {
+              authenticated: false,
+              error: err?.message || 'Session verification error.',
+            });
+          }
+          return;
+        }
+
+        if (url === '/api/payment-sms/receive') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+            return;
+          }
+
+          const bodyStr = await readRequestBody(req);
+          try {
+            const result = await processPaymentSmsWebhook({
+              headers: req.headers || {},
+              body: bodyStr || '{}',
+              clientIp,
+            });
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/payment-sms/logs') {
+          if (req.method !== 'GET') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use GET.' });
+            return;
+          }
+
+          try {
+            const result = await processGetPaymentSmsLogs(authHeader);
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/orders/submit-and-verify') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+            return;
+          }
+
+          const bodyStr = await readRequestBody(req);
+          try {
+            const result = await processSubmitAndVerifyOrder({
+              authorizationHeader: authHeader,
+              body: bodyStr || '{}',
+              clientIp,
+            });
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/orders/admin-approve') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+            return;
+          }
+
+          const bodyStr = await readRequestBody(req);
+          try {
+            const result = await processAdminApproveOrder({
+              authorizationHeader: authHeader,
+              body: bodyStr || '{}',
+            });
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
           return;
         }
 
         if (url === '/api/package-order' || url === '/api/order' || url === '/api/inquiry') {
           if (req.method !== 'POST') {
-            res.statusCode = 405;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: false, error: 'Method not allowed. Use POST.' }));
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
             return;
           }
 
-          let bodyStr = '';
-          req.on('data', (chunk) => {
-            bodyStr += chunk;
-          });
-          req.on('end', async () => {
+          const bodyStr = await readRequestBody(req);
+          try {
+            let body = {};
             try {
-              let body = {};
-              try {
-                body = JSON.parse(bodyStr || '{}');
-              } catch {
-                res.statusCode = 400;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ success: false, error: 'Invalid JSON request body.' }));
-                return;
-              }
-
-              const clientIp =
-                (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
-                req.socket?.remoteAddress ||
-                '127.0.0.1';
-
-              const result = await processPackageOrder(body as any, clientIp);
-              res.statusCode = result.status;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(result.data));
-            } catch (err: any) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ success: false, error: err?.message || 'Server error' }));
+              body = JSON.parse(bodyStr || '{}');
+            } catch {
+              sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+              return;
             }
-          });
+
+            const result = await processPackageOrder(body as any, clientIp);
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
           return;
         }
         next();

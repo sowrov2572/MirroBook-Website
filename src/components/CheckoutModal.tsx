@@ -13,21 +13,17 @@ import {
   Landmark,
   Zap,
   Flame,
-  Send,
   User as UserIcon,
   FolderDown,
   Lock,
 } from 'lucide-react';
-import { CheckoutItem, PaymentMethod, PaymentConfig, Order, ProductItem, UserPurchase, AppUser } from '../types';
+import { CheckoutItem, PaymentMethod, PaymentConfig, Order, ProductItem, AppUser } from '../types';
 import {
   saveOrderToStorage,
   loadPaymentConfig,
-  verifyPaymentWithSheet,
-  sendTelegramNotification,
-  sendOrderToGoogleSheet,
-  isTrxIdAlreadyUsedLocally,
+  submitAndVerifyOrderApi,
 } from '../utils/paymentService';
-import { saveOrderToFirestore, recordUserPurchase } from '../utils/firebase';
+import { auth } from '../utils/firebase';
 
 interface CheckoutModalProps {
   item: CheckoutItem | null;
@@ -38,7 +34,7 @@ interface CheckoutModalProps {
   user?: AppUser | null;
   onSignIn?: () => void;
   onOpenVault?: () => void;
-  onSelectDownload?: (target: { title: string; category?: string; downloadUrl: string; orderId?: string }) => void;
+  onSelectDownload?: (target: { title: string; category?: string; downloadUrl: string; orderId?: string; trxId?: string }) => void;
 }
 
 // Payment method icons component
@@ -62,14 +58,6 @@ const MethodIcon: React.FC<{ method: PaymentMethod; className?: string }> = ({ m
       return <Smartphone className={className} />;
   }
 };
-
-// Robust numeric price extractor
-function extractNumericPrice(priceStr: string | number): number {
-  if (typeof priceStr === 'number') return priceStr;
-  const sanitized = priceStr.replace(/,/g, '');
-  const match = sanitized.match(/\d+(?:\.\d+)?/);
-  return match ? parseFloat(match[0]) : 0;
-}
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   item,
@@ -104,25 +92,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   // Status & Verification States
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const [verificationFailed, setVerificationFailed] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Completed Order State
+  // Completed / Pending Order State
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
   const [isAutoVerified, setIsAutoVerified] = useState(false);
 
   if (!item) return null;
 
-  // Extract numeric price for verification against Sheet
-  const numericPrice = extractNumericPrice(item.price);
-
-  // Find product's protected download link if available
+  // Resolve canonical product ID only (never read paid protectedUrl from client catalog)
   const matchedProduct = allProducts.find(
     (p) => p.id === item.id || p.title.toLowerCase() === item.name.toLowerCase()
   );
-  const downloadUrl = matchedProduct?.protectedUrl || 'https://drive.google.com';
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -130,15 +113,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const cleanPhoneForWhatsApp = (num: string) => {
-    let digits = num.replace(/[^0-9]/g, '');
-    if (digits.startsWith('01') && digits.length === 11) {
-      digits = '88' + digits;
-    }
-    return digits;
-  };
-
-  // 1. Primary Action: "Verify & Complete Order" (STRICT ANTI-CHEAT VERIFICATION)
+  // Server-side Atomic Order Submission & bKash SMS Verification
   const handleVerifyAndComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -152,229 +127,77 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
 
     const cleanPhone = phone.trim();
-    const cleanTrx = trxId.trim().toUpperCase();
+    const cleanTrx = trxId.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     if (!cleanPhone || !cleanTrx) {
-      setErrorMsg('আপনার ফোন নম্বর এবং বিকাশ/নগদ ট্রানজিশন আইডি (TrxID) দিন।');
+      setErrorMsg('আপনার ফোন নম্বর এবং বিকাশ/ব্যাংক ট্রানজিশন আইডি (TrxID) দিন।');
       return;
     }
 
     if (cleanTrx.length < 6) {
-      setErrorMsg('সঠিক ট্রানজিশন আইডি লিখুন (কমপক্ষে ৬-১৬ অক্ষর)।');
-      return;
-    }
-
-    // Anti-Cheat Step 1: Reject duplicate TrxID locally if already redeemed in this browser
-    const localCheck = isTrxIdAlreadyUsedLocally(cleanTrx);
-    if (localCheck.used && localCheck.order) {
-      setErrorMsg(
-        `এই Transaction ID (${cleanTrx}) টি পূর্বে Order #${localCheck.order.id} (${localCheck.order.itemName})-এ ব্যবহার করা হয়েছে! একই TrxID একাধিকবার ব্যবহার করা যাবে না।`
-      );
-      setVerificationFailed(true);
-      setVerificationMessage(
-        'একই TrxID দিয়ে একাধিকবার প্রোডাক্ট আনলক করার চেষ্টা ব্লক করা হয়েছে। প্রতিটি ক্রয়ের জন্য আলাদা পেমেন্ট প্রয়োজন।'
-      );
+      setErrorMsg('সঠিক ট্রানজিশন আইডি লিখুন (কমপক্ষে ৬–২০ অক্ষর)।');
       return;
     }
 
     setIsVerifying(true);
 
-    const orderId = `MB-${Math.floor(1000 + Math.random() * 9000)}`;
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
     try {
-      // Anti-Cheat Step 2: Strict Verification against Google Apps Script Web App
-      if (!config.webAppUrl || !config.webAppUrl.trim().startsWith('http')) {
-        setIsVerifying(false);
+      const idToken = auth.currentUser
+        ? await auth.currentUser.getIdToken().catch(() => null)
+        : null;
+
+      const result = await submitAndVerifyOrderApi(
+        {
+          productId: matchedProduct?.id || item.id,
+          itemName: item.name,
+          paymentMethod: selectedMethod,
+          customerName: name.trim() || user?.displayName || customerEmail.split('@')[0],
+          customerEmail,
+          customerPhone: cleanPhone,
+          senderAccount: senderAccount.trim() || cleanPhone,
+          trxId: cleanTrx,
+        },
+        idToken
+      );
+
+      // Duplicate / Reused TrxID blocked strictly by server atomic lock
+      if (!result.success && result.alreadyUsed) {
         setVerificationFailed(true);
         setVerificationMessage(
-          'অটোমেটেড পেমেন্ট ভেরিফিকেশন সার্ভার যুক্ত নেই। নিচে "Submit for Manual Review" বাটনে ক্লিক করুন, এডমিন যাচাই করে লাইসেন্স অ্যাক্টিভ করবেন।'
+          result.message ||
+            `এই Transaction ID (${cleanTrx}) টি ইতিমধ্যে ব্যবহৃত হয়েছে। একটি TrxID দিয়ে শুধুমাত্র একবার প্রোডাক্ট আনলক করা যাবে।`
+        );
+        setErrorMsg(
+          `Transaction ID (${cleanTrx}) ইতিমধ্যে ব্যবহার করা হয়েছে। ডুপ্লিকেট TrxID গ্রহণযোগ্য নয়।`
         );
         return;
       }
 
-      const verifyResult = await verifyPaymentWithSheet(
-        config.webAppUrl,
-        cleanTrx,
-        numericPrice,
-        orderId,
-        customerEmail
-      );
-
-      // BLOCK UNLOCK IF NOT VERIFIED
-      if (!verifyResult.verified) {
-        setIsVerifying(false);
-        setVerificationFailed(true);
-
-        if (verifyResult.alreadyUsed) {
-          setVerificationMessage(
-            verifyResult.message ||
-              `এই Transaction ID (${cleanTrx}) টি ইতিমধ্যে ব্যবহার করা হয়ে গেছে। একটি TrxID দিয়ে শুধুমাত্র একবারই প্লাগইন আনলক করা যাবে।`
-          );
-          setErrorMsg('Transaction ID ইতিমধ্যে ব্যবহার করা হয়েছে। ডুপ্লিকেট TrxID গ্রহণযোগ্য নয়।');
-        } else if (verifyResult.amountMismatch) {
-          setVerificationMessage(
-            verifyResult.message ||
-              `পেমেন্ট অ্যামাউন্ট মেলেনি! প্রোডাক্টের মূল্য ৳${verifyResult.requiredAmount || numericPrice} কিন্তু শিটে পাওয়া গেছে ৳${verifyResult.receivedAmount}।`
-          );
-          setErrorMsg(`পেমেন্ট অ্যামাউন্ট কম এসেছে (প্রয়োজন ৳${verifyResult.requiredAmount || numericPrice})`);
-        } else if (verifyResult.notFound) {
-          setVerificationMessage(
-            verifyResult.message ||
-              `Transaction ID (${cleanTrx}) টি পেমেন্ট শিটে খুঁজে পাওয়া যায়নি। আপনি কি নিশ্চিত যে বিকাশ থেকে ৳${numericPrice} সেন্ড মানি করেছেন? অনুগ্রহ করে সঠিক TrxID দিন বা ১-২ মিনিট পর আবার 'Verify' দিন।`
-          );
-          setErrorMsg('পেমেন্ট রেকর্ড পাওয়া যায়নি। সঠিক TrxID লিখুন।');
-        } else {
-          setVerificationMessage(
-            verifyResult.message || 'পেমেন্ট যাচাই করা যায়নি। আপনি ম্যানুয়াল পর্যালোচনার জন্য জমা দিতে পারেন।'
-          );
-          setErrorMsg('পেমেন্ট যাচাই ব্যর্থ হয়েছে।');
-        }
-        return; // CRITICAL: Stop execution, do not unlock!
+      if (!result.success || !result.order) {
+        setErrorMsg(result.error || result.message || 'অর্ডার সাবমিট করা যায়নি।');
+        return;
       }
 
-      // ONLY REACHED ON VERIFIED SUCCESS: Unlock product, bind license, send email
-      const verifiedOrder: Order = {
-        id: orderId,
-        userId: user?.uid,
-        customerName: name.trim() || user?.displayName || customerEmail.split('@')[0],
-        customerEmail: customerEmail,
-        customerPhone: cleanPhone,
-        itemName: item.name,
-        itemPrice: item.price,
-        paymentMethod: selectedMethod,
-        senderAccount: senderAccount.trim() || cleanPhone,
-        trxId: cleanTrx,
-        createdAt: formattedDate,
-        status: 'Verified',
-        productId: matchedProduct?.id || item.id,
-        downloadUrl: downloadUrl,
-      };
+      const serverOrder = result.order;
+      saveOrderToStorage(serverOrder);
 
-      saveOrderToStorage(verifiedOrder);
-      saveOrderToFirestore(verifiedOrder).catch(() => {});
-
-      // Save directly to user's personal vault if authenticated
-      if (user?.uid) {
-        const userPurchase: UserPurchase = {
-          id: orderId,
-          productId: matchedProduct?.id || item.id,
-          title: item.name,
-          category: item.category || 'Plugin',
-          downloadUrl: downloadUrl,
-          purchasedAt: formattedDate,
-          trxId: cleanTrx,
-        };
-        recordUserPurchase(user.uid, userPurchase).catch(() => {});
+      if (result.verified && (serverOrder.status === 'Completed' || serverOrder.status === 'Verified')) {
+        setIsAutoVerified(true);
+        setCompletedOrder(serverOrder);
+        onOrderSuccess(serverOrder);
+      } else {
+        // Order stored cleanly in Pending state (awaiting late SMS or Admin manual approval)
+        setIsAutoVerified(false);
+        setVerificationMessage(result.message || '');
+        setCompletedOrder(serverOrder);
+        onOrderSuccess(serverOrder);
       }
-
-      // Send order to Google Sheet -> Logs order, marks TrxID USED, grants Drive viewer access, and dispatches email
-      sendOrderToGoogleSheet(config.webAppUrl, verifiedOrder).catch((sheetErr) => {
-        console.warn('sendOrderToGoogleSheet warning:', sheetErr);
-      });
-
-      // Send Telegram Notification to Studio Owner
-      if (config.telegramBotToken && config.telegramChatId) {
-        const tgText = `AUTO-VERIFIED ORDER — MIRRORBOOK\n\n` +
-          `Order ID: ${verifiedOrder.id}\n` +
-          `Item: ${verifiedOrder.itemName}\n` +
-          `Amount: ${verifiedOrder.itemPrice}\n` +
-          `Gateway: ${verifiedOrder.paymentMethod}\n` +
-          `Sender: ${verifiedOrder.senderAccount}\n` +
-          `TrxID: ${verifiedOrder.trxId}\n\n` +
-          `Customer: ${verifiedOrder.customerName}\n` +
-          `Email: ${verifiedOrder.customerEmail}\n` +
-          `Account Bound: ${user ? user.email : 'Guest'}\n` +
-          `Phone: ${verifiedOrder.customerPhone}\n\n` +
-          `Download: ${verifiedOrder.downloadUrl}\n` +
-          `Status: Auto-verified & email dispatched from miirorbook.tech@gmail.com.`;
-
-        sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText).catch(() => {});
-      }
-
-      setIsAutoVerified(true);
-      setCompletedOrder(verifiedOrder);
-      onOrderSuccess(verifiedOrder);
-
     } catch (err: unknown) {
-      console.error('Order completion error:', err);
-      setErrorMsg('সার্ভারে সংযোগ করা সম্ভব হয়নি। অনুগ্রহ করে ইন্টারনেট কানেকশন চেক করুন।');
+      console.error('Order verification error:', err);
+      setErrorMsg('ভেরিফিকেশন সার্ভারে সংযোগ করা সম্ভব হয়নি। অনুগ্রহ করে ইন্টারনেট কানেকশন চেক করুন।');
     } finally {
       setIsVerifying(false);
     }
-  };
-
-  // 2. Fallback Action: "Submit for Manual Review" (No Instant Download Until Approved)
-  const handleSubmitManualReview = async () => {
-    setIsSubmittingManual(true);
-
-    const orderId = `MB-${Math.floor(1000 + Math.random() * 9000)}`;
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    const manualOrder: Order = {
-      id: orderId,
-      userId: user?.uid,
-      customerName: name.trim() || user?.displayName || (user?.email || email || '').split('@')[0],
-      customerEmail: (user?.email || email || '').trim().toLowerCase(),
-      customerPhone: phone.trim(),
-      itemName: item.name,
-      itemPrice: item.price,
-      paymentMethod: selectedMethod,
-      senderAccount: senderAccount.trim() || phone.trim(),
-      trxId: trxId.trim().toUpperCase(),
-      createdAt: formattedDate,
-      status: 'Pending',
-      productId: matchedProduct?.id || item.id,
-      downloadUrl: '', // DO NOT reveal download URL until owner approves
-    };
-
-    saveOrderToStorage(manualOrder);
-    saveOrderToFirestore(manualOrder).catch(() => {});
-
-    // Send order to Google Sheet with Pending status
-    if (config.webAppUrl) {
-      sendOrderToGoogleSheet(config.webAppUrl, manualOrder).catch(() => {});
-    }
-
-    // Send Telegram Notification with direct WhatsApp link
-    if (config.telegramBotToken && config.telegramChatId) {
-      const waLink = `https://wa.me/${cleanPhoneForWhatsApp(manualOrder.customerPhone)}?text=${encodeURIComponent(
-        `Hi ${manualOrder.customerName}, regarding your MirrorBook order ${manualOrder.id} (${manualOrder.itemName}):`
-      )}`;
-
-      const tgText = `NEW ORDER PENDING MANUAL REVIEW — MIRRORBOOK\n\n` +
-        `Order ID: ${manualOrder.id}\n` +
-        `Item: ${manualOrder.itemName}\n` +
-        `Amount: ${manualOrder.itemPrice}\n` +
-        `Method: ${manualOrder.paymentMethod}\n` +
-        `Sender: ${manualOrder.senderAccount}\n` +
-        `TrxID: ${manualOrder.trxId}\n\n` +
-        `Customer: ${manualOrder.customerName}\n` +
-        `Email: ${manualOrder.customerEmail}\n` +
-        `Phone: ${manualOrder.customerPhone}\n\n` +
-        `WhatsApp Customer: ${waLink}`;
-
-      sendTelegramNotification(config.telegramBotToken, config.telegramChatId, tgText).catch(() => {});
-    }
-
-    setIsAutoVerified(false);
-    setCompletedOrder(manualOrder);
-    onOrderSuccess(manualOrder);
-    setIsSubmittingManual(false);
   };
 
   // Pre-formatted customer WhatsApp message
@@ -420,69 +243,69 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md glossy-card border border-white/20 text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative w-full max-w-md glossy-card border border-white/[0.09] text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.1] bg-white/[0.04]">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.09] bg-[#171C19]">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#71B913] shadow-[0_0_10px_#71B913]" />
-            <h3 className="font-display text-xs font-bold tracking-normal uppercase text-white">
+            <ShieldCheck size={15} className="text-[#B7F34A]" />
+            <h3 className="font-display text-xs font-bold tracking-normal uppercase text-[#F5F7F2]">
               Instant Checkout
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-lg hover:bg-white/10 text-[#888888] hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+            className="w-7 h-7 rounded-xl hover:bg-white/10 text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors flex items-center justify-center cursor-pointer"
             aria-label="Close"
           >
             <X size={15} />
           </button>
         </div>
 
-        {/* 1. COMPLETED SUCCESS VIEW */}
+        {/* 1. COMPLETED OR PENDING SUBMISSION VIEW */}
         {completedOrder ? (
           <div className="p-5 space-y-4">
             <div className="text-center py-1">
-              <div className="w-11 h-11 rounded-full bg-[#71B913]/10 border border-[#71B913] text-[#71B913] mx-auto flex items-center justify-center mb-2.5">
+              <div className="w-11 h-11 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A] text-[#B7F34A] mx-auto flex items-center justify-center mb-2.5">
                 {isAutoVerified ? <ShieldCheck size={22} /> : <CheckCircle size={22} />}
               </div>
-              <h4 className="font-display text-lg font-bold text-white mb-0.5">
-                {isAutoVerified ? 'Payment Verified' : 'Order Submitted'}
+              <h4 className="font-display text-lg font-bold text-[#F5F7F2] mb-0.5">
+                {isAutoVerified ? 'Payment Verified & Completed' : 'Order Submitted (Pending Verification)'}
               </h4>
-              <p className="text-xs text-[#888888]">
-                Order ID: <span className="text-white font-semibold">{completedOrder.id}</span>
+              <p className="text-xs text-[#A1AAA2]">
+                Order ID: <span className="text-[#F5F7F2] font-semibold">{completedOrder.id}</span>
               </p>
             </div>
 
             {/* Receipt Summary */}
-            <div className="bg-[#121212] border border-white/10 rounded-xl p-3.5 space-y-1.5 text-xs">
-              <div className="flex justify-between py-1 border-b border-white/5">
-                <span className="text-[#888888]">Item</span>
-                <span className="text-white font-medium truncate max-w-[200px]">{completedOrder.itemName}</span>
+            <div className="bg-[#121614] border border-white/[0.09] rounded-xl p-3.5 space-y-1.5 text-xs">
+              <div className="flex justify-between py-1 border-b border-white/[0.06]">
+                <span className="text-[#A1AAA2]">Item</span>
+                <span className="text-[#F5F7F2] font-medium truncate max-w-[200px]">{completedOrder.itemName}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/5">
-                <span className="text-[#888888]">Amount</span>
-                <span className="text-[#71B913] font-bold">{completedOrder.itemPrice}</span>
+              <div className="flex justify-between py-1 border-b border-white/[0.06]">
+                <span className="text-[#A1AAA2]">Amount</span>
+                <span className="text-[#B7F34A] font-bold">{completedOrder.itemPrice}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/5">
-                <span className="text-[#888888]">Method</span>
-                <span className="text-white font-medium">{completedOrder.paymentMethod}</span>
+              <div className="flex justify-between py-1 border-b border-white/[0.06]">
+                <span className="text-[#A1AAA2]">Method</span>
+                <span className="text-[#F5F7F2] font-medium">{completedOrder.paymentMethod}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/5">
-                <span className="text-[#888888]">TrxID</span>
-                <span className="text-white font-semibold">{completedOrder.trxId}</span>
+              <div className="flex justify-between py-1 border-b border-white/[0.06]">
+                <span className="text-[#A1AAA2]">TrxID</span>
+                <span className="text-[#F5F7F2] font-semibold">{completedOrder.trxId}</span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-[#888888]">Account</span>
-                <span className="text-[#71B913] font-medium truncate max-w-[200px]">
+                <span className="text-[#A1AAA2]">Account</span>
+                <span className="text-[#B7F34A] font-medium truncate max-w-[200px]">
                   {user ? user.email : completedOrder.customerEmail}
                 </span>
               </div>
             </div>
 
-            {/* Auto-Verified: Direct Unlock Link & Vault Binding */}
-            {isAutoVerified && (
+            {/* Auto-Verified: Server-Delivered Unlock Link & Vault Binding */}
+            {isAutoVerified && completedOrder.downloadUrl && (
               <div className="space-y-2">
                 <button
                   type="button"
@@ -490,32 +313,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     if (onSelectDownload) {
                       onSelectDownload({
                         title: completedOrder.itemName,
-                        downloadUrl: completedOrder.downloadUrl || downloadUrl,
+                        downloadUrl: completedOrder.downloadUrl!,
                         orderId: completedOrder.id,
                         category: 'Plugin',
+                        trxId: completedOrder.trxId,
                       });
                     } else {
-                      window.open(completedOrder.downloadUrl || downloadUrl, '_blank', 'noopener,noreferrer');
+                      window.open(completedOrder.downloadUrl!, '_blank', 'noopener,noreferrer');
                     }
                   }}
-                  className="w-full py-3.5 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full py-3.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Download size={15} />
                   <span>Secure Download &amp; Install Now (Google Drive)</span>
                 </button>
 
-                {/* Email Confirmation Notice */}
-                <div className="p-3 bg-[#71B913]/10 border border-[#71B913]/30 rounded-xl text-left space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#71B913]">
-                    <CheckCircle size={14} />
-                    <span>Download Link Sent to Your Email!</span>
+                {completedOrder.licenseKey && (
+                  <div className="p-2.5 bg-[#121614] border border-[#B7F34A]/30 rounded-xl flex items-center justify-between text-[11px]">
+                    <span className="text-[#A1AAA2]">License Key:</span>
+                    <code className="text-[#B7F34A] font-mono font-bold select-all">
+                      {completedOrder.licenseKey}
+                    </code>
                   </div>
-                  <p className="text-[11px] text-[#AAAAAA] leading-relaxed">
-                    A confirmation email containing the official download folder link has been automatically dispatched to{' '}
-                    <strong className="text-white">{completedOrder.customerEmail}</strong> from{' '}
-                    <strong className="text-[#71B913]">miirorbook.tech@gmail.com</strong>.
-                  </p>
-                </div>
+                )}
 
                 {onOpenVault && user && (
                   <button
@@ -524,29 +344,30 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       onClose();
                       onOpenVault();
                     }}
-                    className="w-full py-2.5 text-xs font-semibold uppercase tracking-normal bg-white/10 hover:bg-white/15 text-white rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-2.5 text-xs font-semibold uppercase tracking-normal glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <FolderDown size={14} className="text-[#71B913]" />
+                    <FolderDown size={14} className="text-[#B7F34A]" />
                     <span>View in My Creator Vault</span>
                   </button>
                 )}
 
-                <div className="p-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-[10px] text-[#888888] flex items-center gap-2">
-                  <Lock size={12} className="text-[#71B913] shrink-0" />
-                  <span>License is bound to your account ({completedOrder.customerEmail}). You can re-download anytime by logging into your vault.</span>
+                <div className="p-2.5 bg-[#121614] border border-white/[0.09] rounded-xl text-[10px] text-[#A1AAA2] flex items-center gap-2">
+                  <Lock size={12} className="text-[#B7F34A] shrink-0" />
+                  <span>License is bound to your account ({completedOrder.customerEmail}). You can re-download anytime by logging into your dashboard.</span>
                 </div>
               </div>
             )}
 
-            {/* Manual Review Pending Notice */}
+            {/* Manual Review Pending Notice (No download URL exposed until Admin SDK approves) */}
             {!isAutoVerified && (
               <div className="p-3.5 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left space-y-1.5">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
                   <AlertCircle size={14} />
-                  <span>ম্যানুয়াল ভেরিফিকেশনের জন্য জমা হয়েছে</span>
+                  <span>অর্ডার Pending — এডমিন যাচাইয়ের অপেক্ষায়</span>
                 </div>
-                <p className="text-[11px] text-[#AAAAAA] leading-relaxed">
-                  আপনার TrxID এবং পেমেন্ট এডমিন দ্বারা সরাসরি যাচাই করার পর লাইসেন্স ও গুগল ড্রাইভ এক্সেস সক্রিয় করা হবে। দ্রুত অ্যাক্টিভেশনের জন্য নিচের বাটনে ক্লিক করে সরাসরি WhatsApp-এ মেসেজ দিন।
+                <p className="text-[11px] text-[#A1AAA2] leading-relaxed">
+                  {verificationMessage ||
+                    'আপনার TrxID এবং পেমেন্ট এডমিন দ্বারা যাচাই করার পর লাইসেন্স ও গুগল ড্রাইভ এক্সেস সক্রিয় করা হবে। দ্রুত অ্যাক্টিভেশনের জন্য নিচের বাটনে ক্লিক করে সরাসরি WhatsApp-এ মেসেজ দিন।'}
                 </p>
               </div>
             )}
@@ -559,17 +380,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 rel="noopener noreferrer"
                 className={`w-full py-2.5 text-xs font-bold uppercase tracking-normal rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   isAutoVerified
-                    ? 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
-                    : 'bg-[#71B913] hover:bg-[#81cf17] text-black shadow-[0_0_20px_rgba(113,185,19,0.25)]'
+                    ? 'glossy-btn-secondary'
+                    : 'glossy-btn'
                 }`}
               >
                 <MessageCircle size={14} />
-                <span>{isAutoVerified ? 'Open WhatsApp' : 'Message on WhatsApp'}</span>
+                <span>{isAutoVerified ? 'Open WhatsApp Support' : 'Message on WhatsApp'}</span>
               </a>
 
               <button
                 onClick={onClose}
-                className="w-full py-2 text-xs text-[#888888] hover:text-white transition-colors cursor-pointer text-center"
+                className="w-full py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer text-center"
               >
                 Close
               </button>
@@ -579,20 +400,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           /* 2. MINIMAL UNCLUTTERED CHECKOUT FORM */
           <div className="p-5 space-y-3.5">
             {/* Clean Item Name & Price Banner */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.09]">
               <div>
-                <span className="text-[10px] uppercase tracking-normal text-[#666666] block">
+                <span className="text-[10px] uppercase tracking-normal text-[#707A72] block">
                   Item
                 </span>
-                <span className="font-display text-sm sm:text-base font-bold text-white truncate max-w-[220px] block">
+                <span className="font-display text-sm sm:text-base font-bold text-[#F5F7F2] truncate max-w-[220px] block">
                   {item.name}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] uppercase tracking-normal text-[#666666] block">
+                <span className="text-[10px] uppercase tracking-normal text-[#707A72] block">
                   Price
                 </span>
-                <span className="font-display text-lg sm:text-xl font-bold text-[#71B913] tabular-nums">
+                <span className="font-display text-lg sm:text-xl font-bold text-[#B7F34A] tabular-nums">
                   {item.price}
                 </span>
               </div>
@@ -600,22 +421,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             {/* Account Binding Indicator or Quick Login */}
             {user ? (
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#71B913]/10 border border-[#71B913]/25 text-xs text-[#71B913]">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/25 text-xs text-[#B7F34A]">
                 <div className="flex items-center gap-2">
                   <ShieldCheck size={14} />
                   <span>Licensed to: <strong>{user.email}</strong></span>
                 </div>
-                <span className="text-[10px] font-semibold bg-[#71B913] text-black px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-semibold bg-[#B7F34A] text-black px-1.5 py-0.5 rounded">
                   Vault Ready
                 </span>
               </div>
             ) : onSignIn ? (
-              <div className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-[#888888]">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-[#121614] border border-white/[0.09] text-xs text-[#A1AAA2]">
                 <span>Want to save this to your permanent Vault?</span>
                 <button
                   type="button"
                   onClick={onSignIn}
-                  className="text-xs font-semibold text-[#71B913] hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs font-semibold text-[#B7F34A] hover:underline cursor-pointer flex items-center gap-1"
                 >
                   <UserIcon size={12} />
                   <span>Sign In</span>
@@ -625,10 +446,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             {/* Payment Method Selector Tabs with Name & Icon */}
             <div>
-              <span className="text-[10px] uppercase tracking-normal text-[#666666] block mb-1.5">
+              <span className="text-[10px] uppercase tracking-normal text-[#707A72] block mb-1.5">
                 Payment Method
               </span>
-              <div className="grid grid-cols-5 gap-1 p-1 bg-[#121212] rounded-xl border border-white/10">
+              <div className="grid grid-cols-5 gap-1 p-1 bg-[#121614] rounded-xl border border-white/[0.09]">
                 {paymentMethods.map(({ method, label }) => {
                   const isActive = selectedMethod === method;
                   return (
@@ -641,8 +462,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       }}
                       className={`py-2 px-1 text-[11px] font-medium rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer ${
                         isActive
-                          ? 'bg-[#71B913] text-black font-semibold shadow-sm'
-                          : 'text-[#888888] hover:text-white hover:bg-white/5'
+                          ? 'bg-[#B7F34A] text-black font-semibold shadow-sm'
+                          : 'text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/5'
                       }`}
                     >
                       <MethodIcon method={method} className="w-3.5 h-3.5 shrink-0" />
@@ -654,30 +475,30 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             {/* Dynamic Account Details Box */}
-            <div className="bg-[#121212] border border-white/10 rounded-xl p-3">
+            <div className="bg-[#121614] border border-white/[0.09] rounded-xl p-3">
               {selectedMethod === 'Bank Transfer' ? (
                 <div className="space-y-2">
                   {/* Account 1: IBBL */}
-                  <div className="bg-[#181818] border border-white/5 rounded-lg p-2.5 space-y-1 text-xs">
-                    <div className="flex justify-between items-center text-[#888888]">
+                  <div className="bg-[#171C19] border border-white/[0.07] rounded-lg p-2.5 space-y-1 text-xs">
+                    <div className="flex justify-between items-center text-[#A1AAA2]">
                       <span>{config.bankDetails.bankName}</span>
-                      <span className="text-[10px] text-[#71B913] bg-[#71B913]/10 px-1.5 py-0.5 rounded">Primary</span>
+                      <span className="text-[10px] text-[#B7F34A] bg-[#B7F34A]/10 px-1.5 py-0.5 rounded">Primary</span>
                     </div>
-                    <div className="flex justify-between text-[#888888]">
+                    <div className="flex justify-between text-[#A1AAA2]">
                       <span>A/C Name:</span>
-                      <span className="text-white font-medium">{config.bankDetails.accountName}</span>
+                      <span className="text-[#F5F7F2] font-medium">{config.bankDetails.accountName}</span>
                     </div>
-                    <div className="flex justify-between items-center text-[#888888]">
+                    <div className="flex justify-between items-center text-[#A1AAA2]">
                       <span>A/C Number:</span>
                       <div className="flex items-center gap-1">
-                        <span className="text-white font-semibold">{config.bankDetails.accountNumber}</span>
+                        <span className="text-[#F5F7F2] font-semibold">{config.bankDetails.accountNumber}</span>
                         <button
                           type="button"
                           onClick={() => handleCopy(config.bankDetails.accountNumber, 'bank-ibbl')}
-                          className="text-[#888888] hover:text-[#71B913] p-0.5"
+                          className="text-[#A1AAA2] hover:text-[#B7F34A] p-0.5 cursor-pointer"
                           title="Copy account number"
                         >
-                          {copiedKey === 'bank-ibbl' ? <Check size={12} className="text-[#71B913]" /> : <Copy size={12} />}
+                          {copiedKey === 'bank-ibbl' ? <Check size={12} className="text-[#B7F34A]" /> : <Copy size={12} />}
                         </button>
                       </div>
                     </div>
@@ -685,26 +506,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                   {/* Account 2: DBBL */}
                   {config.secondaryBankDetails && (
-                    <div className="bg-[#181818] border border-white/5 rounded-lg p-2.5 space-y-1 text-xs">
-                      <div className="flex justify-between items-center text-[#888888]">
+                    <div className="bg-[#171C19] border border-white/[0.07] rounded-lg p-2.5 space-y-1 text-xs">
+                      <div className="flex justify-between items-center text-[#A1AAA2]">
                         <span>{config.secondaryBankDetails.bankName}</span>
-                        <span className="text-[10px] text-[#888888] bg-white/5 px-1.5 py-0.5 rounded">Alternate</span>
+                        <span className="text-[10px] text-[#A1AAA2] bg-white/5 px-1.5 py-0.5 rounded">Alternate</span>
                       </div>
-                      <div className="flex justify-between text-[#888888]">
+                      <div className="flex justify-between text-[#A1AAA2]">
                         <span>A/C Name:</span>
-                        <span className="text-white font-medium">{config.secondaryBankDetails.accountName}</span>
+                        <span className="text-[#F5F7F2] font-medium">{config.secondaryBankDetails.accountName}</span>
                       </div>
-                      <div className="flex justify-between items-center text-[#888888]">
+                      <div className="flex justify-between items-center text-[#A1AAA2]">
                         <span>A/C Number:</span>
                         <div className="flex items-center gap-1">
-                          <span className="text-white font-semibold">{config.secondaryBankDetails.accountNumber}</span>
+                          <span className="text-[#F5F7F2] font-semibold">{config.secondaryBankDetails.accountNumber}</span>
                           <button
                             type="button"
                             onClick={() => handleCopy(config.secondaryBankDetails!.accountNumber, 'bank-dbbl')}
-                            className="text-[#888888] hover:text-[#71B913] p-0.5"
+                            className="text-[#A1AAA2] hover:text-[#B7F34A] p-0.5 cursor-pointer"
                             title="Copy account number"
                           >
-                            {copiedKey === 'bank-dbbl' ? <Check size={12} className="text-[#71B913]" /> : <Copy size={12} />}
+                            {copiedKey === 'bank-dbbl' ? <Check size={12} className="text-[#B7F34A]" /> : <Copy size={12} />}
                           </button>
                         </div>
                       </div>
@@ -714,10 +535,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] uppercase text-[#666666] block">
+                    <span className="text-[10px] uppercase text-[#707A72] block">
                       Send Money ({getAccountForMethod(selectedMethod).type})
                     </span>
-                    <span className="text-base font-bold text-white tracking-normal">
+                    <span className="text-base font-bold text-[#F5F7F2] tracking-normal">
                       {getAccountForMethod(selectedMethod).number}
                     </span>
                   </div>
@@ -725,12 +546,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleCopy(getAccountForMethod(selectedMethod).number, 'mobile-acc')}
-                    className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-white rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-[#F5F7F2] rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     {copiedKey === 'mobile-acc' ? (
                       <>
-                        <Check size={12} className="text-[#71B913]" />
-                        <span className="text-[#71B913]">Copied</span>
+                        <Check size={12} className="text-[#B7F34A]" />
+                        <span className="text-[#B7F34A]">Copied</span>
                       </>
                     ) : (
                       <>
@@ -745,35 +566,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             {/* Error Banner */}
             {errorMsg && (
-              <div className="p-2.5 rounded-lg bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center gap-2">
+              <div className="p-2.5 rounded-xl bg-red-950/40 border border-red-800/70 text-red-300 text-xs flex items-center gap-2">
                 <AlertCircle size={14} className="shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
-            {/* Verification Failed Banner */}
-            {verificationFailed && (
-              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800 text-amber-200 text-xs space-y-2">
-                <div className="flex items-start gap-2">
-                  <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-400" />
-                  <div>
-                    <p className="font-semibold text-white">Instant Verification Pending</p>
-                    <p className="text-[11px] text-amber-300/90 mt-0.5 leading-relaxed">
-                      {verificationMessage}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={handleSubmitManualReview}
-                    disabled={isSubmittingManual}
-                    className="w-full py-2 text-xs font-semibold uppercase tracking-normal bg-white/10 hover:bg-[#71B913] hover:text-black text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmittingManual ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                    <span>Submit for Manual Review</span>
-                  </button>
+            {/* Verification Notice Banner (Duplicate TrxID or Pending Details) */}
+            {verificationFailed && verificationMessage && (
+              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800 text-amber-200 text-xs flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-400" />
+                <div>
+                  <p className="font-semibold text-[#F5F7F2]">Verification Notice</p>
+                  <p className="text-[11px] text-amber-300/90 mt-0.5 leading-relaxed">
+                    {verificationMessage}
+                  </p>
                 </div>
               </div>
             )}
@@ -784,7 +591,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               {!user && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-[#888888] mb-1 block">
+                    <label className="text-[10px] text-[#A1AAA2] mb-1 block">
                       Name (Optional)
                     </label>
                     <input
@@ -792,12 +599,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your Name"
-                      className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-[#888888] mb-1 block">
+                    <label className="text-[10px] text-[#A1AAA2] mb-1 block">
                       License Email *
                     </label>
                     <input
@@ -806,7 +613,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="yourname@gmail.com"
-                      className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -814,7 +621,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-[#888888] mb-1 block font-medium">
+                  <label className="text-[10px] text-[#A1AAA2] mb-1 block font-medium">
                     Your {selectedMethod} / Phone Number *
                   </label>
                   <input
@@ -827,12 +634,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       if (!senderAccount) setSenderAccount(val);
                     }}
                     placeholder="01XXXXXXXXX"
-                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-mono"
+                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-[#888888] mb-1 block font-medium">
+                  <label className="text-[10px] text-[#A1AAA2] mb-1 block font-medium">
                     bKash / Bank TrxID *
                   </label>
                   <input
@@ -844,19 +651,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       setVerificationFailed(false);
                     }}
                     placeholder="e.g. BL92XK9P1Q"
-                    className="w-full bg-[#121212] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none font-semibold font-mono uppercase"
+                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-semibold font-mono uppercase"
                   />
                 </div>
               </div>
 
-              <div className="p-2 rounded-lg bg-white/[0.02] border border-white/5 text-[10px] text-[#888888] flex items-center justify-between">
+              <div className="p-2 rounded-lg bg-[#121614] border border-white/[0.06] text-[10px] text-[#A1AAA2] flex items-center justify-between">
                 <span>Payment Sent From:</span>
                 <input
                   type="text"
                   value={senderAccount}
                   onChange={(e) => setSenderAccount(e.target.value)}
                   placeholder="Last 4 digits or Number"
-                  className="bg-transparent border-b border-white/10 focus:border-[#71B913] text-right text-[11px] text-[#71B913] focus:outline-none font-mono max-w-[150px]"
+                  className="bg-transparent border-b border-white/[0.12] focus:border-[#B7F34A] text-right text-[11px] text-[#B7F34A] focus:outline-none font-mono max-w-[150px]"
                 />
               </div>
 
@@ -864,7 +671,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <button
                   type="submit"
                   disabled={isVerifying}
-                  className="w-full py-2.5 sm:py-3 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-2.5 sm:py-3 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isVerifying ? (
                     <>
@@ -879,8 +686,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   )}
                 </button>
 
-                <p className="text-[10px] text-[#666666] text-center">
-                  Instant automated recognition via bKash/Nagad/Rocket SMS or Google Sheets
+                <p className="text-[10px] text-[#707A72] text-center">
+                  Instant server-side Personal bKash SMS verification &amp; single-use TrxID lock
                 </p>
               </div>
             </form>

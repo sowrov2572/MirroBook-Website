@@ -26,6 +26,7 @@ import {
   where,
   getDocFromServer,
   serverTimestamp,
+  deleteField,
   Timestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -122,11 +123,20 @@ export function handleFirestoreError(
 
 // Collections
 const PRODUCTS_COLLECTION = 'products';
+const PRODUCT_SECRETS_COLLECTION = 'productSecrets';
 const SETTINGS_COLLECTION = 'settings';
 const ORDERS_COLLECTION = 'orders';
 const USERS_COLLECTION = 'users';
 const PAYMENT_CONFIG_DOC = 'paymentConfig';
 const ADMIN_CONFIG_DOC = 'adminConfig';
+
+function stripPaidUrl(product: ProductItem): ProductItem {
+  if (Number(product.price) > 0 && 'protectedUrl' in product) {
+    const { protectedUrl: _omit, ...rest } = product;
+    return rest as ProductItem;
+  }
+  return product;
+}
 
 function formatTimestampField(value: unknown): string {
   if (!value) return '';
@@ -292,7 +302,31 @@ export function subscribeToProducts(
             }
             return;
           }
-          cloudList.push(docSnap.data() as ProductItem);
+          const rawItem = docSnap.data() as ProductItem;
+          // Migrate legacy paid protectedUrl off public /products into /productSecrets when verified Admin is viewing
+          if (
+            isAdminVerified &&
+            Number(rawItem.price) > 0 &&
+            typeof rawItem.protectedUrl === 'string' &&
+            rawItem.protectedUrl.trim().length > 0
+          ) {
+            setDoc(
+              doc(db, PRODUCT_SECRETS_COLLECTION, rawItem.id),
+              {
+                id: rawItem.id,
+                protectedUrl: rawItem.protectedUrl.trim(),
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            )
+              .then(() =>
+                updateDoc(docSnap.ref, {
+                  protectedUrl: deleteField(),
+                }).catch(() => {})
+              )
+              .catch(() => {});
+          }
+          cloudList.push(stripPaidUrl(rawItem));
         });
 
         const filteredCloudList = cloudList.filter((cp) => !OBSOLETE_PRODUCT_IDS.has(cp.id));
@@ -310,29 +344,62 @@ export function subscribeToProducts(
               const lp = localMap.get(cp.id);
               if (lp && lp.updatedAt && (!cp.updatedAt || lp.updatedAt > cp.updatedAt)) {
                 saveProductToFirestore(lp).catch(() => {});
-                return lp;
+                return stripPaidUrl(lp);
               }
-              return cp;
+              return stripPaidUrl(cp);
             });
 
             filteredLocal.forEach((lp) => {
               if (!mergedList.some((p) => p.id === lp.id)) {
-                mergedList.push(lp);
+                mergedList.push(stripPaidUrl(lp));
                 saveProductToFirestore(lp).catch(() => {});
               }
             });
           }
 
-          localStorage.setItem('mirrorbook_products', JSON.stringify(mergedList));
+          localStorage.setItem(
+            'mirrorbook_products',
+            JSON.stringify(mergedList.map(stripPaidUrl))
+          );
         } catch {
           // fallback
         }
 
-        onUpdate(mergedList);
+        onUpdate(mergedList.map(stripPaidUrl));
       }
     },
     (err) => {
       handleFirestoreError(err, OperationType.GET, PRODUCTS_COLLECTION);
+    }
+  );
+}
+
+/**
+ * Admin-only real-time listener for paid product download URLs in /productSecrets.
+ * Never subscribe for unauthenticated or non-admin users.
+ */
+export function subscribeToProductSecrets(
+  onUpdate: (secretsMap: Record<string, string>) => void
+): () => void {
+  const colRef = collection(db, PRODUCT_SECRETS_COLLECTION);
+  const q = query(colRef);
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const secretsMap: Record<string, string> = {};
+      snapshot.forEach((snap) => {
+        const data = snap.data();
+        const id = String(data.id || snap.id);
+        const url = typeof data.protectedUrl === 'string' ? data.protectedUrl.trim() : '';
+        if (id && url) {
+          secretsMap[id] = url;
+        }
+      });
+      onUpdate(secretsMap);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, PRODUCT_SECRETS_COLLECTION);
     }
   );
 }
@@ -351,12 +418,14 @@ export const OBSOLETE_PRODUCT_IDS = new Set([
 
 /**
  * Saves or updates a single product in Firestore (Admin only).
+ * Paid protectedUrl values are written exclusively to /productSecrets/{id} and stripped from public /products/{id}.
  */
 export async function saveProductToFirestore(product: ProductItem): Promise<void> {
   if (OBSOLETE_PRODUCT_IDS.has(product.id)) {
     return;
   }
   const docPath = `${PRODUCTS_COLLECTION}/${product.id}`;
+  const priceNum = Number(product.price) || 0;
   try {
     const docRef = doc(db, PRODUCTS_COLLECTION, product.id);
     const cleaned: Record<string, any> = {
@@ -365,19 +434,37 @@ export async function saveProductToFirestore(product: ProductItem): Promise<void
       category: product.category || 'General',
       title: product.title || '',
       description: product.description || 'MirrorBook digital asset',
-      price: Number(product.price) || 0,
-      priceDisplay: product.priceDisplay || `৳${(Number(product.price) || 0).toLocaleString()}`,
-      protectedUrl: product.protectedUrl || '',
+      price: priceNum,
+      priceDisplay: product.priceDisplay || `৳${priceNum.toLocaleString()}`,
       thumbnailUrl: product.thumbnailUrl || '',
       createdAt: product.createdAt || new Date().toISOString().split('T')[0],
       updatedAt: product.updatedAt || new Date().toISOString(),
     };
+    if (priceNum === 0) {
+      cleaned.protectedUrl = product.protectedUrl || '';
+    } else {
+      cleaned.protectedUrl = deleteField();
+    }
     if (product.period) cleaned.period = product.period;
     if (product.duration) cleaned.duration = product.duration;
     if (product.instructor) cleaned.instructor = product.instructor;
     if (typeof product.featured === 'boolean') cleaned.featured = product.featured;
 
     await setDoc(docRef, cleaned, { merge: true });
+
+    if (priceNum > 0 && product.protectedUrl && product.protectedUrl.trim()) {
+      await setDoc(
+        doc(db, PRODUCT_SECRETS_COLLECTION, product.id),
+        {
+          id: product.id,
+          protectedUrl: product.protectedUrl.trim(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } else if (priceNum > 0 && product.protectedUrl === '') {
+      await deleteDoc(doc(db, PRODUCT_SECRETS_COLLECTION, product.id)).catch(() => {});
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, docPath);
     throw err;
@@ -385,13 +472,13 @@ export async function saveProductToFirestore(product: ProductItem): Promise<void
 }
 
 /**
- * Deletes a product from Firestore (Admin only).
+ * Deletes a product (and any associated secret URL) from Firestore (Admin only).
  */
 export async function deleteProductFromFirestore(id: string): Promise<void> {
   const docPath = `${PRODUCTS_COLLECTION}/${id}`;
   try {
-    const docRef = doc(db, PRODUCTS_COLLECTION, id);
-    await deleteDoc(docRef);
+    await deleteDoc(doc(db, PRODUCTS_COLLECTION, id));
+    await deleteDoc(doc(db, PRODUCT_SECRETS_COLLECTION, id)).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, docPath);
     throw err;
@@ -509,7 +596,7 @@ export async function savePaymentConfigToFirestore(config: PaymentConfig): Promi
 }
 
 /**
- * Saves customer order in Firestore.
+ * Saves a strictly Pending customer order in Firestore (Verified/Completed states can only be written by backend Admin SDK or verified Admin).
  */
 export async function saveOrderToFirestore(order: Order): Promise<void> {
   const docPath = `${ORDERS_COLLECTION}/${order.id}`;
@@ -526,12 +613,11 @@ export async function saveOrderToFirestore(order: Order): Promise<void> {
       senderAccount: order.senderAccount || '',
       trxId: order.trxId,
       createdAt: order.createdAt || new Date().toISOString(),
-      status: order.status || 'Pending',
-      downloadUrl: order.downloadUrl || '',
+      status: 'Pending',
+      downloadUrl: '',
     };
-    if (order.userId) payload.userId = order.userId;
+    if (auth.currentUser?.uid) payload.userId = auth.currentUser.uid;
     if (order.productId) payload.productId = order.productId;
-    if (order.licenseKey) payload.licenseKey = order.licenseKey;
 
     await setDoc(docRef, payload);
   } catch (err) {
@@ -937,35 +1023,11 @@ export function subscribeToUserPurchases(
 }
 
 /**
- * Records a purchased item directly to the user's personal vault (ensures parent user doc exists first).
+ * Purchase records under users/{uid}/purchases are strictly written server-side by the Firebase Admin SDK
+ * inside /api/orders/submit-and-verify or /api/orders/admin-approve. Client writes are blocked by firestore.rules.
  */
-export async function recordUserPurchase(userId: string, purchase: UserPurchase): Promise<void> {
-  const docPath = `${USERS_COLLECTION}/${userId}/purchases/${purchase.id}`;
-  try {
-    if (auth.currentUser && auth.currentUser.uid === userId) {
-      await syncUserProfileToFirestore(auth.currentUser);
-    }
-    const licenseKey =
-      purchase.licenseKey ||
-      generateDeterministicLicenseKey(purchase.title, auth.currentUser?.email, purchase.trxId || purchase.id);
-
-    const payload: UserPurchase = {
-      id: purchase.id,
-      productId: purchase.productId || purchase.id,
-      title: purchase.title,
-      category: purchase.category || 'Plugin',
-      downloadUrl: purchase.downloadUrl || '',
-      purchasedAt: purchase.purchasedAt || new Date().toISOString(),
-      trxId: purchase.trxId || '',
-      licenseKey,
-    };
-
-    const docRef = doc(db, USERS_COLLECTION, userId, 'purchases', purchase.id);
-    await setDoc(docRef, payload, { merge: true });
-  } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, docPath);
-    throw err;
-  }
+export async function recordUserPurchase(_userId: string, _purchase: UserPurchase): Promise<void> {
+  throw new Error('Client-side purchase writes are disabled for security. Verified purchases are provisioned by the backend.');
 }
 
 /**

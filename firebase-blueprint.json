@@ -2,7 +2,7 @@
   "entities": {
     "Product": {
       "title": "Product",
-      "description": "A digital product, plugin, software, tutorial, or agency package",
+      "description": "A digital product, plugin, software, tutorial, or agency package (paid items exclude protectedUrl)",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -22,6 +22,17 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "type", "category", "title", "description", "price"]
+    },
+    "ProductSecret": {
+      "title": "ProductSecret",
+      "description": "Admin-only & Admin-SDK-only protected download/access URLs for paid catalog items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "protectedUrl": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "protectedUrl"]
     },
     "PaymentConfig": {
       "title": "PaymentConfig",
@@ -50,6 +61,58 @@
         "updatedAt": { "type": "string" }
       }
     },
+    "BkashTransaction": {
+      "title": "BkashTransaction",
+      "description": "Trusted server-side SMS webhook payment event recorded exclusively via Firebase Admin SDK",
+      "type": "object",
+      "properties": {
+        "trxId": { "type": "string" },
+        "gateway": { "type": "string" },
+        "transactionType": { "type": "string" },
+        "amount": { "type": "number" },
+        "sender": { "type": "string" },
+        "recipientAccount": { "type": "string" },
+        "ownerBkashNumber": { "type": "string" },
+        "rawText": { "type": "string" },
+        "rawTextHash": { "type": "string" },
+        "smsTimestamp": { "type": "string" },
+        "receivedAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["UNUSED", "USED"] },
+        "verifiedByWebhook": { "type": "boolean" },
+        "usedByOrderId": { "type": "string" },
+        "usedByUid": { "type": "string" },
+        "usedByEmail": { "type": "string" },
+        "redeemedAt": { "type": "string" }
+      },
+      "required": ["trxId", "gateway", "amount", "status", "verifiedByWebhook", "receivedAt"]
+    },
+    "RedeemedTransaction": {
+      "title": "RedeemedTransaction",
+      "description": "Atomic transaction lock record preventing duplicate TrxID redemption across orders",
+      "type": "object",
+      "properties": {
+        "trxId": { "type": "string" },
+        "orderId": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "amount": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["trxId", "orderId", "amount", "createdAt"]
+    },
+    "PaymentSession": {
+      "title": "PaymentSession",
+      "description": "Server-only payment checkout verification session state",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "userId": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "status", "createdAt"]
+    },
     "Order": {
       "title": "Order",
       "description": "A customer purchase or payment verification order",
@@ -64,13 +127,17 @@
         "productId": { "type": "string" },
         "itemName": { "type": "string" },
         "itemPrice": { "type": "string" },
+        "canonicalAmount": { "type": "number" },
         "paymentMethod": { "type": "string" },
         "senderAccount": { "type": "string" },
         "trxId": { "type": "string" },
         "createdAt": { "type": "string" },
-        "status": { "type": "string", "enum": ["Pending", "Verified", "Completed"] },
+        "status": { "type": "string", "enum": ["Pending", "Verified", "Paid", "Completed"] },
         "downloadUrl": { "type": "string" },
-        "licenseKey": { "type": "string" }
+        "licenseKey": { "type": "string" },
+        "verificationNote": { "type": "string" },
+        "approvedBy": { "type": "string" },
+        "approvedAt": { "type": "string" }
       },
       "required": ["id", "customerName", "customerEmail", "itemName", "trxId", "status"]
     },
@@ -96,7 +163,7 @@
     },
     "Purchase": {
       "title": "Purchase",
-      "description": "A secured digital asset license unlocked for an authenticated customer",
+      "description": "A secured digital asset license unlocked exclusively by Firebase Admin SDK for an authenticated customer",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -142,7 +209,23 @@
   "firestore": {
     "/products/{productId}": {
       "schema": "Product",
-      "description": "Public catalog of agency packages, plugins, software, tutorials, and courses"
+      "description": "Public catalog of agency packages, plugins, software, tutorials, and courses (never stores paid protectedUrl)"
+    },
+    "/productSecrets/{productId}": {
+      "schema": "ProductSecret",
+      "description": "Admin-only protected download URLs for paid digital products"
+    },
+    "/bkashTransactions/{trxId}": {
+      "schema": "BkashTransaction",
+      "description": "Server-only incoming bKash SMS webhook events verified atomically by Firebase Admin SDK"
+    },
+    "/redeemedTrxIds/{trxId}": {
+      "schema": "RedeemedTransaction",
+      "description": "Server-only transaction redemption lock documents preventing TrxID reuse"
+    },
+    "/paymentSessions/{sessionId}": {
+      "schema": "PaymentSession",
+      "description": "Server-only checkout verification sessions"
     },
     "/settings/{settingId}": {
       "schema": "PaymentConfig",
@@ -162,7 +245,7 @@
     },
     "/users/{userId}/purchases/{purchaseId}": {
       "schema": "Purchase",
-      "description": "Secured user downloads and digital licenses locked to their Firebase account"
+      "description": "Secured user downloads and digital licenses written strictly by Firebase Admin SDK"
     },
     "/users/{userId}/downloads/{downloadId}": {
       "schema": "DownloadLog",

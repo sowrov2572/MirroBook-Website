@@ -20,9 +20,7 @@ import {
   Settings,
   Send,
   Smartphone,
-  Building2,
   Bot,
-  Play,
   CheckCircle2,
   Zap,
   MessageSquare,
@@ -32,19 +30,17 @@ import { Order, ProductItem, ProductType, PaymentConfig, AppUser, SheetPaymentLo
 import {
   COMPLETE_PAYMENT_GOOGLE_APPS_SCRIPT,
   sendTelegramNotification,
-  simulatePaymentSMS,
   loadPaymentConfig,
-  DEFAULT_PAYMENT_CONFIG,
-  fetchGoogleSheetOrders,
-  fetchGoogleSheetPayments,
-  verifyPaymentWithSheet,
+  fetchBackendPaymentSmsLogs,
 } from '../utils/paymentService';
+import { auth } from '../utils/firebase';
 
 interface AdminModalProps {
   isOpen: boolean;
   onClose: () => void;
   orders: Order[];
   onDeleteOrder: (id: string) => void;
+  onApproveOrder?: (orderId: string) => Promise<{ success: boolean; message: string }>;
   onClearOrders: () => void;
   products: ProductItem[];
   onAddProduct: (product: ProductItem) => void;
@@ -64,18 +60,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onClose,
   orders,
   onDeleteOrder,
+  onApproveOrder,
   onClearOrders,
   products,
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
-  onSyncProducts,
+  onSyncProducts: _onSyncProducts,
   sheetsUrl,
   onSaveSheetsUrl,
   paymentConfig: passedPaymentConfig,
   onSavePaymentConfig,
   currentUser,
-  onRefreshOrdersFromSheet,
+  onRefreshOrdersFromSheet: _onRefreshOrdersFromSheet,
 }) => {
   const paymentConfig = passedPaymentConfig || loadPaymentConfig();
   const isOwnerVerified = isVerifiedAdminUser(currentUser);
@@ -149,12 +146,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [configSavedToast, setConfigSavedToast] = useState(false);
   const [isTestingTelegram, setIsTestingTelegram] = useState(false);
   const [telegramTestResult, setTelegramTestResult] = useState<string | null>(null);
-  const [isSimulatingSMS, setIsSimulatingSMS] = useState(false);
-  const [smsSimulationResult, setSmsSimulationResult] = useState<string | null>(null);
-  const [sampleSimTrxId, setSampleSimTrxId] = useState('BK200TEST');
-  const [sampleSimAmount, setSampleSimAmount] = useState(200);
-  const [isTestingVerify, setIsTestingVerify] = useState(false);
-  const [verifyTestResult, setVerifyTestResult] = useState<string | null>(null);
+  const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
 
   // Synchronize when paymentConfig prop updates
   useEffect(() => {
@@ -179,16 +171,35 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setCfgWhatsApp(paymentConfig.whatsAppNumber);
   }, [paymentConfig, sheetsUrl]);
 
-  // Auto fetch Google Sheet payments when opened by verified studio owner
-  useEffect(() => {
-    if (isOpen && isOwnerVerified && cfgWebAppUrl && cfgWebAppUrl.trim().startsWith('http')) {
-      fetchGoogleSheetPayments(cfgWebAppUrl)
-        .then((logs) => {
-          if (logs.length > 0) setSheetSmsLogs(logs);
-        })
-        .catch(() => {});
+  // Auto fetch authenticated SMS Gateway payments from Vercel backend (/api/payment-sms/logs)
+  const loadSmsLogsFromBackend = async (showNotice = false) => {
+    if (!isOwnerVerified || !auth.currentUser) return;
+    setIsSyncingAll(true);
+    if (showNotice) setSyncFeedback(null);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const logs = await fetchBackendPaymentSmsLogs(idToken);
+      setSheetSmsLogs(logs);
+      if (showNotice) {
+        setSyncFeedback(`Loaded ${logs.length} Personal bKash SMS webhook record(s) from Firestore.`);
+      }
+    } catch (err: unknown) {
+      if (showNotice) {
+        setSyncFeedback(err instanceof Error ? err.message : 'Failed to fetch SMS webhook logs.');
+      }
+    } finally {
+      setIsSyncingAll(false);
+      if (showNotice) {
+        setTimeout(() => setSyncFeedback(null), 4500);
+      }
     }
-  }, [isOpen, isOwnerVerified, cfgWebAppUrl]);
+  };
+
+  useEffect(() => {
+    if (isOpen && isOwnerVerified && auth.currentUser) {
+      loadSmsLogsFromBackend(false).catch(() => {});
+    }
+  }, [isOpen, isOwnerVerified]);
 
   // Reset view states when modal closes
   useEffect(() => {
@@ -199,7 +210,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       setEditingProduct(null);
       setInlinePriceId(null);
       setTelegramTestResult(null);
-      setSmsSimulationResult(null);
       setConfigSavedToast(false);
       setSyncFeedback(null);
     }
@@ -208,38 +218,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   if (!isOpen) return null;
 
   const handleSyncAllFromSheet = async () => {
-    setIsSyncingAll(true);
-    setSyncFeedback(null);
-
-    const targetUrl = cfgWebAppUrl || sheetsUrl;
-    if (!targetUrl || !targetUrl.trim().startsWith('http')) {
-      setIsSyncingAll(false);
-      setSyncFeedback('Please configure your Google Apps Script Web App URL in the Setup tab first.');
-      return;
-    }
-
-    try {
-      const [fetchedOrders, fetchedPayments] = await Promise.all([
-        fetchGoogleSheetOrders(targetUrl),
-        fetchGoogleSheetPayments(targetUrl),
-      ]);
-
-      if (fetchedOrders.length > 0 && onRefreshOrdersFromSheet) {
-        onRefreshOrdersFromSheet(fetchedOrders);
-      }
-
-      if (fetchedPayments.length > 0) {
-        setSheetSmsLogs(fetchedPayments);
-      }
-
-      setSyncFeedback(`Successfully synchronized: ${fetchedOrders.length} Orders & ${fetchedPayments.length} SMS Payments from Google Sheet.`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Sync failed';
-      setSyncFeedback(`Sync notice: ${msg}`);
-    } finally {
-      setIsSyncingAll(false);
-      setTimeout(() => setSyncFeedback(null), 5000);
-    }
+    await loadSmsLogsFromBackend(true);
   };
 
   const handleCopy = (text: string, key: string) => {
@@ -305,51 +284,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setTelegramTestResult(res.message);
   };
 
-  // Simulate Payment SMS to Google Apps Script Web App
-  const handleSimulateSMS = async () => {
-    setIsSimulatingSMS(true);
-    setSmsSimulationResult(null);
-
-    const amt = Number(sampleSimAmount) || 200;
-    const res = await simulatePaymentSMS(cfgWebAppUrl, sampleSimTrxId.trim().toUpperCase(), amt);
-    setIsSimulatingSMS(false);
-    setSmsSimulationResult(res.message);
-  };
-
-  // Live Test Anti-Cheat Verification API directly
-  const handleTestVerificationApi = async () => {
-    setIsTestingVerify(true);
-    setVerifyTestResult(null);
-
-    const cleanTrx = sampleSimTrxId.trim().toUpperCase();
-    const amt = Number(sampleSimAmount) || 200;
-    const res = await verifyPaymentWithSheet(
-      cfgWebAppUrl,
-      cleanTrx,
-      amt,
-      'ADMIN-TEST-ORD',
-      currentUser?.email || 'khansaheb2572@gmail.com'
-    );
-
-    setIsTestingVerify(false);
-    if (res.verified) {
-      setVerifyTestResult(
-        `✓ VERIFIED: ৳${res.receivedAmount || amt} confirmed for TrxID ${cleanTrx}. TrxID is now marked USED in Sheet.`
-      );
-    } else if (res.alreadyUsed) {
-      setVerifyTestResult(
-        `✗ ANTI-CHEAT REJECTED: Single-use check passed! This TrxID (${cleanTrx}) was already redeemed.`
-      );
-    } else if (res.amountMismatch) {
-      setVerifyTestResult(
-        `✗ AMOUNT MISMATCH REJECTED: Required ৳${res.requiredAmount || amt}, but Sheet has ৳${res.receivedAmount}.`
-      );
-    } else if (res.notFound) {
-      setVerifyTestResult(
-        `✗ NOT FOUND: TrxID (${cleanTrx}) was not found in Payments sheet. Please simulate or forward SMS first.`
-      );
-    } else {
-      setVerifyTestResult(`✗ RESULT: ${res.message}`);
+  // Trigger server-side Admin Approve API for Pending orders
+  const handleAdminApproveClick = async (orderId: string) => {
+    if (!onApproveOrder) return;
+    setApprovingOrderId(orderId);
+    setSyncFeedback(null);
+    try {
+      const res = await onApproveOrder(orderId);
+      setSyncFeedback(res.message);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    } finally {
+      setApprovingOrderId(null);
     }
   };
 
@@ -542,22 +487,22 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-in fade-in duration-200">
-      <div className="relative w-full max-w-6xl max-h-[92vh] flex flex-col bg-[#0F0F0F] border border-white/10 rounded-2xl overflow-hidden shadow-2xl my-4 text-left">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/85 backdrop-blur-xl animate-in fade-in duration-200">
+      <div className="relative w-full max-w-6xl max-h-[92vh] flex flex-col glossy-card bg-[#121614] border border-white/[0.09] rounded-2xl overflow-hidden shadow-2xl my-4 text-left">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-[#141414] shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-[#71B913] shadow-[0_0_8px_#71B913]" />
-            <span className="text-xs uppercase tracking-normal text-[#71B913] font-mono">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.09] bg-[#171C19] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Shield size={14} className="text-[#B7F34A]" />
+            <span className="text-xs uppercase tracking-normal text-[#B7F34A] font-mono font-semibold">
               Admin Portal
             </span>
-            <span className="text-xs text-[#555555]">/</span>
-            <span className="text-xs text-[#888888]">Enterprise Control Desk</span>
+            <span className="text-xs text-[#707A72]">/</span>
+            <span className="text-xs text-[#A1AAA2]">Enterprise Control Desk</span>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full glass-pill hover:bg-white/10 text-[#888888] hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-xl hover:bg-white/10 text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors flex items-center justify-center cursor-pointer"
             aria-label="Close"
           >
             <X size={16} />
@@ -572,17 +517,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </div>
 
             <div>
-              <h4 className="font-display text-2xl font-bold text-white mb-2">
+              <h4 className="font-display text-2xl font-bold text-[#F5F7F2] mb-2">
                 Access Denied
               </h4>
-              <p className="text-xs text-[#AAAAAA] leading-relaxed">
+              <p className="text-xs text-[#A1AAA2] leading-relaxed">
                 {currentUser?.email ? (
                   <span>
-                    Current account (<strong className="text-white">{currentUser.email}</strong>) does not have Studio Owner administrator privileges.
+                    Current account (<strong className="text-[#F5F7F2]">{currentUser.email}</strong>) does not have Studio Owner administrator privileges.
                   </span>
                 ) : (
                   <span>
-                    Please sign in at the dedicated Studio Owner portal (<code className="text-[#71B913]">/admin/login</code>) with a verified administrator Google account.
+                    Please sign in at the dedicated Studio Owner portal (<code className="text-[#B7F34A]">/admin/login</code>) with a verified administrator Google account.
                   </span>
                 )}
               </p>
@@ -591,7 +536,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-3 text-xs font-semibold uppercase tracking-normal bg-white/10 hover:bg-white/15 text-white rounded-xl transition-all cursor-pointer"
+              className="w-full py-3 text-xs font-semibold uppercase tracking-normal glossy-btn-secondary rounded-xl cursor-pointer"
             >
               Close
             </button>
@@ -600,18 +545,18 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           /* Authenticated Admin Workspace */
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* 3 Main Tabs: Orders, Manage Products, Payment & Automation Setup */}
-            <div className="flex items-center justify-between px-6 pt-3 pb-0 border-b border-white/[0.08] bg-[#121212] shrink-0">
+            <div className="flex items-center justify-between px-6 pt-3 pb-0 border-b border-white/[0.09] bg-[#171C19] shrink-0">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab('orders')}
                   className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-normal transition-all border-b-2 cursor-pointer ${
                     activeTab === 'orders'
-                      ? 'border-[#71B913] text-white'
-                      : 'border-transparent text-[#888888] hover:text-white'
+                      ? 'border-[#B7F34A] text-[#F5F7F2]'
+                      : 'border-transparent text-[#A1AAA2] hover:text-[#F5F7F2]'
                   }`}
                 >
                   <span>Orders</span>
-                  <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono bg-[#1E1E1E] text-[#AAAAAA] rounded">
+                  <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono bg-[#0B0D0C] text-[#A1AAA2] rounded">
                     {orders.length}
                   </span>
                 </button>
@@ -620,12 +565,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   onClick={() => setActiveTab('products')}
                   className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-normal transition-all border-b-2 cursor-pointer ${
                     activeTab === 'products'
-                      ? 'border-[#71B913] text-white'
-                      : 'border-transparent text-[#888888] hover:text-white'
+                      ? 'border-[#B7F34A] text-[#F5F7F2]'
+                      : 'border-transparent text-[#A1AAA2] hover:text-[#F5F7F2]'
                   }`}
                 >
                   <span>Manage Products</span>
-                  <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono bg-[#1E1E1E] text-[#AAAAAA] rounded">
+                  <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono bg-[#0B0D0C] text-[#A1AAA2] rounded">
                     {products.length}
                   </span>
                 </button>
@@ -634,16 +579,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   onClick={() => setActiveTab('automation')}
                   className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-normal transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
                     activeTab === 'automation'
-                      ? 'border-[#71B913] text-white'
-                      : 'border-transparent text-[#888888] hover:text-white'
+                      ? 'border-[#B7F34A] text-[#F5F7F2]'
+                      : 'border-transparent text-[#A1AAA2] hover:text-[#F5F7F2]'
                   }`}
                 >
-                  <Settings size={13} className={activeTab === 'automation' ? 'text-[#71B913]' : ''} />
+                  <Settings size={13} className={activeTab === 'automation' ? 'text-[#B7F34A]' : ''} />
                   <span>Payment &amp; Automation Setup</span>
                 </button>
               </div>
 
-              <span className="px-3 py-1 text-[10px] font-mono uppercase tracking-normal bg-[#71B913]/15 text-[#71B913] border border-[#71B913]/30 rounded-lg mb-2">
+              <span className="px-3 py-1 text-[10px] font-mono uppercase tracking-normal bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30 rounded-lg mb-2">
                 Verified Admin
               </span>
             </div>
@@ -653,13 +598,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               <div className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1">
                 {/* Metrics Summary Strip */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-[#141414] border border-white/10 rounded-xl p-3.5">
-                    <span className="text-[10px] text-[#888888] uppercase font-mono block">Customer Orders</span>
-                    <span className="text-xl font-display font-bold text-white tabular-nums">{orders.length}</span>
+                  <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-3.5">
+                    <span className="text-[10px] text-[#A1AAA2] uppercase font-mono block">Customer Orders</span>
+                    <span className="text-xl font-display font-bold text-[#F5F7F2] tabular-nums">{orders.length}</span>
                   </div>
-                  <div className="bg-[#141414] border border-white/10 rounded-xl p-3.5">
-                    <span className="text-[10px] text-[#888888] uppercase font-mono block">Estimated Revenue</span>
-                    <span className="text-xl font-display font-bold text-[#71B913] tabular-nums">
+                  <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-3.5">
+                    <span className="text-[10px] text-[#A1AAA2] uppercase font-mono block">Estimated Revenue</span>
+                    <span className="text-xl font-display font-bold text-[#B7F34A] tabular-nums">
                       ৳{orders.reduce((sum, o) => {
                         const sanitized = (o.itemPrice || '').replace(/,/g, '');
                         const m = sanitized.match(/\d+(?:\.\d+)?/);
@@ -667,14 +612,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       }, 0).toLocaleString()}
                     </span>
                   </div>
-                  <div className="bg-[#141414] border border-white/10 rounded-xl p-3.5">
-                    <span className="text-[10px] text-[#888888] uppercase font-mono block">Verified Status</span>
-                    <span className="text-xl font-display font-bold text-white tabular-nums">
-                      {orders.filter((o) => o.status === 'Verified').length}
+                  <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-3.5">
+                    <span className="text-[10px] text-[#A1AAA2] uppercase font-mono block">Verified / Completed</span>
+                    <span className="text-xl font-display font-bold text-[#F5F7F2] tabular-nums">
+                      {orders.filter((o) => o.status === 'Verified' || o.status === 'Completed' || o.status === 'Paid').length}
                     </span>
                   </div>
-                  <div className="bg-[#141414] border border-white/10 rounded-xl p-3.5">
-                    <span className="text-[10px] text-[#888888] uppercase font-mono block">SMS Gateway Logs</span>
+                  <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-3.5">
+                    <span className="text-[10px] text-[#A1AAA2] uppercase font-mono block">SMS Gateway Logs</span>
                     <span className="text-xl font-display font-bold text-yellow-400 tabular-nums">
                       {sheetSmsLogs.length}
                     </span>
@@ -682,15 +627,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
 
                 {/* Sub-tab Navigation and Actions */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.08]">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.09]">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setOrdersSubTab('orders')}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                         ordersSubTab === 'orders'
-                          ? 'bg-[#71B913] text-black shadow-sm'
-                          : 'bg-white/5 text-[#888888] hover:text-white'
+                          ? 'bg-[#B7F34A] text-black shadow-sm'
+                          : 'bg-[#171C19] text-[#A1AAA2] hover:text-[#F5F7F2]'
                       }`}
                     >
                       <span>Customer Purchases ({filteredOrders.length})</span>
@@ -700,8 +645,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       onClick={() => setOrdersSubTab('sms_logs')}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                         ordersSubTab === 'sms_logs'
-                          ? 'bg-[#71B913] text-black shadow-sm'
-                          : 'bg-white/5 text-[#888888] hover:text-white'
+                          ? 'bg-[#B7F34A] text-black shadow-sm'
+                          : 'bg-[#171C19] text-[#A1AAA2] hover:text-[#F5F7F2]'
                       }`}
                     >
                       <Smartphone size={12} />
@@ -710,16 +655,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Live Sync All Button */}
+                    {/* Refresh Backend SMS Logs Button */}
                     <button
                       type="button"
                       onClick={handleSyncAllFromSheet}
                       disabled={isSyncingAll}
-                      className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#181818] border border-white/15 hover:border-[#71B913] text-white rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors"
-                      title="Fetch live records from Google Sheet and Firestore"
+                      className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#171C19] border border-white/[0.09] hover:border-[#B7F34A] text-[#F5F7F2] rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors"
+                      title="Refresh incoming bKash SMS webhook logs from Firestore"
                     >
-                      <RefreshCw size={12} className={isSyncingAll ? 'animate-spin text-[#71B913]' : 'text-[#71B913]'} />
-                      <span>{isSyncingAll ? 'Syncing...' : 'Sync with Google Sheet'}</span>
+                      <RefreshCw size={12} className={isSyncingAll ? 'animate-spin text-[#B7F34A]' : 'text-[#B7F34A]'} />
+                      <span>{isSyncingAll ? 'Refreshing...' : 'Refresh SMS Logs'}</span>
                     </button>
 
                     {/* Open Google Sheet Link */}
@@ -728,10 +673,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         href={cfgSpreadsheetUrl || 'https://sheets.google.com'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-white/5 hover:bg-white/10 border border-white/15 text-white rounded-lg flex items-center gap-1.5 transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#171C19] hover:bg-white/10 border border-white/[0.09] text-[#F5F7F2] rounded-lg flex items-center gap-1.5 transition-colors"
                         title="Open connected Google Sheet database in Google Drive"
                       >
-                        <ExternalLink size={12} className="text-[#71B913]" />
+                        <ExternalLink size={12} className="text-[#B7F34A]" />
                         <span>Open Sheet in Drive</span>
                       </a>
                     )}
@@ -739,7 +684,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <button
                       onClick={exportCSV}
                       disabled={orders.length === 0}
-                      className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#141414] border border-white/10 hover:border-[#71B913] rounded-lg text-white disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#171C19] border border-white/[0.09] hover:border-[#B7F34A] rounded-lg text-[#F5F7F2] disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Download size={12} />
                       <span>CSV</span>
@@ -748,7 +693,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <button
                       onClick={onClearOrders}
                       disabled={orders.length === 0}
-                      className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#141414] border border-red-950 text-red-400 hover:bg-red-950/30 rounded-lg disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 text-xs font-medium uppercase tracking-normal bg-[#171C19] border border-red-950 text-red-400 hover:bg-red-950/30 rounded-lg disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <Trash2 size={12} />
                       <span>Clear</span>
@@ -758,9 +703,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                 {/* Sync Feedback Toast */}
                 {syncFeedback && (
-                  <div className="p-3 bg-[#71B913]/10 border border-[#71B913]/30 rounded-xl text-xs text-[#71B913] flex items-center justify-between animate-in fade-in">
+                  <div className="p-3 bg-[#B7F34A]/10 border border-[#B7F34A]/30 rounded-xl text-xs text-[#B7F34A] flex items-center justify-between animate-in fade-in">
                     <span>{syncFeedback}</span>
-                    <button type="button" onClick={() => setSyncFeedback(null)} className="text-[#888888] hover:text-white">
+                    <button type="button" onClick={() => setSyncFeedback(null)} className="text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer">
                       <X size={12} />
                     </button>
                   </div>
@@ -773,24 +718,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <div className="relative flex-1 max-w-sm">
                         <Search
                           size={14}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]"
                         />
                         <input
                           type="text"
                           value={orderSearchTerm}
                           onChange={(e) => setOrderSearchTerm(e.target.value)}
                           placeholder="Search phone, customer name, email, TrxID..."
-                          className="bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none w-full transition-colors"
+                          className="bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-4 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none w-full transition-colors"
                         />
                       </div>
-                      <span className="text-xs text-[#777777] font-mono tabular-nums">
+                      <span className="text-xs text-[#707A72] font-mono tabular-nums">
                         Showing {filteredOrders.length} order{filteredOrders.length === 1 ? '' : 's'}
                       </span>
                     </div>
 
-                    <div className="border border-white/10 rounded-xl overflow-x-auto">
+                    <div className="border border-white/[0.09] rounded-xl overflow-x-auto">
                       <table className="w-full text-left text-xs whitespace-nowrap">
-                        <thead className="bg-[#141414] border-b border-white/10 uppercase tracking-normal font-mono text-[#888888]">
+                        <thead className="bg-[#171C19] border-b border-white/[0.09] uppercase tracking-normal font-mono text-[#A1AAA2]">
                           <tr>
                             <th className="py-3 px-4 font-normal">Order ID</th>
                             <th className="py-3 px-4 font-normal">Status</th>
@@ -803,10 +748,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             <th className="py-3 px-4 font-normal text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-white/[0.06]">
                           {filteredOrders.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="py-12 text-center text-[#666666]">
+                              <td colSpan={9} className="py-12 text-center text-[#707A72]">
                                 No customer orders recorded yet. When a visitor places an order, their payment and customer details will appear here and sync to your Google Sheet.
                               </td>
                             </tr>
@@ -815,14 +760,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               const cleanPhone = (order.customerPhone || '').replace(/[^0-9]/g, '');
                               return (
                                 <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
-                                  <td className="py-3 px-4 font-mono font-semibold text-[#71B913]">
+                                  <td className="py-3 px-4 font-mono font-semibold text-[#B7F34A]">
                                     {order.id}
                                   </td>
                                   <td className="py-3 px-4">
                                     <span
                                       className={`px-2 py-0.5 rounded text-[10px] font-mono ${
-                                        order.status === 'Verified'
-                                          ? 'bg-[#71B913]/15 text-[#71B913] border border-[#71B913]/30'
+                                        order.status === 'Verified' || order.status === 'Completed' || order.status === 'Paid'
+                                          ? 'bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30'
                                           : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                                       }`}
                                     >
@@ -830,10 +775,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">
-                                    <div className="font-semibold text-white">{order.customerName}</div>
-                                    <div className="text-[11px] text-[#AAAAAA]">{order.customerEmail}</div>
+                                    <div className="font-semibold text-[#F5F7F2]">{order.customerName}</div>
+                                    <div className="text-[11px] text-[#A1AAA2]">{order.customerEmail}</div>
                                     <div className="flex items-center gap-2 pt-0.5">
-                                      <span className="text-[11px] text-[#71B913] font-mono font-semibold">
+                                      <span className="text-[11px] text-[#B7F34A] font-mono font-semibold">
                                         {order.customerPhone}
                                       </span>
                                       {cleanPhone && (
@@ -850,40 +795,53 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                       )}
                                     </div>
                                   </td>
-                                  <td className="py-3 px-4 text-white font-medium max-w-[180px] truncate">
+                                  <td className="py-3 px-4 text-[#F5F7F2] font-medium max-w-[180px] truncate">
                                     {order.itemName}
                                   </td>
-                                  <td className="py-3 px-4 font-mono font-bold text-white tabular-nums">
+                                  <td className="py-3 px-4 font-mono font-bold text-[#F5F7F2] tabular-nums">
                                     {order.itemPrice}
                                   </td>
                                   <td className="py-3 px-4">
-                                    <span className="font-mono text-white block">{order.paymentMethod}</span>
-                                    <span className="text-[10px] text-[#888888] font-mono block">
+                                    <span className="font-mono text-[#F5F7F2] block">{order.paymentMethod}</span>
+                                    <span className="text-[10px] text-[#A1AAA2] font-mono block">
                                       Sender: {order.senderAccount || order.customerPhone}
                                     </span>
                                   </td>
                                   <td className="py-3 px-4">
-                                    <div className="flex items-center gap-1 font-mono font-bold text-[#71B913]">
+                                    <div className="flex items-center gap-1 font-mono font-bold text-[#B7F34A]">
                                       <span>{order.trxId}</span>
                                       <button
                                         type="button"
                                         onClick={() => handleCopy(order.trxId, `trx_${order.id}`)}
-                                        className="text-[#666666] hover:text-white"
+                                        className="text-[#707A72] hover:text-[#F5F7F2] cursor-pointer"
                                         title="Copy TrxID"
                                       >
-                                        {copiedKey === `trx_${order.id}` ? <Check size={11} className="text-[#71B913]" /> : <Copy size={11} />}
+                                        {copiedKey === `trx_${order.id}` ? <Check size={11} className="text-[#B7F34A]" /> : <Copy size={11} />}
                                       </button>
                                     </div>
                                   </td>
-                                  <td className="py-3 px-4 text-[#777777] font-mono">{order.createdAt}</td>
+                                  <td className="py-3 px-4 text-[#707A72] font-mono">{order.createdAt}</td>
                                   <td className="py-3 px-4 text-right">
-                                    <button
-                                      onClick={() => onDeleteOrder(order.id)}
-                                      className="p-1.5 text-[#666666] hover:text-red-400 hover:bg-red-950/20 rounded transition-colors cursor-pointer"
-                                      title="Delete Order"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      {order.status === 'Pending' && onApproveOrder && (
+                                        <button
+                                          type="button"
+                                          disabled={approvingOrderId === order.id}
+                                          onClick={() => handleAdminApproveClick(order.id)}
+                                          className="px-2.5 py-1 text-[10px] font-bold uppercase glossy-btn rounded transition-colors cursor-pointer disabled:opacity-50"
+                                          title="Approve order & release product via Admin API"
+                                        >
+                                          {approvingOrderId === order.id ? 'Approving...' : 'Approve'}
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => onDeleteOrder(order.id)}
+                                        className="p-1.5 text-[#707A72] hover:text-red-400 hover:bg-red-950/20 rounded transition-colors cursor-pointer"
+                                        title="Delete Order"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -899,55 +857,57 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs text-yellow-200/90 flex items-start gap-2.5">
                       <Smartphone size={16} className="text-yellow-400 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white block mb-0.5">Automated iPhone bKash / Nagad SMS Feed:</strong>
-                        Every transaction SMS forwarded by your iPhone Shortcuts automation to Google Sheets appears below. Use this to cross-check incoming balances and verify payments in seconds.
+                        <strong className="text-[#F5F7F2] block mb-0.5">Protected Personal bKash SMS Webhook Feed:</strong>
+                        Incoming Personal bKash SMS notifications forwarded by your iPhone Shortcut to{' '}
+                        <code className="text-[#B7F34A]">POST /api/payment-sms/receive</code> appear below from Firestore.
                       </div>
                     </div>
 
-                    <div className="border border-white/10 rounded-xl overflow-x-auto">
+                    <div className="border border-white/[0.09] rounded-xl overflow-x-auto">
                       <table className="w-full text-left text-xs whitespace-nowrap">
-                        <thead className="bg-[#141414] border-b border-white/10 uppercase tracking-normal font-mono text-[#888888]">
+                        <thead className="bg-[#171C19] border-b border-white/[0.09] uppercase tracking-normal font-mono text-[#A1AAA2]">
                           <tr>
                             <th className="py-3 px-4 font-normal">Timestamp</th>
-                            <th className="py-3 px-4 font-normal">Gateway</th>
+                            <th className="py-3 px-4 font-normal">Gateway / Type</th>
                             <th className="py-3 px-4 font-normal">TrxID</th>
                             <th className="py-3 px-4 font-normal">Amount</th>
                             <th className="py-3 px-4 font-normal">Sender Phone</th>
                             <th className="py-3 px-4 font-normal text-right">Usage Status</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-white/[0.06]">
                           {sheetSmsLogs.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="py-12 text-center text-[#666666]">
-                                No SMS logs loaded yet. Click &quot;Sync with Google Sheet&quot; above to fetch recorded SMS payments from your Google Sheet Payments tab.
+                              <td colSpan={6} className="py-12 text-center text-[#707A72]">
+                                No SMS webhook events recorded yet. Forward an incoming bKash SMS from iPhone Shortcuts or click &quot;Refresh SMS Logs&quot;.
                               </td>
                             </tr>
                           ) : (
                             sheetSmsLogs.map((log, idx) => (
                               <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                                <td className="py-3 px-4 font-mono text-[#888888]">{log.timestamp}</td>
+                                <td className="py-3 px-4 font-mono text-[#A1AAA2]">{log.timestamp}</td>
                                 <td className="py-3 px-4">
-                                  <span className="font-semibold text-white px-2 py-0.5 rounded bg-white/5">
-                                    {log.gateway}
+                                  <span className="font-semibold text-[#F5F7F2] px-2 py-0.5 rounded bg-white/5">
+                                    {log.gateway} {log.transactionType ? `• ${log.transactionType}` : ''}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 font-mono font-bold text-[#71B913]">
+                                <td className="py-3 px-4 font-mono font-bold text-[#B7F34A]">
                                   {log.trxId}
                                 </td>
-                                <td className="py-3 px-4 font-mono font-bold text-white tabular-nums">
+                                <td className="py-3 px-4 font-mono font-bold text-[#F5F7F2] tabular-nums">
                                   ৳{log.amount.toLocaleString()}
                                 </td>
-                                <td className="py-3 px-4 font-mono text-[#AAAAAA]">{log.sender}</td>
+                                <td className="py-3 px-4 font-mono text-[#A1AAA2]">{log.sender}</td>
                                 <td className="py-3 px-4 text-right">
                                   <span
                                     className={`px-2 py-0.5 rounded text-[10px] font-mono ${
                                       log.status === 'USED'
-                                        ? 'bg-white/10 text-[#888888]'
-                                        : 'bg-[#71B913]/15 text-[#71B913] border border-[#71B913]/30 font-bold'
+                                        ? 'bg-white/10 text-[#A1AAA2]'
+                                        : 'bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30 font-bold'
                                     }`}
                                   >
                                     {log.status || 'UNUSED'}
+                                    {log.usedByOrderId ? ` (${log.usedByOrderId})` : ''}
                                   </span>
                                 </td>
                               </tr>
@@ -964,7 +924,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             {/* TAB 2: MANAGE PRODUCTS */}
             {activeTab === 'products' && (
               <div className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/[0.09]">
                   <div className="flex flex-wrap items-center gap-1">
                     {(['All', 'Plugin', 'Software', 'Course', 'Free Tutorial', 'Agency Package'] as const).map(
                       (type) => (
@@ -973,8 +933,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           onClick={() => setProductTypeFilter(type)}
                           className={`px-3 py-1.5 text-xs font-medium tracking-wide rounded-lg transition-all cursor-pointer ${
                             productTypeFilter === type
-                              ? 'bg-[#71B913] text-black font-semibold'
-                              : 'bg-[#141414] text-[#888888] hover:text-white border border-white/10'
+                              ? 'bg-[#B7F34A] text-black font-semibold'
+                              : 'bg-[#171C19] text-[#A1AAA2] hover:text-[#F5F7F2] border border-white/[0.09]'
                           }`}
                         >
                           {type}
@@ -987,20 +947,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <div className="relative">
                       <Search
                         size={14}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]"
                       />
                       <input
                         type="text"
                         value={productSearchTerm}
                         onChange={(e) => setProductSearchTerm(e.target.value)}
                         placeholder="Search products..."
-                        className="bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-4 py-1.5 text-xs text-white focus:outline-none w-56 transition-colors"
+                        className="bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-4 py-1.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none w-56 transition-colors"
                       />
                     </div>
 
                     <button
                       onClick={openAddForm}
-                      className="px-4 py-2 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                      className="px-4 py-2 text-xs font-semibold uppercase tracking-normal glossy-btn rounded-xl flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <Plus size={14} />
                       <span>Add New Item</span>
@@ -1009,25 +969,25 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
 
                 {productSavedToast && (
-                  <div className="p-3 bg-[#71B913]/15 border border-[#71B913]/40 rounded-xl text-xs text-[#71B913] flex items-center gap-2 font-medium shadow-[0_0_15px_rgba(113,185,19,0.15)]">
-                    <CheckCircle2 size={16} className="text-[#71B913] shrink-0" />
+                  <div className="p-3 bg-[#B7F34A]/15 border border-[#B7F34A]/40 rounded-xl text-xs text-[#B7F34A] flex items-center gap-2 font-medium shadow-[0_0_15px_rgba(183,243,74,0.15)]">
+                    <CheckCircle2 size={16} className="text-[#B7F34A] shrink-0" />
                     <span>{productSavedToast}</span>
                   </div>
                 )}
 
                 {isFormOpen && (
-                  <div className="bg-[#131313] border border-white/15 rounded-2xl p-6 space-y-5">
-                    <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                      <span className="text-xs uppercase tracking-normal text-[#71B913] font-mono">
+                  <div className="bg-[#171C19] border border-white/[0.09] rounded-2xl p-6 space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.09]">
+                      <span className="text-xs uppercase tracking-normal text-[#B7F34A] font-mono font-semibold">
                         {editingProduct ? 'Update Product' : 'Add New Item'}
                       </span>
-                      <button onClick={() => setIsFormOpen(false)} className="text-[#888888] hover:text-white">
+                      <button onClick={() => setIsFormOpen(false)} className="text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer">
                         <X size={18} />
                       </button>
                     </div>
 
                     {formError && (
-                      <div className="p-3 bg-red-950/40 border border-red-800 text-xs text-red-300 rounded-lg flex items-center gap-2">
+                      <div className="p-3 bg-red-950/40 border border-red-800/70 text-xs text-red-300 rounded-xl flex items-center gap-2">
                         <AlertCircle size={14} />
                         <span>{formError}</span>
                       </div>
@@ -1036,13 +996,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <form onSubmit={handleFormSubmit} className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                          <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                             Item Type *
                           </label>
                           <select
                             value={formType}
                             onChange={(e) => setFormType(e.target.value as ProductType)}
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-xs text-[#F5F7F2] focus:outline-none"
                           >
                             <option value="Plugin">Plugin</option>
                             <option value="Software">Software</option>
@@ -1053,7 +1013,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                          <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                             Software / Category Tag *
                           </label>
                           <input
@@ -1062,12 +1022,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formCategory}
                             onChange={(e) => setFormCategory(e.target.value)}
                             placeholder="e.g. Premiere Pro, After Effects"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                          <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                             Price in BDT * (0 for Free)
                           </label>
                           <input
@@ -1076,14 +1036,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             disabled={formType === 'Free Tutorial'}
                             value={formType === 'Free Tutorial' ? 0 : formPrice}
                             onChange={(e) => setFormPrice(Number(e.target.value))}
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-xs text-[#F5F7F2] focus:outline-none"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                          <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                             Title *
                           </label>
                           <input
@@ -1092,12 +1052,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formTitle}
                             onChange={(e) => setFormTitle(e.target.value)}
                             placeholder="e.g. AI AutoCut Plugin"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                          <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                             Short 1-Line Description *
                           </label>
                           <input
@@ -1106,14 +1066,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formDescription}
                             onChange={(e) => setFormDescription(e.target.value)}
                             placeholder="Briefly describe item scope"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                          <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                             Thumbnail Image URL (Optional)
                           </label>
                           <input
@@ -1121,12 +1081,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formThumbnail}
                             onChange={(e) => setFormThumbnail(e.target.value)}
                             placeholder="https://..."
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
+                            className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-mono text-[#71B913] mb-1 flex items-center gap-1.5">
+                          <label className="block text-[11px] font-mono text-[#B7F34A] mb-1 flex items-center gap-1.5">
                             <Shield size={12} />
                             <span>Protected Download / Access URL *</span>
                           </label>
@@ -1135,7 +1095,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             value={formProtectedUrl}
                             onChange={(e) => setFormProtectedUrl(e.target.value)}
                             placeholder="Google Drive or YouTube Unlisted link"
-                            className="w-full bg-[#181818] border border-white/10 focus:border-[#71B913] rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                            className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                           />
                         </div>
                       </div>
@@ -1143,14 +1103,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <div className="flex items-center gap-3 pt-2">
                         <button
                           type="submit"
-                          className="px-6 py-2.5 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-lg transition-colors cursor-pointer"
+                          className="px-6 py-2.5 text-xs font-semibold uppercase tracking-normal glossy-btn rounded-lg cursor-pointer"
                         >
                           {editingProduct ? 'Save Changes' : 'Add Item'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setIsFormOpen(false)}
-                          className="px-4 py-2.5 text-xs font-medium uppercase tracking-normal bg-[#1A1A1A] text-[#888888] hover:text-white rounded-lg transition-colors cursor-pointer"
+                          className="px-4 py-2.5 text-xs font-medium uppercase tracking-normal glossy-btn-secondary rounded-lg cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -1159,9 +1119,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   </div>
                 )}
 
-                <div className="border border-white/10 rounded-xl overflow-x-auto">
+                <div className="border border-white/[0.09] rounded-xl overflow-x-auto">
                   <table className="w-full text-left text-xs whitespace-nowrap">
-                    <thead className="bg-[#141414] border-b border-white/10 uppercase tracking-normal font-mono text-[#888888]">
+                    <thead className="bg-[#171C19] border-b border-white/[0.09] uppercase tracking-normal font-mono text-[#A1AAA2]">
                       <tr>
                         <th className="py-3 px-4 font-normal">Type</th>
                         <th className="py-3 px-4 font-normal">Tag</th>
@@ -1171,18 +1131,18 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         <th className="py-3 px-4 font-normal text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-white/[0.06]">
                       {filteredProducts.map((product) => {
                         const isEditingPrice = inlinePriceId === product.id;
                         const isUrlVisible = visibleProtectedUrls[product.id];
 
                         return (
                           <tr key={product.id} className="hover:bg-white/[0.02] transition-colors">
-                            <td className="py-3 px-4 font-mono text-white text-[11px]">{product.type}</td>
-                            <td className="py-3 px-4 text-xs font-mono text-[#71B913]">{product.category}</td>
+                            <td className="py-3 px-4 font-mono text-[#F5F7F2] text-[11px]">{product.type}</td>
+                            <td className="py-3 px-4 text-xs font-mono text-[#B7F34A]">{product.category}</td>
                             <td className="py-3 px-4 max-w-xs truncate">
-                              <div className="font-semibold text-white">{product.title}</div>
-                              <div className="text-[11px] text-[#777777] truncate">{product.description}</div>
+                              <div className="font-semibold text-[#F5F7F2]">{product.title}</div>
+                              <div className="text-[11px] text-[#707A72] truncate">{product.description}</div>
                             </td>
                             <td className="py-3 px-4">
                               {isEditingPrice ? (
@@ -1196,21 +1156,21 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                       if (e.key === 'Enter') handleSaveInlinePrice(product);
                                       if (e.key === 'Escape') setInlinePriceId(null);
                                     }}
-                                    className="w-20 bg-[#1A1A1A] border border-[#71B913] px-2 py-1 text-xs text-white focus:outline-none font-mono rounded"
+                                    className="w-20 bg-[#0B0D0C] border border-[#B7F34A] px-2 py-1 text-xs text-[#F5F7F2] focus:outline-none font-mono rounded"
                                   />
                                   <button
                                     onClick={() => handleSaveInlinePrice(product)}
-                                    className="p-1 text-[#71B913]"
+                                    className="p-1 text-[#B7F34A] cursor-pointer"
                                   >
                                     <Check size={14} />
                                   </button>
-                                  <button onClick={() => setInlinePriceId(null)} className="p-1 text-[#888888]">
+                                  <button onClick={() => setInlinePriceId(null)} className="p-1 text-[#A1AAA2] cursor-pointer">
                                     <X size={14} />
                                   </button>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2 group">
-                                  <span className="font-mono font-bold text-white tabular-nums">
+                                  <span className="font-mono font-bold text-[#F5F7F2] tabular-nums">
                                     {product.price === 0 ? 'Free' : `৳${product.price.toLocaleString()}`}
                                   </span>
                                   <button
@@ -1218,7 +1178,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                       setInlinePriceId(product.id);
                                       setInlinePriceValue(product.price.toString());
                                     }}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-[#666666] hover:text-[#71B913]"
+                                    className="opacity-0 group-hover:opacity-100 p-1 text-[#707A72] hover:text-[#B7F34A] cursor-pointer"
                                   >
                                     <Edit2 size={12} />
                                   </button>
@@ -1228,39 +1188,39 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             <td className="py-3 px-4">
                               {product.protectedUrl ? (
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono text-[11px] text-[#888888] max-w-[130px] truncate">
+                                  <span className="font-mono text-[11px] text-[#A1AAA2] max-w-[130px] truncate">
                                     {isUrlVisible ? product.protectedUrl : '••••••••••••••••'}
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => toggleProtectedUrlVisibility(product.id)}
-                                    className="p-1 text-[#888888] hover:text-white"
+                                    className="p-1 text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer"
                                   >
                                     {isUrlVisible ? <EyeOff size={13} /> : <Eye size={13} />}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleCopy(product.protectedUrl || '', `url-${product.id}`)}
-                                    className="p-1 text-[#888888] hover:text-[#71B913]"
+                                    className="p-1 text-[#A1AAA2] hover:text-[#B7F34A] cursor-pointer"
                                   >
-                                    {copiedKey === `url-${product.id}` ? <Check size={13} className="text-[#71B913]" /> : <Copy size={13} />}
+                                    {copiedKey === `url-${product.id}` ? <Check size={13} className="text-[#B7F34A]" /> : <Copy size={13} />}
                                   </button>
                                 </div>
                               ) : (
-                                <span className="text-[#555555] text-[11px] font-mono">None set</span>
+                                <span className="text-[#707A72] text-[11px] font-mono">None set</span>
                               )}
                             </td>
                             <td className="py-3 px-4 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   onClick={() => openEditForm(product)}
-                                  className="p-1.5 text-[#888888] hover:text-white hover:bg-white/5 rounded"
+                                  className="p-1.5 text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/5 rounded cursor-pointer"
                                 >
                                   <Edit2 size={14} />
                                 </button>
                                 <button
                                   onClick={() => onDeleteProduct(product.id)}
-                                  className="p-1.5 text-[#666666] hover:text-red-400 hover:bg-red-950/20 rounded"
+                                  className="p-1.5 text-[#707A72] hover:text-red-400 hover:bg-red-950/20 rounded cursor-pointer"
                                   title="Delete Product"
                                 >
                                   <Trash2 size={14} />
@@ -1281,7 +1241,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               <div className="p-6 md:p-8 space-y-8 overflow-y-auto flex-1">
                 {/* Save Success Toast Banner */}
                 {configSavedToast && (
-                  <div className="p-3 bg-[#71B913]/10 border border-[#71B913] rounded-xl text-xs text-[#71B913] flex items-center gap-2">
+                  <div className="p-3 bg-[#B7F34A]/10 border border-[#B7F34A] rounded-xl text-xs text-[#B7F34A] flex items-center gap-2">
                     <CheckCircle2 size={16} />
                     <span>Payment configuration &amp; endpoints saved successfully.</span>
                   </div>
@@ -1289,16 +1249,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                 {/* Section 1: Mobile Banking & Bank Accounts */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                    <Smartphone size={16} className="text-[#71B913]" />
-                    <h5 className="font-display text-base font-bold text-white">
+                  <div className="flex items-center gap-2 border-b border-white/[0.09] pb-2">
+                    <Smartphone size={16} className="text-[#B7F34A]" />
+                    <h5 className="font-display text-base font-bold text-[#F5F7F2]">
                       1. Payment Numbers &amp; Account Details
                     </h5>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                      <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                         bKash Personal
                       </label>
                       <input
@@ -1306,11 +1266,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgBkash}
                         onChange={(e) => setCfgBkash(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                      <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                         Nagad Personal
                       </label>
                       <input
@@ -1318,11 +1278,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgNagad}
                         onChange={(e) => setCfgNagad(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                      <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                         Rocket Personal
                       </label>
                       <input
@@ -1330,11 +1290,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgRocket}
                         onChange={(e) => setCfgRocket(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                      <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                         Upay Personal
                       </label>
                       <input
@@ -1342,60 +1302,60 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgUpay}
                         onChange={(e) => setCfgUpay(e.target.value)}
                         placeholder="01XXXXXXXXX"
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                       />
                     </div>
                   </div>
 
                   {/* Primary Bank Details Grid (IBBL) */}
                   <div className="space-y-1.5 pt-1">
-                    <span className="text-[11px] font-mono text-[#71B913] font-semibold block">
+                    <span className="text-[11px] font-mono text-[#B7F34A] font-semibold block">
                       Primary Bank (IBBL)
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Bank Name</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Bank Name</label>
                         <input
                           type="text"
                           value={cfgBankName}
                           onChange={(e) => setCfgBankName(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Name</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Account Name</label>
                         <input
                           type="text"
                           value={cfgAccName}
                           onChange={(e) => setCfgAccName(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Number</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Account Number</label>
                         <input
                           type="text"
                           value={cfgAccNum}
                           onChange={(e) => setCfgAccNum(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none font-mono"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Branch Name</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Branch Name</label>
                         <input
                           type="text"
                           value={cfgBranch}
                           onChange={(e) => setCfgBranch(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Routing Number</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Routing Number</label>
                         <input
                           type="text"
                           value={cfgRouting}
                           onChange={(e) => setCfgRouting(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none font-mono"
                         />
                       </div>
                     </div>
@@ -1403,53 +1363,53 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   {/* Secondary Bank Details Grid (DBBL) */}
                   <div className="space-y-1.5 pt-2">
-                    <span className="text-[11px] font-mono text-[#888888] font-semibold block">
+                    <span className="text-[11px] font-mono text-[#A1AAA2] font-semibold block">
                       Secondary Bank (DBBL)
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Bank Name</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Bank Name</label>
                         <input
                           type="text"
                           value={cfgBankName2}
                           onChange={(e) => setCfgBankName2(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Name</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Account Name</label>
                         <input
                           type="text"
                           value={cfgAccName2}
                           onChange={(e) => setCfgAccName2(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Account Number</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Account Number</label>
                         <input
                           type="text"
                           value={cfgAccNum2}
                           onChange={(e) => setCfgAccNum2(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none font-mono"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Branch Name</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Branch Name</label>
                         <input
                           type="text"
                           value={cfgBranch2}
                           onChange={(e) => setCfgBranch2(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-mono text-[#888888] mb-1">Routing Number</label>
+                        <label className="block text-[10px] font-mono text-[#A1AAA2] mb-1">Routing Number</label>
                         <input
                           type="text"
                           value={cfgRouting2}
                           onChange={(e) => setCfgRouting2(e.target.value)}
-                          className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-mono"
+                          className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] focus:outline-none font-mono"
                         />
                       </div>
                     </div>
@@ -1458,14 +1418,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                 {/* Section 2: Google Sheet & Google Apps Script Web App Integration */}
                 <div className="space-y-4 pt-2">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-2 gap-3">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/[0.09] pb-2 gap-3">
                     <div className="flex items-center gap-2">
-                      <Cloud size={16} className="text-[#71B913]" />
+                      <Cloud size={16} className="text-[#B7F34A]" />
                       <div>
-                        <h5 className="font-display text-base font-bold text-white">
+                        <h5 className="font-display text-base font-bold text-[#F5F7F2]">
                           2. Google Sheet &amp; Automated Verification Endpoint
                         </h5>
-                        <p className="text-[11px] text-[#888888]">
+                        <p className="text-[11px] text-[#A1AAA2]">
                           গুগল শিট ডাটাবেজ, আইফোন অটোমেশন ও ড্রাইভ অটো-লাইসেন্স এক্সেস
                         </p>
                       </div>
@@ -1476,7 +1436,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         href="https://sheets.new"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 text-[11px] font-mono uppercase bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg flex items-center gap-1.5"
+                        className="px-3 py-1.5 text-[11px] font-mono uppercase glossy-btn-secondary rounded-lg flex items-center gap-1.5"
                       >
                         <ExternalLink size={12} />
                         <span>Create New Sheet</span>
@@ -1485,7 +1445,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleCopy(COMPLETE_PAYMENT_GOOGLE_APPS_SCRIPT, 'apps-script')}
-                        className="px-3.5 py-1.5 text-[11px] font-mono uppercase bg-[#71B913] hover:bg-[#81cf17] text-black font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        className="px-3.5 py-1.5 text-[11px] font-mono uppercase glossy-btn font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer"
                       >
                         {copiedKey === 'apps-script' ? <Check size={13} /> : <Copy size={13} />}
                         <span>{copiedKey === 'apps-script' ? 'Script Copied!' : 'Copy Apps Script Code'}</span>
@@ -1496,7 +1456,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   {/* Direct Google Sheet Spreadsheet Link */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[11px] font-mono text-[#888888]">
+                      <label className="block text-[11px] font-mono text-[#A1AAA2]">
                         Google Sheet Spreadsheet URL (Google Drive Sheet Link)
                       </label>
                       {cfgSpreadsheetUrl && (
@@ -1504,7 +1464,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           href={cfgSpreadsheetUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] text-[#71B913] hover:underline flex items-center gap-1"
+                          className="text-[11px] text-[#B7F34A] hover:underline flex items-center gap-1"
                         >
                           <ExternalLink size={11} />
                           <span>Open in Google Drive Now</span>
@@ -1517,28 +1477,28 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgSpreadsheetUrl}
                         onChange={(e) => setCfgSpreadsheetUrl(e.target.value)}
                         placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit"
-                        className="flex-1 bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-mono"
+                        className="flex-1 bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                       />
                       {cfgSpreadsheetUrl && (
                         <a
                           href={cfgSpreadsheetUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/15 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shrink-0"
+                          className="px-3 py-2 glossy-btn-secondary rounded-xl text-xs font-semibold flex items-center gap-1 shrink-0"
                         >
-                          <ExternalLink size={12} className="text-[#71B913]" />
+                          <ExternalLink size={12} className="text-[#B7F34A]" />
                           <span>Open Sheet</span>
                         </a>
                       )}
                     </div>
-                    <span className="text-[10px] text-[#777777] block mt-1">
+                    <span className="text-[10px] text-[#707A72] block mt-1">
                       আপনার গুগল শিটের লিঙ্কটি এখানে পেস্ট করে Save Settings দিন। তাহলে উপরে থাকা &apos;Open Sheet in Drive&apos; বাটনে ক্লিক করলেই সরাসরি আপনার গুগল শিট ওপেন হবে।
                     </span>
                   </div>
 
                   {/* Web App URL */}
                   <div>
-                    <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                    <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                       Google Apps Script Web App URL (Endpoint)
                     </label>
                     <input
@@ -1546,30 +1506,30 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       value={cfgWebAppUrl}
                       onChange={(e) => setCfgWebAppUrl(e.target.value)}
                       placeholder="https://script.google.com/macros/s/.../exec"
-                      className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-mono"
+                      className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                     />
-                    <span className="text-[10px] text-[#777777] block mt-1">
+                    <span className="text-[10px] text-[#707A72] block mt-1">
                       The script automatically creates &quot;Orders&quot;, &quot;Payments&quot;, and &quot;Users&quot; sheets, extracts TrxID &amp; Amount from SMS, and auto-shares Google Drive downloads with buyers.
                     </span>
                   </div>
 
                   {/* Quick Setup Instructions Box */}
-                  <div className="p-3.5 bg-white/[0.03] border border-white/10 rounded-xl space-y-2 text-xs">
-                    <span className="font-semibold text-white block">গুগল শিট সেটআপ করার সহজ ৩ ধাপ:</span>
-                    <ol className="list-decimal list-inside space-y-1 text-[#AAAAAA] text-[11px] leading-relaxed">
-                      <li>উপরের <span className="text-white font-mono">Create New Sheet</span> বাটনে ক্লিক করে একটি নতুন গুগল শিট খুলুন এবং এর লিঙ্কটি উপরের বক্সে পেস্ট করুন।</li>
-                      <li>গুগল শিটের মেনু থেকে <span className="text-white font-mono">Extensions &gt; Apps Script</span> এ যান এবং পুরো কোড মুছে <span className="text-white font-mono">Copy Apps Script Code</span> বাটনের কোডটি পেস্ট করুন।</li>
-                      <li>উপরে <span className="text-white font-mono">Deploy &gt; New deployment &gt; Web app</span> সিলেক্ট করে <span className="text-white font-mono">Who has access: Anyone</span> দিয়ে Deploy করুন এবং পাওয়া Web App URL টি উপরের বক্সে বসিয়ে <span className="text-[#71B913] font-semibold">Save Settings</span> বাটনে চাপ দিন।</li>
+                  <div className="p-3.5 bg-[#171C19] border border-white/[0.09] rounded-xl space-y-2 text-xs">
+                    <span className="font-semibold text-[#F5F7F2] block">গুগল শিট সেটআপ করার সহজ ৩ ধাপ:</span>
+                    <ol className="list-decimal list-inside space-y-1 text-[#A1AAA2] text-[11px] leading-relaxed">
+                      <li>উপরের <span className="text-[#F5F7F2] font-mono">Create New Sheet</span> বাটনে ক্লিক করে একটি নতুন গুগল শিট খুলুন এবং এর লিঙ্কটি উপরের বক্সে পেস্ট করুন।</li>
+                      <li>গুগল শিটের মেনু থেকে <span className="text-[#F5F7F2] font-mono">Extensions &gt; Apps Script</span> এ যান এবং পুরো কোড মুছে <span className="text-[#F5F7F2] font-mono">Copy Apps Script Code</span> বাটনের কোডটি পেস্ট করুন।</li>
+                      <li>উপরে <span className="text-[#F5F7F2] font-mono">Deploy &gt; New deployment &gt; Web app</span> সিলেক্ট করে <span className="text-[#F5F7F2] font-mono">Who has access: Anyone</span> দিয়ে Deploy করুন এবং পাওয়া Web App URL টি উপরের বক্সে বসিয়ে <span className="text-[#B7F34A] font-semibold">Save Settings</span> বাটনে চাপ দিন।</li>
                     </ol>
                   </div>
                 </div>
 
                 {/* Section 3: Telegram Bot Live Notifications */}
                 <div className="space-y-4 pt-2">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <div className="flex items-center justify-between border-b border-white/[0.09] pb-2">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-[#71B913]" />
-                      <h5 className="font-display text-base font-bold text-white">
+                      <Bot size={16} className="text-[#B7F34A]" />
+                      <h5 className="font-display text-base font-bold text-[#F5F7F2]">
                         3. Telegram Bot Notifications
                       </h5>
                     </div>
@@ -1578,7 +1538,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       type="button"
                       onClick={handleTestTelegram}
                       disabled={isTestingTelegram || !cfgTgToken || !cfgTgChatId}
-                      className="px-3.5 py-1.5 text-[11px] font-mono uppercase bg-white/10 hover:bg-[#71B913] hover:text-black border border-white/10 text-white rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors"
+                      className="px-3.5 py-1.5 text-[11px] font-mono uppercase bg-[#171C19] hover:bg-[#B7F34A] hover:text-black border border-white/[0.09] text-[#F5F7F2] rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors"
                     >
                       <Send size={12} />
                       <span>{isTestingTelegram ? 'Sending...' : 'Test Telegram Notification'}</span>
@@ -1587,7 +1547,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                      <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                         Telegram Bot Token
                       </label>
                       <input
@@ -1595,12 +1555,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgTgToken}
                         onChange={(e) => setCfgTgToken(e.target.value)}
                         placeholder="e.g. 7123456789:AAHq_..."
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-mono text-[#888888] mb-1">
+                      <label className="block text-[11px] font-mono text-[#A1AAA2] mb-1">
                         Telegram Chat ID
                       </label>
                       <input
@@ -1608,129 +1568,60 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={cfgTgChatId}
                         onChange={(e) => setCfgTgChatId(e.target.value)}
                         placeholder="e.g. 987654321 or -100..."
-                        className="w-full bg-[#141414] border border-white/10 focus:border-[#71B913] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                        className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                       />
                     </div>
                   </div>
 
                   {telegramTestResult && (
-                    <div className="p-2.5 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-[#AAAAAA]">
-                      Telegram Test: <span className="text-[#71B913]">{telegramTestResult}</span>
+                    <div className="p-2.5 bg-[#171C19] border border-white/[0.09] rounded-lg text-xs font-mono text-[#A1AAA2]">
+                      Telegram Test: <span className="text-[#B7F34A]">{telegramTestResult}</span>
                     </div>
                   )}
                 </div>
 
-                {/* Section 4: iPhone SMS Shortcut Guide & 1-Click Simulator */}
+                {/* Section 4: Secure iPhone SMS Shortcut Setup */}
                 <div className="space-y-4 pt-2">
-                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                    <Zap size={16} className="text-[#71B913]" />
-                    <h5 className="font-display text-base font-bold text-white">
-                      4. iPhone SMS Shortcut Automation &amp; 1-Click Simulator
+                  <div className="flex items-center gap-2 border-b border-white/[0.09] pb-2">
+                    <Zap size={16} className="text-[#B7F34A]" />
+                    <h5 className="font-display text-base font-bold text-[#F5F7F2]">
+                      4. iPhone Shortcuts Secure Webhook Setup
                     </h5>
                   </div>
 
-                  <div className="bg-[#121212] border border-white/10 rounded-xl p-4 text-xs space-y-2.5 text-[#AAAAAA]">
-                    <div className="font-semibold text-white">iOS Shortcuts 2-Minute Setup:</div>
-                    <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-                      <li>Open the <strong>Shortcuts</strong> app on iPhone &gt; tap <strong>Automation</strong> &gt; <strong>New Automation</strong>.</li>
-                      <li>Select <strong>Message</strong> &gt; set &quot;Message Contains&quot; to <code>TrxID</code> &gt; tap <strong>Run Immediately</strong>.</li>
-                      <li>Add Action: <strong>Get Contents of URL</strong> &gt; paste your Web App URL.</li>
-                      <li>Set Method to <strong>POST</strong> &gt; Request Body: <strong>JSON</strong> &gt; Key: <code>text</code>, Value: <strong>Shortcut Input</strong>.</li>
+                  <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-4 text-xs space-y-2.5 text-[#A1AAA2]">
+                    <div className="font-semibold text-[#F5F7F2]">Secure Personal bKash Automation (Vercel Serverless Endpoint):</div>
+                    <ol className="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed">
+                      <li>Open <strong>Shortcuts</strong> on iPhone &gt; <strong>Automation</strong> &gt; <strong>New Automation</strong> &gt; <strong>Message</strong>.</li>
+                      <li>Set Sender / Contains filter (e.g., <code>bKash</code> or <code>TrxID</code>) &gt; select <strong>Run Immediately</strong>.</li>
+                      <li>Add <strong>Get Contents of URL</strong> with URL: <code className="text-[#B7F34A]">https://mirrorbook.site/api/payment-sms/receive</code>.</li>
+                      <li>Set Method to <strong>POST</strong>, and add Header <code className="text-[#F5F7F2]">x-webhook-secret</code> matching your Vercel <code className="text-[#B7F34A]">PAYMENT_SMS_WEBHOOK_SECRET</code> env var.</li>
+                      <li>Set Request Body to <strong>JSON</strong> with key <code className="text-[#F5F7F2]">text</code> = <strong>Shortcut Input</strong> (plus optional <code className="text-[#F5F7F2]">sender</code>).</li>
                     </ol>
-                  </div>
-
-                  {/* Simulator Box */}
-                  <div className="bg-[#121212] border border-white/10 rounded-xl p-4 space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <div className="text-xs font-semibold text-white flex items-center gap-2">
-                          <Play size={13} className="text-[#71B913]" />
-                          <span>1-Click iPhone SMS &amp; Anti-Cheat Verification Test Suite</span>
-                        </div>
-                        <div className="text-[11px] text-[#777777] mt-0.5">
-                          Test whether incoming bKash/Nagad SMS is stored into Sheet and strictly verified against price &amp; duplicate usage.
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 bg-[#161616] border border-white/10 rounded-lg px-2 py-1">
-                          <span className="text-[10px] text-[#888888]">৳</span>
-                          <input
-                            type="number"
-                            value={sampleSimAmount}
-                            onChange={(e) => setSampleSimAmount(Number(e.target.value) || 0)}
-                            className="w-14 bg-transparent text-xs text-[#71B913] font-bold font-mono focus:outline-none"
-                            placeholder="200"
-                          />
-                        </div>
-
-                        <input
-                          type="text"
-                          value={sampleSimTrxId}
-                          onChange={(e) => setSampleSimTrxId(e.target.value)}
-                          placeholder="BK200TEST"
-                          className="w-28 bg-[#161616] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono text-center uppercase"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
-                      <button
-                        type="button"
-                        onClick={handleSimulateSMS}
-                        disabled={isSimulatingSMS || !cfgWebAppUrl}
-                        className="px-3.5 py-2 text-xs font-semibold uppercase tracking-normal bg-white/10 hover:bg-white/15 text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                      >
-                        <Play size={12} className="text-[#71B913]" />
-                        <span>{isSimulatingSMS ? 'Ingesting...' : '1. Ingest SMS to Sheet'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleTestVerificationApi}
-                        disabled={isTestingVerify || !cfgWebAppUrl}
-                        className="px-3.5 py-2 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                      >
-                        <ShieldCheck size={13} className="text-black" />
-                        <span>{isTestingVerify ? 'Verifying...' : '2. Test Anti-Cheat Verify API'}</span>
-                      </button>
-                    </div>
-
-                    {smsSimulationResult && (
-                      <div className="p-2.5 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-[#AAAAAA]">
-                        SMS Ingestion: <span className="text-[#71B913]">{smsSimulationResult}</span>
-                      </div>
-                    )}
-
-                    {verifyTestResult && (
-                      <div className="p-2.5 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-[#AAAAAA]">
-                        Anti-Cheat Result: <span className="text-white font-semibold">{verifyTestResult}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
                 {/* Section 5: Anti-Piracy Protection for Google Drive Downloads */}
                 <div className="space-y-4 pt-2">
-                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                    <ShieldCheck size={16} className="text-[#71B913]" />
-                    <h5 className="font-display text-base font-bold text-white">
+                  <div className="flex items-center gap-2 border-b border-white/[0.09] pb-2">
+                    <ShieldCheck size={16} className="text-[#B7F34A]" />
+                    <h5 className="font-display text-base font-bold text-[#F5F7F2]">
                       5. Anti-Piracy Protection (Google Drive Restricted Sharing)
                     </h5>
                   </div>
 
-                  <div className="bg-[#121212] border border-[#71B913]/30 rounded-xl p-4 text-xs space-y-3">
-                    <div className="flex items-center gap-2 text-white font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-[#71B913]" />
+                  <div className="bg-[#171C19] border border-[#B7F34A]/30 rounded-xl p-4 text-xs space-y-3">
+                    <div className="flex items-center gap-2 text-[#F5F7F2] font-semibold">
+                      <ShieldCheck size={14} className="text-[#B7F34A]" />
                       <span>How to prevent customers from sharing download links with others:</span>
                     </div>
 
-                    <div className="text-[11px] text-[#CCCCCC] space-y-2 leading-relaxed">
+                    <div className="text-[11px] text-[#A1AAA2] space-y-2 leading-relaxed">
                       <p>
-                        1. <strong>Do NOT make your Google Drive folder public</strong> (&quot;Anyone with the link&quot;). Instead, open your plugin folder in Google Drive, click <strong>Share</strong>, and keep General Access set to <strong>&quot;Restricted&quot;</strong>.
+                        1. <strong className="text-[#F5F7F2]">Do NOT make your Google Drive folder public</strong> (&quot;Anyone with the link&quot;). Instead, open your plugin folder in Google Drive, click <strong className="text-[#F5F7F2]">Share</strong>, and keep General Access set to <strong className="text-[#F5F7F2]">&quot;Restricted&quot;</strong>.
                       </p>
                       <p>
-                        2. When an order is completed, our Google Apps Script automatically adds the <strong>buyer&apos;s personal Google Email</strong> as an authorized Viewer via Google Drive API.
+                        2. When an order is completed, our Google Apps Script automatically adds the <strong className="text-[#F5F7F2]">buyer&apos;s personal Google Email</strong> as an authorized Viewer via Google Drive API.
                       </p>
                       <p>
                         3. If a buyer copies and shares the Google Drive link with strangers or on social media, anyone else clicking the link will receive:
@@ -1743,14 +1634,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
 
                 {/* Final Save All Settings Button */}
-                <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                  <div className="text-[11px] text-[#777777]">
+                <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between">
+                  <div className="text-[11px] text-[#707A72]">
                     Settings save to browser storage and auto-sync with checkout.
                   </div>
                   <button
                     type="button"
                     onClick={() => handleSaveAllConfig()}
-                    className="px-6 py-3 text-xs font-semibold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] transition-all cursor-pointer"
+                    className="px-6 py-3 text-xs font-semibold uppercase tracking-normal glossy-btn rounded-xl cursor-pointer"
                   >
                     Save All Settings
                   </button>

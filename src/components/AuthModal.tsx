@@ -113,12 +113,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md glossy-card border border-white/20 text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-[#0B0D0C]/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md glossy-card border border-white/[0.09] text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
         {/* Clean Customer Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.1] bg-white/[0.04]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.09] bg-[#171C19]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/[0.06] border border-white/15 p-1 flex items-center justify-center shadow-inner">
+            <div className="w-10 h-10 rounded-2xl bg-[#121614] border border-white/[0.09] p-1 flex items-center justify-center shadow-inner">
               <img
                 src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
                 alt="MirrorBook Official Logo"
@@ -128,14 +128,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               />
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-white tracking-normal">
+              <h3 className="font-display text-base font-bold text-[#F5F7F2] tracking-normal">
                 {isResetMode
                   ? 'Reset Password'
                   : isSignUp
                   ? 'Create Customer Account'
                   : 'Customer Sign In'}
               </h3>
-              <p className="text-xs text-[#888888] font-normal">
+              <p className="text-xs text-[#A1AAA2] font-normal">
                 Access your purchases, licenses &amp; downloads
               </p>
             </div>
@@ -144,7 +144,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-white/10 text-[#888888] hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-xl hover:bg-white/10 text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors flex items-center justify-center cursor-pointer"
             aria-label="Close"
           >
             <X size={16} />
@@ -158,7 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="button"
                 onClick={handleGoogleClick}
                 disabled={isLoadingGoogle || isSubmitting}
-                className="w-full py-3.5 px-4 bg-white/95 hover:bg-white text-black font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-70"
+                className="w-full py-3.5 px-4 bg-[#F5F7F2] hover:bg-white text-black font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-70"
               >
                 {isLoadingGoogle ? (
                   <>
@@ -190,7 +190,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 )}
               </button>
 
-              <div className="grid grid-cols-2 p-1 rounded-xl bg-white/[0.04] border border-white/10">
+              <div className="grid grid-cols-2 p-1 rounded-xl glass-tab-bar">
                 <button
                   type="button"
                   onClick={() => {
@@ -199,8 +199,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   }}
                   className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                     !isSignUp
-                      ? 'bg-[#71B913] text-black shadow-sm font-bold'
-                      : 'text-[#888888] hover:text-white'
+                      ? 'bg-[#B7F34A] text-black shadow-sm font-bold'
+                      : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                   }`}
                 >
                   Sign In
@@ -213,8 +213,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   }}
                   className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                     isSignUp
-                      ? 'bg-[#71B913] text-black shadow-sm font-bold'
-                      : 'text-[#888888] hover:text-white'
+                      ? 'bg-[#B7F34A] text-black shadow-sm font-bold'
+                      : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                   }`}
                 >
                   Sign Up
@@ -226,36 +226,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <form onSubmit={handleSubmitForm} className="space-y-3">
             {isSignUp && !isResetMode && (
               <div>
-                <label className="text-[11px] text-[#AAAAAA] mb-1 block font-medium">
+                <label className="text-[11px] text-[#A1AAA2] mb-1 block font-medium">
                   Full Name *
                 </label>
                 <div className="relative">
-                  <UserIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
+                  <UserIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]" />
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your full name"
-                    className="w-full bg-[#121212]/80 border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none transition-colors"
+                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="text-[11px] text-[#AAAAAA] mb-1 block font-medium">
+              <label className="text-[11px] text-[#A1AAA2] mb-1 block font-medium">
                 Email Address *
               </label>
               <div className="relative">
-                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
+                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full bg-[#121212]/80 border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none transition-colors"
+                  className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
                 />
               </div>
             </div>
@@ -263,7 +263,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {!isResetMode && (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] text-[#AAAAAA] font-medium">Password *</label>
+                  <label className="text-[11px] text-[#A1AAA2] font-medium">Password *</label>
                   {!isSignUp && onSendResetPassword && (
                     <button
                       type="button"
@@ -271,14 +271,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         setIsResetMode(true);
                         setErrorMessage(null);
                       }}
-                      className="text-[11px] text-[#71B913] hover:underline cursor-pointer"
+                      className="text-[11px] text-[#B7F34A] hover:underline cursor-pointer"
                     >
                       Forgot password?
                     </button>
                   )}
                 </div>
                 <div className="relative">
-                  <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
+                  <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
@@ -286,12 +286,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={isSignUp ? 'Create a password (min 6 chars)' : 'Enter password'}
-                    className="w-full bg-[#121212]/80 border border-white/10 focus:border-[#71B913] rounded-xl pl-9 pr-10 py-2.5 text-xs text-white focus:outline-none transition-colors font-mono"
+                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-10 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#777777] hover:text-white cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#707A72] hover:text-[#F5F7F2] cursor-pointer"
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -300,15 +300,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
 
             {errorMessage && (
-              <div className="p-2.5 rounded-xl bg-red-950/40 border border-red-800 text-red-200 text-xs flex items-center gap-2">
+              <div className="p-2.5 rounded-xl bg-red-950/40 border border-red-800/70 text-red-200 text-xs flex items-center gap-2">
                 <AlertCircle size={14} className="shrink-0 text-red-400" />
                 <p className="leading-relaxed text-[11px]">{errorMessage}</p>
               </div>
             )}
 
             {successMessage && (
-              <div className="p-2.5 rounded-xl bg-[#71B913]/15 border border-[#71B913]/40 text-[#c9f788] text-xs flex items-center gap-2">
-                <CheckCircle2 size={14} className="shrink-0 text-[#71B913]" />
+              <div className="p-2.5 rounded-xl bg-[#B7F34A]/15 border border-[#B7F34A]/40 text-[#D0FC7A] text-xs flex items-center gap-2">
+                <CheckCircle2 size={14} className="shrink-0 text-[#B7F34A]" />
                 <p className="leading-relaxed text-[11px]">{successMessage}</p>
               </div>
             )}
@@ -316,7 +316,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting || isLoadingGoogle}
-              className="w-full py-3.5 text-xs font-bold uppercase tracking-normal bg-[#71B913] hover:bg-[#81cf17] active:scale-[0.99] text-black rounded-xl shadow-[0_0_20px_rgba(113,185,19,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-60"
+              className="w-full py-3.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-60"
             >
               <span>
                 {isSubmitting
@@ -334,7 +334,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsResetMode(false)}
-                className="w-full py-1.5 text-xs text-[#999999] hover:text-white cursor-pointer"
+                className="w-full py-1.5 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer"
               >
                 Back to Sign In
               </button>
@@ -349,15 +349,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClose();
                   onNavigate(isSignUp ? '/signup' : '/login');
                 }}
-                className="text-[11px] text-[#71B913] hover:underline cursor-pointer"
+                className="text-[11px] text-[#B7F34A] hover:underline cursor-pointer"
               >
                 Open Full {isSignUp ? 'Sign Up' : 'Login'} Page →
               </button>
             </div>
           )}
 
-          <div className="p-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] text-[#888888] flex items-start gap-2">
-            <ShieldCheck size={14} className="text-[#71B913] shrink-0 mt-0.5" />
+          <div className="p-3 bg-[#121614] border border-white/[0.09] rounded-xl text-[11px] text-[#A1AAA2] flex items-start gap-2">
+            <ShieldCheck size={14} className="text-[#B7F34A] shrink-0 mt-0.5" />
             <p className="leading-relaxed">
               Your purchases, plugin licenses, and download links sync securely to your personal MirrorBook customer account.
             </p>

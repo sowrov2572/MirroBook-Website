@@ -55,16 +55,29 @@ service cloud.firestore {
         && data.type is string && data.type in ['Plugin', 'Course', 'Software', 'Free Tutorial', 'Agency Package']
         && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
-        && data.description is string && data.description.size() >= 1 && data.description.size() <= 3000
+        && data.description is string && data.description.size() >= 0 && data.description.size() <= 3000
         && (data.price is int || data.price is float) && data.price >= 0 && data.price <= 10000000
         && (!('priceDisplay' in data) || (data.priceDisplay is string && data.priceDisplay.size() <= 60))
         && (!('period' in data) || (data.period is string && data.period.size() <= 40))
         && (!('thumbnailUrl' in data) || (data.thumbnailUrl is string && data.thumbnailUrl.size() <= 1000))
-        && (!('protectedUrl' in data) || (data.protectedUrl is string && data.protectedUrl.size() <= 1000))
+        // Paid items (price > 0) MUST NOT store non-empty protectedUrl in public /products collection
+        && (
+          !('protectedUrl' in data) ||
+          (data.price == 0 && data.protectedUrl is string && data.protectedUrl.size() <= 1000) ||
+          (data.price > 0 && data.protectedUrl is string && data.protectedUrl.size() == 0)
+        )
         && (!('duration' in data) || (data.duration is string && data.duration.size() <= 60))
         && (!('instructor' in data) || (data.instructor is string && data.instructor.size() <= 120))
         && (!('featured' in data) || data.featured is bool)
         && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64))
+        && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidProductSecret(data) {
+      return data.keys().hasAll(['id', 'protectedUrl'])
+        && data.keys().hasOnly(['id', 'protectedUrl', 'updatedAt'])
+        && isValidId(data.id)
+        && data.protectedUrl is string && data.protectedUrl.size() >= 1 && data.protectedUrl.size() <= 1000
         && (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
     }
 
@@ -98,8 +111,9 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'customerName', 'customerEmail', 'customerPhone', 'itemName', 'itemPrice', 'paymentMethod', 'trxId', 'createdAt', 'status'])
         && data.keys().hasOnly([
           'id', 'userId', 'customerName', 'customerEmail', 'customerPhone',
-          'itemId', 'productId', 'itemName', 'itemPrice', 'paymentMethod',
-          'senderAccount', 'trxId', 'createdAt', 'status', 'downloadUrl', 'licenseKey'
+          'itemId', 'productId', 'itemName', 'itemPrice', 'canonicalAmount',
+          'paymentMethod', 'senderAccount', 'trxId', 'createdAt', 'status',
+          'downloadUrl', 'licenseKey', 'verificationNote', 'approvedBy', 'approvedAt'
         ])
         && isValidId(data.id)
         && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
@@ -110,13 +124,17 @@ service cloud.firestore {
         && (!('productId' in data) || (data.productId is string && data.productId.size() <= 128))
         && data.itemName is string && data.itemName.size() >= 1 && data.itemName.size() <= 200
         && data.itemPrice is string && data.itemPrice.size() >= 1 && data.itemPrice.size() <= 60
+        && (!('canonicalAmount' in data) || ((data.canonicalAmount is int || data.canonicalAmount is float) && data.canonicalAmount >= 0))
         && data.paymentMethod is string && data.paymentMethod in ['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer']
         && (!('senderAccount' in data) || (data.senderAccount is string && data.senderAccount.size() <= 80))
         && data.trxId is string && data.trxId.size() >= 4 && data.trxId.size() <= 60
         && data.createdAt is string && data.createdAt.size() <= 80
-        && data.status is string && data.status in ['Pending', 'Verified', 'Completed']
+        && data.status is string && data.status in ['Pending', 'Verified', 'Paid', 'Completed']
         && (!('downloadUrl' in data) || (data.downloadUrl is string && data.downloadUrl.size() <= 1000))
-        && (!('licenseKey' in data) || (data.licenseKey is string && data.licenseKey.size() <= 120));
+        && (!('licenseKey' in data) || (data.licenseKey is string && data.licenseKey.size() <= 120))
+        && (!('verificationNote' in data) || (data.verificationNote is string && data.verificationNote.size() <= 300))
+        && (!('approvedBy' in data) || (data.approvedBy is string && data.approvedBy.size() <= 254))
+        && (!('approvedAt' in data) || (data.approvedAt is string && data.approvedAt.size() <= 80));
     }
 
     function isValidUserProfile(data) {
@@ -139,19 +157,6 @@ service cloud.firestore {
         && (!('lastLoginAt' in data) || data.lastLoginAt is timestamp);
     }
 
-    function isValidPurchase(data) {
-      return data.keys().hasAll(['id', 'title', 'downloadUrl', 'purchasedAt'])
-        && data.keys().hasOnly(['id', 'productId', 'title', 'category', 'downloadUrl', 'purchasedAt', 'trxId', 'licenseKey'])
-        && isValidId(data.id)
-        && (!('productId' in data) || (data.productId is string && data.productId.size() <= 128))
-        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
-        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
-        && data.downloadUrl is string && data.downloadUrl.size() <= 1000
-        && data.purchasedAt is string && data.purchasedAt.size() <= 80
-        && (!('trxId' in data) || (data.trxId is string && data.trxId.size() <= 60))
-        && (!('licenseKey' in data) || (data.licenseKey is string && data.licenseKey.size() <= 120));
-    }
-
     function isValidDownloadLog(data) {
       return data.keys().hasAll(['id', 'userId', 'title', 'downloadedAt'])
         && data.keys().hasOnly(['id', 'userId', 'purchaseId', 'title', 'category', 'licenseKey', 'sessionToken', 'downloadedAt'])
@@ -167,19 +172,41 @@ service cloud.firestore {
 
     // ==================== COLLECTION RULES ====================
 
-    // 1. Public Digital Store Catalog (Admin write only)
+    // 1. Public Digital Store Catalog (Admin write only; paid URLs excluded)
     match /products/{productId} {
       allow get: if isValidId(productId);
       allow list: if true;
       allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().id == productId;
-      allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().id == existing().id;
+      allow update: if isValidProduct(incoming()) && isAdmin() && isValidId(productId) && incoming().id == existing().id;
       allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // 1b. Protected Download URLs (Strictly Admin-only & Server Admin SDK)
+    match /productSecrets/{productId} {
+      allow get: if isAdmin() && isValidId(productId);
+      allow list: if isVerifiedOwnerEmail();
+      allow create: if isAdmin() && isValidId(productId) && isValidProductSecret(incoming()) && incoming().id == productId;
+      allow update: if isValidProductSecret(incoming()) && isAdmin() && isValidId(productId) && incoming().id == existing().id;
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // 1c. Server-Only Payment & SMS Verification Collections (Admin SDK Only — zero client access)
+    match /bkashTransactions/{trxId} {
+      allow read, write: if false;
+    }
+
+    match /redeemedTrxIds/{trxId} {
+      allow read, write: if false;
+    }
+
+    match /paymentSessions/{sessionId} {
+      allow read, write: if false;
     }
 
     // 2. Settings: paymentConfig is public read-only for checkout; adminConfig is strictly Admin-only
     match /settings/{settingId} {
       allow get: if isValidId(settingId) && (settingId == 'paymentConfig' || isAdmin());
-      allow list: if isAdmin();
+      allow list: if isVerifiedOwnerEmail();
       allow create, update: if isAdmin() && isValidId(settingId) && isValidSetting(settingId, incoming());
       allow delete: if isAdmin() && isValidId(settingId);
     }
@@ -190,7 +217,7 @@ service cloud.firestore {
       allow list, create, update, delete: if false;
     }
 
-    // 4. Customer Orders (Strictly isolated to order owner or Admin)
+    // 4. Customer Orders (Client creates restricted strictly to Pending with NO downloadUrl/licenseKey)
     match /orders/{orderId} {
       allow get: if isValidId(orderId) && isSignedIn() && (
         isAdmin() ||
@@ -205,12 +232,17 @@ service cloud.firestore {
       allow create: if isValidId(orderId)
         && isValidOrder(incoming())
         && incoming().id == orderId
-        && incoming().status in ['Pending', 'Verified']
+        && incoming().status == 'Pending'
+        && (!('downloadUrl' in incoming()) || incoming().downloadUrl == '')
+        && (!('licenseKey' in incoming()) || incoming().licenseKey == '')
+        && !('approvedBy' in incoming())
+        && !('approvedAt' in incoming())
+        && !('canonicalAmount' in incoming())
         && (
           (isSignedIn() && ('userId' in incoming()) && incoming().userId == request.auth.uid) ||
           (!isSignedIn() && !('userId' in incoming()))
         );
-      allow update: if isAdmin() && isValidId(orderId) && isValidOrder(incoming()) && incoming().id == existing().id;
+      allow update: if isValidOrder(incoming()) && isAdmin() && isValidId(orderId) && incoming().id == existing().id;
       allow delete: if isAdmin() && isValidId(orderId);
     }
 
@@ -226,9 +258,9 @@ service cloud.firestore {
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time
         && (incoming().role == 'customer' || (incoming().role == 'admin' && isVerifiedOwnerEmail()));
-      allow update: if isValidId(userId)
+      allow update: if isValidUserProfile(incoming())
+        && isValidId(userId)
         && isSignedIn()
-        && isValidUserProfile(incoming())
         && (
           isAdmin() ||
           (
@@ -245,18 +277,11 @@ service cloud.firestore {
         );
       allow delete: if isAdmin() && isValidId(userId);
 
-      // Customer Purchases Subcollection
+      // Customer Purchases Subcollection (READ-ONLY for owner/admin; WRITES strictly Firebase Admin SDK only)
       match /purchases/{purchaseId} {
         allow get: if isValidId(userId) && isValidId(purchaseId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
         allow list: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isVerifiedOwnerEmail());
-        allow create, update: if isValidId(userId)
-          && isValidId(purchaseId)
-          && isSignedIn()
-          && (request.auth.uid == userId || isAdmin())
-          && isValidPurchase(incoming())
-          && incoming().id == purchaseId
-          && exists(/databases/$(database)/documents/users/$(userId));
-        allow delete: if isValidId(userId) && isValidId(purchaseId) && isAdmin();
+        allow create, update, delete: if false;
       }
 
       // Customer Download History Subcollection

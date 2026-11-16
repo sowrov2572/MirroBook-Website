@@ -120,10 +120,14 @@ export interface Order {
   senderAccount: string;
   trxId: string;
   createdAt: string;
-  status?: 'Pending' | 'Verified' | 'Completed';
+  status?: 'Pending' | 'Verified' | 'Paid' | 'Completed';
   productId?: string;
   downloadUrl?: string;
   licenseKey?: string;
+  canonicalAmount?: number;
+  verificationNote?: string;
+  approvedBy?: string;
+  approvedAt?: string;
 }
 
 export interface UserPurchase {
@@ -187,10 +191,12 @@ export interface CheckoutItem {
 export interface SheetPaymentLog {
   timestamp: string;
   gateway: string;
+  transactionType?: string;
   trxId: string;
   amount: number;
   sender: string;
   status: string;
+  usedByOrderId?: string;
 }
 
 // Strict Studio Owner identity — verified server-side via Firebase ID token & Firestore rules
