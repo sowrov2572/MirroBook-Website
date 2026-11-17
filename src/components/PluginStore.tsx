@@ -5,9 +5,14 @@ import { ShoppingBag, Terminal, Layers } from 'lucide-react';
 interface PluginStoreProps {
   onBuyItem: (item: CheckoutItem) => void;
   plugins?: ProductItem[];
+  loading?: boolean;
 }
 
-export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [] }) => {
+export const PluginStore: React.FC<PluginStoreProps> = ({
+  onBuyItem,
+  plugins = [],
+  loading = false,
+}) => {
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
@@ -32,23 +37,23 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [
   return (
     <section
       id="plugins"
-      className="py-16 sm:py-20 px-5 sm:px-6 lg:px-8 bg-[#0B0D0C] text-[#F5F7F2] bg-grid-subtle border-b border-white/[0.09] relative overflow-hidden"
+      className="scroll-mt-20 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-[#0B0D0C] text-[#F5F7F2] bg-grid-subtle border-b border-white/[0.09] relative overflow-x-clip"
     >
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Aligned Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-5 border-b border-white/[0.09]">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-10 pb-5 border-b border-white/[0.09]">
+          <div className="min-w-0">
             <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
               Creator Extensions
             </span>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
+            <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
               Plugin Store
             </h2>
           </div>
 
           {/* Segmented Glass Filter Tabs */}
           {sourcePlugins.length > 0 && (
-            <div className="glass-tab-bar flex flex-wrap items-center gap-1 self-start md:self-auto">
+            <div className="glass-tab-bar flex items-center gap-1 self-start md:self-auto max-w-full overflow-x-auto no-scrollbar">
               {filterOptions.map((filter) => {
                 const isActive = selectedFilter === filter;
                 return (
@@ -56,7 +61,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [
                     key={filter}
                     type="button"
                     onClick={() => setSelectedFilter(filter)}
-                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                    className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       isActive
                         ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold shadow-sm'
                         : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
@@ -70,9 +75,23 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [
           )}
         </div>
 
-        {/* Empty State */}
-        {filteredPlugins.length === 0 ? (
-          <div className="glossy-card p-10 sm:p-14 text-center max-w-2xl mx-auto">
+        {/* Loading State */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 items-stretch">
+            {[1, 2, 3, 4].map((idx) => (
+              <div
+                key={idx}
+                className="glossy-card p-5 space-y-4 animate-pulse"
+              >
+                <div className="aspect-video w-full rounded-xl bg-white/[0.06]" />
+                <div className="h-3 w-20 rounded bg-white/[0.08]" />
+                <div className="h-5 w-3/4 rounded bg-white/[0.08]" />
+                <div className="h-10 w-full rounded-xl bg-white/[0.06]" />
+              </div>
+            ))}
+          </div>
+        ) : filteredPlugins.length === 0 ? (
+          <div className="glossy-card p-8 sm:p-14 text-center max-w-2xl mx-auto">
             <div className="w-12 h-12 rounded-xl bg-white/[0.05] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] mx-auto mb-4">
               <Layers size={22} />
             </div>
@@ -84,15 +103,15 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 items-stretch">
             {filteredPlugins.map((plugin) => {
               const showImg = plugin.thumbnailUrl && !brokenImages[plugin.id];
               return (
                 <div
                   key={plugin.id}
-                  className="glossy-card glossy-card-hover p-5 sm:p-6 flex flex-col justify-between h-full group"
+                  className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full group"
                 >
-                  <div>
+                  <div className="min-w-0">
                     {/* Visual Thumbnail */}
                     <div className="aspect-video w-full rounded-xl bg-[#0B0D0C] border border-white/[0.09] mb-4 overflow-hidden relative group-hover:border-[#B7F34A]/40 transition-colors flex flex-col justify-between p-3">
                       {showImg ? (
@@ -130,12 +149,12 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [
                     </div>
 
                     {/* Software Label */}
-                    <div className="text-xs text-[#B7F34A] font-semibold mb-1">
+                    <div className="text-xs text-[#B7F34A] font-semibold mb-1 truncate">
                       {plugin.software}
                     </div>
 
                     {/* Title */}
-                    <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors mb-1.5 leading-snug">
+                    <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors mb-1.5 leading-snug break-words">
                       {plugin.title}
                     </h3>
 
@@ -148,7 +167,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [
                   </div>
 
                   <div>
-                    <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between mb-4">
+                    <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between gap-2 mb-4">
                       <span className="text-xs text-[#A1AAA2] font-medium">
                         Instant License
                       </span>
@@ -167,7 +186,7 @@ export const PluginStore: React.FC<PluginStoreProps> = ({ onBuyItem, plugins = [
                           category: `Plugin (${plugin.software})`,
                         })
                       }
-                      className="w-full py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full min-h-[44px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ShoppingBag size={14} />
                       <span>Buy Now</span>

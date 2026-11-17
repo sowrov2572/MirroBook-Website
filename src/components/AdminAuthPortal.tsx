@@ -39,9 +39,10 @@ interface AdminAuthPortalProps {
   onApproveOrder: (orderId: string) => Promise<{ success: boolean; message: string }>;
   onClearOrders: () => void;
   products: ProductItem[];
-  onAddProduct: (product: ProductItem) => void;
-  onUpdateProduct: (product: ProductItem) => void;
-  onDeleteProduct: (id: string) => void;
+  onAddProduct: (product: ProductItem) => Promise<{ success: boolean; error?: string }> | void;
+  onUpdateProduct: (product: ProductItem) => Promise<{ success: boolean; error?: string }> | void;
+  onDeleteProduct: (id: string) => Promise<{ success: boolean; error?: string }> | void;
+  onEnsureMirrorPOS?: () => Promise<void>;
   onSyncProducts: (urlOverride?: string) => Promise<{ success: boolean; message: string }>;
   sheetsUrl: string;
   onSaveSheetsUrl: (url: string) => void;
@@ -66,6 +67,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
+  onEnsureMirrorPOS,
   onSyncProducts,
   sheetsUrl,
   onSaveSheetsUrl,
@@ -114,7 +116,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
 
   if (!authReady) {
     return (
-      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-[#0B0D0C]">
+      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-[#0B0D0C] px-4 overflow-x-clip">
         <div className="flex items-center gap-3 text-xs text-[#A1AAA2]">
           <Loader2 size={18} className="animate-spin text-[#B7F34A]" />
           <span>Verifying session permissions...</span>
@@ -126,22 +128,22 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   // Case 1: Signed in as unauthorized customer attempting /admin (or /admin/login)
   if (user && !isAdmin) {
     return (
-      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-16 bg-[#0B0D0C]">
-        <div className="max-w-md w-full glossy-card border border-red-500/30 rounded-2xl p-8 text-center space-y-5 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.85)]">
+      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-10 sm:py-16 bg-[#0B0D0C] overflow-x-clip">
+        <div className="max-w-md w-full glossy-card border border-red-500/30 rounded-2xl p-6 sm:p-8 text-center space-y-5 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.85)]">
           <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/40 text-red-400 mx-auto flex items-center justify-center">
             <ShieldAlert size={28} />
           </div>
           <div className="space-y-2">
-            <h1 className="font-display text-2xl font-bold text-[#F5F7F2]">Access Denied</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">Access Denied</h1>
             <p className="text-xs text-[#A1AAA2] leading-relaxed">
-              Your current account (<strong className="text-[#F5F7F2]">{user.email}</strong>) is a customer account and does not have MirrorBook Administrator permissions.
+              Your current account (<strong className="text-[#F5F7F2] break-all">{user.email}</strong>) is a customer account and does not have MirrorBook Administrator permissions.
             </p>
           </div>
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
               onClick={() => onNavigate('/account')}
-              className="glossy-btn w-full py-3 text-xs font-bold rounded-xl cursor-pointer"
+              className="glossy-btn w-full min-h-[44px] py-3 text-xs font-bold rounded-xl cursor-pointer"
             >
               Go to Customer Dashboard
             </button>
@@ -151,14 +153,14 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                 await onSignOut();
                 onNavigate('/admin/login');
               }}
-              className="glossy-btn-secondary w-full py-2.5 text-xs font-semibold rounded-xl cursor-pointer"
+              className="glossy-btn-secondary w-full min-h-[44px] py-2.5 text-xs font-semibold rounded-xl cursor-pointer"
             >
               Sign Out &amp; Switch Account
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/')}
-              className="w-full py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer"
+              className="w-full min-h-[44px] py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer"
             >
               Return Home
             </button>
@@ -171,23 +173,23 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   // Case 2: Unauthenticated visitor on /admin or /admin/login -> Show Dedicated Admin Login
   if (!user || mode === 'login') {
     return (
-      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-16 bg-[#0B0D0C]">
+      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-10 sm:py-16 bg-[#0B0D0C] overflow-x-clip">
         <div className="max-w-md w-full space-y-5">
           <button
             type="button"
             onClick={() => onNavigate('/')}
-            className="inline-flex items-center gap-2 text-xs text-[#A1AAA2] hover:text-[#B7F34A] cursor-pointer"
+            className="inline-flex items-center gap-2 text-xs text-[#A1AAA2] hover:text-[#B7F34A] cursor-pointer min-h-[44px]"
           >
             <ArrowLeft size={14} />
             <span>Back to MirrorBook</span>
           </button>
 
-          <div className="glossy-card rounded-2xl p-8 space-y-6 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.85)]">
+          <div className="glossy-card rounded-2xl p-6 sm:p-8 space-y-6 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.85)]">
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center shrink-0">
                 <ShieldCheck size={24} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h1 className="font-display text-lg font-bold text-[#F5F7F2]">
                   MirrorBook Admin Console
                 </h1>
@@ -212,7 +214,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
               type="button"
               onClick={handleAdminSignInClick}
               disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-[#F5F7F2] hover:bg-white text-[#0B0D0C] font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
+              className="w-full min-h-[44px] py-3.5 px-4 bg-[#F5F7F2] hover:bg-white text-[#0B0D0C] font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
             >
               {isLoading ? (
                 <>
@@ -276,24 +278,24 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   };
 
   return (
-    <section className="min-h-[calc(100vh-140px)] bg-[#0B0D0C] px-5 sm:px-6 lg:px-8 py-8">
+    <section className="min-h-[calc(100vh-140px)] bg-[#0B0D0C] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-x-clip">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Verified Admin Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/[0.09]">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center">
-              <ShieldCheck size={24} />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-white/[0.09]">
+          <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center shrink-0">
+              <ShieldCheck size={22} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display text-xl font-bold text-[#F5F7F2]">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] break-words">
                   MirrorBook Enterprise Admin Console
                 </h1>
-                <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-lg bg-[#B7F34A] text-[#0B0D0C]">
+                <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-lg bg-[#B7F34A] text-[#0B0D0C] shrink-0">
                   Verified Owner
                 </span>
               </div>
-              <p className="text-xs text-[#A1AAA2] font-mono">{user.email}</p>
+              <p className="text-xs text-[#A1AAA2] font-mono break-all mt-0.5">{user.email}</p>
             </div>
           </div>
 
@@ -301,15 +303,15 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
             <button
               type="button"
               onClick={() => setIsConsoleModalOpen(true)}
-              className="glossy-btn px-4 py-2.5 text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer"
+              className="glossy-btn w-full sm:w-auto min-h-[44px] px-4 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Settings size={14} />
-              <span>Open Full Control Desk (Orders / Products / Sheets / SMS)</span>
+              <Settings size={14} className="shrink-0" />
+              <span className="text-center">Open Full Control Desk (Orders / Products / Sheets / SMS)</span>
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/account')}
-              className="glossy-btn-secondary px-4 py-2.5 text-xs font-semibold rounded-xl cursor-pointer"
+              className="glossy-btn-secondary flex-1 sm:flex-none min-h-[44px] px-4 py-2.5 text-xs font-semibold rounded-xl cursor-pointer"
             >
               Customer View
             </button>
@@ -319,7 +321,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                 await onSignOut();
                 onNavigate('/admin/login');
               }}
-              className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
+              className="flex-1 sm:flex-none min-h-[44px] px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <LogOut size={13} />
               <span>Logout</span>
@@ -328,36 +330,36 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         </div>
 
         {/* Executive Overview Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="glossy-card rounded-2xl p-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
             <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
-              <ShoppingCart size={13} className="text-[#B7F34A]" /> Total Orders
+              <ShoppingCart size={13} className="text-[#B7F34A] shrink-0" /> Total Orders
             </span>
-            <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
+            <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
               {orders.length}
             </span>
           </div>
-          <div className="glossy-card rounded-2xl p-4">
+          <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
             <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
-              <Users size={13} className="text-[#B7F34A]" /> Registered Users
+              <Users size={13} className="text-[#B7F34A] shrink-0" /> Registered Users
             </span>
-            <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
+            <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
               {customers.length}
             </span>
           </div>
-          <div className="glossy-card rounded-2xl p-4">
+          <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
             <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
-              <Package size={13} className="text-[#B7F34A]" /> Catalog Products
+              <Package size={13} className="text-[#B7F34A] shrink-0" /> Catalog Products
             </span>
-            <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
+            <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
               {products.length}
             </span>
           </div>
-          <div className="glossy-card rounded-2xl p-4">
+          <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
             <span className="text-[11px] text-[#A1AAA2] flex items-center gap-1.5">
-              <KeyRound size={13} className="text-yellow-400" /> Pending Reviews
+              <KeyRound size={13} className="text-yellow-400 shrink-0" /> Pending Reviews
             </span>
-            <span className="text-2xl font-display font-bold text-yellow-300 tabular-nums mt-1 block">
+            <span className="text-xl sm:text-2xl font-display font-bold text-yellow-300 tabular-nums mt-1 block">
               {pendingOrders.length}
             </span>
           </div>
@@ -365,9 +367,9 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
 
         {/* Pending Manual Order Approval Queue */}
         {pendingOrders.length > 0 && (
-          <div className="glossy-card border-yellow-500/30 rounded-2xl p-5 space-y-4">
+          <div className="glossy-card border-yellow-500/30 rounded-2xl p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-bold text-[#F5F7F2]">
+              <h2 className="font-display text-sm sm:text-base font-bold text-[#F5F7F2]">
                 Pending Orders Awaiting Approval ({pendingOrders.length})
               </h2>
             </div>
@@ -383,22 +385,22 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                   key={ord.id}
                   className="bg-[#121614] border border-white/[0.09] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  <div className="text-xs space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="text-xs space-y-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono font-bold text-[#B7F34A]">{ord.id}</span>
-                      <span className="text-[#F5F7F2] font-semibold">{ord.itemName}</span>
+                      <span className="text-[#F5F7F2] font-semibold break-words">{ord.itemName}</span>
                       <span className="text-[#A1AAA2] font-mono tabular-nums">({ord.itemPrice})</span>
                     </div>
-                    <p className="text-[#A1AAA2]">
-                      {ord.customerName} • {ord.customerEmail} • {ord.paymentMethod} TrxID:{' '}
-                      <strong className="text-[#F5F7F2] font-mono">{ord.trxId}</strong>
+                    <p className="text-[#A1AAA2] break-words">
+                      {ord.customerName} • <span className="break-all">{ord.customerEmail}</span> • {ord.paymentMethod} TrxID:{' '}
+                      <strong className="text-[#F5F7F2] font-mono break-all">{ord.trxId}</strong>
                     </p>
                   </div>
                   <button
                     type="button"
                     disabled={approvingOrderId === ord.id}
                     onClick={() => handleApprovePendingOrder(ord)}
-                    className="glossy-btn px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                    className="glossy-btn w-full sm:w-auto min-h-[44px] px-4 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
                   >
                     <CheckCircle2 size={14} />
                     <span>
@@ -412,9 +414,9 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         )}
 
         {/* Registered Users & Issued License Keys */}
-        <div className="glossy-card rounded-2xl p-6 space-y-4">
+        <div className="glossy-card rounded-2xl p-4 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <h2 className="font-display text-base font-bold text-[#F5F7F2]">
                 Customer Directory &amp; License Management
               </h2>
@@ -422,7 +424,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                 Manage registered customer accounts, roles, and verified license keys.
               </p>
             </div>
-            <div className="relative w-full sm:w-72">
+            <div className="relative w-full sm:w-72 shrink-0">
               <Search
                 size={14}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]"
@@ -432,7 +434,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
                 placeholder="Search customer email or name..."
-                className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-3 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
+                className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-3 py-2.5 sm:py-2 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
               />
             </div>
           </div>
@@ -499,7 +501,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         </div>
 
         {/* Issued Licenses Overview */}
-        <div className="glossy-card rounded-2xl p-6 space-y-4">
+        <div className="glossy-card rounded-2xl p-4 sm:p-6 space-y-4">
           <h2 className="font-display text-base font-bold text-[#F5F7F2]">
             Issued Customer Licenses ({orders.filter((o) => o.status === 'Verified' || o.status === 'Completed' || o.status === 'Paid').length})
           </h2>
@@ -542,7 +544,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
                               setCopiedKey(ord.id);
                               setTimeout(() => setCopiedKey(null), 1800);
                             }}
-                            className="px-2.5 py-1 bg-[#121614] hover:bg-white/[0.08] border border-white/[0.09] rounded-lg text-[#F5F7F2] inline-flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[#121614] hover:bg-white/[0.08] border border-white/[0.09] rounded-lg text-[#F5F7F2] inline-flex items-center gap-1 cursor-pointer"
                           >
                             {copiedKey === ord.id ? (
                               <Check size={12} className="text-[#B7F34A]" />
@@ -573,6 +575,7 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         onAddProduct={onAddProduct}
         onUpdateProduct={onUpdateProduct}
         onDeleteProduct={onDeleteProduct}
+        onEnsureMirrorPOS={onEnsureMirrorPOS}
         onSyncProducts={onSyncProducts}
         sheetsUrl={sheetsUrl}
         onSaveSheetsUrl={onSaveSheetsUrl}

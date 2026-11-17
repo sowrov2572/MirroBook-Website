@@ -12,11 +12,11 @@ export const ShowcasesVault: React.FC<ShowcasesVaultProps> = () => {
   return (
     <section
       id="portfolio"
-      className="py-16 sm:py-20 px-5 sm:px-6 lg:px-8 bg-[#0B0D0C] text-[#F5F7F2] bg-grid-subtle border-b border-white/[0.09] relative overflow-hidden"
+      className="scroll-mt-20 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-[#0B0D0C] text-[#F5F7F2] bg-grid-subtle border-b border-white/[0.09] relative overflow-x-clip"
     >
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="glossy-card p-8 sm:p-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl space-y-2.5">
+        <div className="glossy-card p-5 sm:p-8 lg:p-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="max-w-2xl space-y-2.5 min-w-0">
             <span className="text-xs font-semibold text-[#B7F34A] block">
               Selected Client Work
             </span>
@@ -28,12 +28,12 @@ export const ShowcasesVault: React.FC<ShowcasesVaultProps> = () => {
             </p>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 w-full md:w-auto">
             <a
               href={PORTFOLIO_EXTERNAL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm glossy-btn rounded-xl flex items-center justify-center gap-2.5 cursor-pointer group whitespace-nowrap"
+              className="w-full md:w-auto min-h-[44px] px-7 py-3.5 text-xs sm:text-sm glossy-btn rounded-xl flex items-center justify-center gap-2.5 cursor-pointer group whitespace-nowrap"
             >
               <span>View Portfolio</span>
               <ExternalLink

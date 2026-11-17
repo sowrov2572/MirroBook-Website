@@ -2,7 +2,7 @@
   "entities": {
     "Product": {
       "title": "Product",
-      "description": "A digital product, plugin, software, tutorial, or agency package (paid items exclude protectedUrl)",
+      "description": "A digital product, plugin, software, tutorial, or agency package (non-tutorial items exclude protectedUrl)",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -11,10 +11,15 @@
         "title": { "type": "string" },
         "description": { "type": "string" },
         "price": { "type": "number" },
+        "isFree": { "type": "boolean" },
         "priceDisplay": { "type": "string" },
         "period": { "type": "string" },
         "thumbnailUrl": { "type": "string" },
+        "iconUrl": { "type": "string" },
+        "launchUrl": { "type": "string" },
         "protectedUrl": { "type": "string" },
+        "features": { "type": "array", "description": "Bounded feature highlights (max 15 items)" },
+        "status": { "type": "string", "enum": ["active", "draft", "archived"] },
         "duration": { "type": "string" },
         "instructor": { "type": "string" },
         "featured": { "type": "boolean" },
@@ -25,7 +30,7 @@
     },
     "ProductSecret": {
       "title": "ProductSecret",
-      "description": "Admin-only & Admin-SDK-only protected download/access URLs for paid catalog items",
+      "description": "Admin-only & Admin-SDK-only protected download/access URLs for paid and downloadable catalog items",
       "type": "object",
       "properties": {
         "id": { "type": "string" },

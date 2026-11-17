@@ -190,108 +190,113 @@ Sent via https://mirrorbook.site/`;
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/85 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-      <div className="relative w-full max-w-2xl glossy-card bg-[#121614] border border-white/[0.09] rounded-2xl overflow-hidden shadow-2xl my-8">
-        {/* Ambient Top Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-[#B7F34A]/10 rounded-full blur-3xl pointer-events-none" />
+    <div
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#0B0D0C]/85 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="min-h-full flex items-start sm:items-center justify-center p-3 sm:p-4 py-4 sm:py-6">
+        <div className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[90dvh] flex flex-col glossy-card bg-[#121614] border border-white/[0.09] rounded-2xl overflow-hidden shadow-2xl my-auto">
+          {/* Ambient Top Glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-[#B7F34A]/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Modal Header */}
-        <div className="relative z-10 flex items-center justify-between px-6 py-5 border-b border-white/[0.09] bg-[#171C19]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#B7F34A]/15 border border-[#B7F34A]/30 flex items-center justify-center text-[#B7F34A]">
-              <Sliders size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] uppercase tracking-wider text-[#B7F34A] font-bold">
-                  MirrorBook Agency
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] text-[#A1AAA2] font-medium">
-                  Customizable
-                </span>
+          {/* Modal Header (Fixed Top) */}
+          <div className="relative z-10 shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-white/[0.09] bg-[#171C19]">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#B7F34A]/15 border border-[#B7F34A]/30 flex items-center justify-center text-[#B7F34A] shrink-0">
+                <Sliders size={20} />
               </div>
-              <h3 className="font-display text-lg font-bold text-[#F5F7F2]">
-                Monthly Package Inquiry &amp; Customization
-              </h3>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] uppercase tracking-wider text-[#B7F34A] font-bold">
+                    MirrorBook Agency
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] text-[#A1AAA2] font-medium">
+                    Customizable
+                  </span>
+                </div>
+                <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] truncate">
+                  Monthly Package Inquiry &amp; Customization
+                </h3>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors rounded-xl hover:bg-white/[0.06] cursor-pointer shrink-0"
+              aria-label="Close modal"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors p-1.5 rounded-xl hover:bg-white/[0.06] cursor-pointer"
-            aria-label="Close modal"
-          >
-            <X size={20} />
-          </button>
-        </div>
 
-        {isSubmitted ? (
-          <div className="p-8 md:p-12 text-center space-y-5">
-            <div className="w-16 h-16 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(183,243,74,0.2)]">
-              <CheckCircle2 size={36} />
-            </div>
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {isSubmitted ? (
+              <div className="p-5 sm:p-8 md:p-10 text-center space-y-5">
+                <div className="w-16 h-16 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(183,243,74,0.2)]">
+                  <CheckCircle2 size={36} />
+                </div>
 
-            <div>
-              <span className="text-[11px] uppercase tracking-wider text-[#B7F34A] font-bold">
-                Order Request Received
-              </span>
-              <h4 className="font-display text-2xl font-bold text-[#F5F7F2] mt-1">
-                Thank You, {name}!
-              </h4>
-            </div>
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-[#B7F34A] font-bold">
+                    Order Request Received
+                  </span>
+                  <h4 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2] mt-1">
+                    Thank You, {name}!
+                  </h4>
+                </div>
 
-            {/* Order Reference Card */}
-            <div className="bg-[#171C19] border border-white/[0.09] rounded-2xl p-4 max-w-md mx-auto text-left space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#A1AAA2]">Order Reference:</span>
-                <span className="font-mono font-bold text-[#B7F34A] text-sm">{orderRef}</span>
+                {/* Order Reference Card */}
+                <div className="bg-[#171C19] border border-white/[0.09] rounded-2xl p-4 max-w-md mx-auto text-left space-y-2">
+                  <div className="flex flex-wrap justify-between items-center gap-1 text-xs">
+                    <span className="text-[#A1AAA2]">Order Reference:</span>
+                    <span className="font-mono font-bold text-[#B7F34A] text-sm">{orderRef}</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between items-center gap-1 text-xs">
+                    <span className="text-[#A1AAA2]">Selected Package:</span>
+                    <span className="text-[#F5F7F2] font-medium break-words">{requiredService}</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between items-center gap-1 text-xs">
+                    <span className="text-[#A1AAA2]">Confirmation Sent To:</span>
+                    <span className="text-[#F5F7F2] font-medium break-all">{email}</span>
+                  </div>
+                </div>
+
+                {/* Email Confirmation Notice */}
+                <div className="p-3.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/30 text-xs text-[#A1AAA2] max-w-md mx-auto flex items-start gap-2.5 text-left">
+                  <Mail size={16} className="text-[#B7F34A] shrink-0 mt-0.5" />
+                  <p className="leading-relaxed text-[11px] break-words">
+                    A confirmation email has been dispatched to <strong className="text-[#F5F7F2] break-all">{email}</strong>. Our team has received your order request and will contact you shortly to discuss next steps, payment details, and project requirements.
+                  </p>
+                </div>
+
+                <p className="text-[11px] text-[#707A72] max-w-sm mx-auto">
+                  Notice: This confirms receipt of an order request only. Payment details and project scope will be finalized with our team.
+                </p>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <a
+                    href={`https://wa.me/${PAYMENT_CONFIG.whatsAppNumber || '8801767079837'}?text=${encodeURIComponent(
+                      constructInquirySummary(orderRef)
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto min-h-[44px] px-6 py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <MessageSquare size={16} />
+                    <span>Chat on WhatsApp</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full sm:w-auto min-h-[44px] px-6 py-3 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#A1AAA2]">Selected Package:</span>
-                <span className="text-[#F5F7F2] font-medium">{requiredService}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#A1AAA2]">Confirmation Sent To:</span>
-                <span className="text-[#F5F7F2] font-medium">{email}</span>
-              </div>
-            </div>
-
-            {/* Email Confirmation Notice */}
-            <div className="p-3.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/30 text-xs text-[#A1AAA2] max-w-md mx-auto flex items-start gap-2.5 text-left">
-              <Mail size={16} className="text-[#B7F34A] shrink-0 mt-0.5" />
-              <p className="leading-relaxed text-[11px]">
-                A confirmation email has been dispatched to <strong className="text-[#F5F7F2]">{email}</strong>. Our team has received your order request and will contact you shortly to discuss next steps, payment details, and project requirements.
-              </p>
-            </div>
-
-            <p className="text-[11px] text-[#707A72] max-w-sm mx-auto">
-              Notice: This confirms receipt of an order request only. Payment details and project scope will be finalized with our team.
-            </p>
-
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const summary = constructInquirySummary(orderRef);
-                  const phone = PAYMENT_CONFIG.whatsAppNumber || '8801767079837';
-                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(summary)}`, '_blank');
-                }}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-              >
-                <MessageSquare size={16} />
-                <span>Chat on WhatsApp</span>
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={(e) => handleOrderSubmit(e, false)} className="p-6 md:p-8 space-y-5">
+            ) : (
+          <form onSubmit={(e) => handleOrderSubmit(e, false)} className="p-4 sm:p-6 md:p-8 space-y-5">
             {/* Honeypot field (hidden from real users, traps spam bots) */}
             <div style={{ display: 'none' }} aria-hidden="true">
               <label htmlFor="website-hp">Leave this empty</label>
@@ -334,7 +339,7 @@ Sent via https://mirrorbook.site/`;
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Tanvir Ahmed"
-                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors"
                 />
               </div>
 
@@ -347,7 +352,7 @@ Sent via https://mirrorbook.site/`;
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
                   placeholder="e.g. Acme Studio / Personal Brand"
-                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors"
                 />
               </div>
             </div>
@@ -364,7 +369,7 @@ Sent via https://mirrorbook.site/`;
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@business.com"
-                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors"
                 />
               </div>
 
@@ -378,7 +383,7 @@ Sent via https://mirrorbook.site/`;
                   value={whatsAppNumber}
                   onChange={(e) => setWhatsAppNumber(e.target.value)}
                   placeholder="017XXXXXXXX or +880..."
-                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors font-mono"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors font-mono"
                 />
               </div>
             </div>
@@ -419,13 +424,13 @@ Sent via https://mirrorbook.site/`;
                     key={s.id}
                     type="button"
                     onClick={() => setRequiredService(s.id)}
-                    className={`p-3 rounded-xl text-left border transition-all cursor-pointer ${
+                    className={`min-h-[44px] p-3 rounded-xl text-left border transition-all cursor-pointer ${
                       requiredService === s.id
                         ? 'bg-[#B7F34A]/10 border-[#B7F34A] text-[#F5F7F2] shadow-[0_0_15px_rgba(183,243,74,0.15)]'
                         : 'bg-[#171C19] border-white/[0.09] text-[#A1AAA2] hover:border-white/20'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-0.5">
+                    <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-1 mb-0.5">
                       <span className="text-xs font-bold text-[#F5F7F2]">{s.label}</span>
                       <span className="text-[10px] text-[#B7F34A] font-semibold">{s.price}</span>
                     </div>
@@ -444,7 +449,7 @@ Sent via https://mirrorbook.site/`;
                 <select
                   value={monthlyDesignQty}
                   onChange={(e) => setMonthlyDesignQty(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs focus:border-[#B7F34A] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs focus:border-[#B7F34A] focus:outline-none transition-colors"
                 >
                   <option value="120 Designs (~4 designs/day standard)">120 Designs (~4 designs/day standard)</option>
                   <option value="60 Designs (~2 designs/day)">60 Designs (~2 designs/day)</option>
@@ -461,7 +466,7 @@ Sent via https://mirrorbook.site/`;
                 <select
                   value={monthlyVideoQty}
                   onChange={(e) => setMonthlyVideoQty(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs focus:border-[#B7F34A] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs focus:border-[#B7F34A] focus:outline-none transition-colors"
                 >
                   <option value="60 Reels (~2 reels/day standard)">60 Reels (~2 reels/day standard)</option>
                   <option value="30 Reels (~1 reel/day)">30 Reels (~1 reel/day)</option>
@@ -480,7 +485,7 @@ Sent via https://mirrorbook.site/`;
               <select
                 value={budgetRange}
                 onChange={(e) => setBudgetRange(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs focus:border-[#B7F34A] focus:outline-none transition-colors"
+                className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs focus:border-[#B7F34A] focus:outline-none transition-colors"
               >
                 <option value="Starting From ৳25,000 / month">Starting From ৳25,000 / month</option>
                 <option value="৳25,000 – ৳35,000 / month">৳25,000 – ৳35,000 / month</option>
@@ -501,7 +506,7 @@ Sent via https://mirrorbook.site/`;
                 value={additionalRequirements}
                 onChange={(e) => setAdditionalRequirements(e.target.value)}
                 placeholder="Mention specific style references, turnaround needs, motion graphics, branding concepts, or custom requirements..."
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-[#0B0D0C] border border-white/[0.09] text-[#F5F7F2] text-base sm:text-xs placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none transition-colors resize-none"
               />
             </div>
 
@@ -510,7 +515,7 @@ Sent via https://mirrorbook.site/`;
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:flex-1 py-3.5 px-6 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="w-full sm:flex-1 min-h-[44px] py-3.5 px-5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>
@@ -529,7 +534,7 @@ Sent via https://mirrorbook.site/`;
                 type="button"
                 disabled={isSubmitting}
                 onClick={(e) => handleOrderSubmit(e, true)}
-                className="w-full sm:w-auto py-3.5 px-6 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="w-full sm:w-auto min-h-[44px] py-3.5 px-5 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 <MessageSquare size={14} className="text-[#25D366]" />
                 <span>Submit &amp; Open WhatsApp</span>
@@ -537,6 +542,8 @@ Sent via https://mirrorbook.site/`;
             </div>
           </form>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

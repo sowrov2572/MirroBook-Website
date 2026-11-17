@@ -12,17 +12,16 @@ export interface SyncResult {
 }
 
 /**
- * Strips protected download / access URLs from paid items for public storefront consumption.
- * Never expose protected URLs in public inspect element or frontend memory until verified!
+ * Strips protected download / access URLs from all non-tutorial items for public storefront consumption.
+ * Never expose protected URLs in public inspect element, frontend state, or localStorage!
  */
 export function sanitizeProductsForPublic(products: ProductItem[]): ProductItem[] {
   return products.map((item) => {
-    // If it's a paid item (price > 0), strip the protectedUrl completely
-    if (item.price > 0) {
-      const { protectedUrl, ...sanitized } = item;
+    if (Number(item.price) > 0 || item.type !== 'Free Tutorial') {
+      const { protectedUrl: _omit, ...sanitized } = item;
       return sanitized as ProductItem;
     }
-    // Free tutorials keep their playback URL
+    // Free tutorials keep their public video playback URL
     return item;
   });
 }

@@ -243,236 +243,253 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md glossy-card border border-white/[0.09] text-left overflow-hidden my-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
-        {/* Top Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.09] bg-[#171C19]">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={15} className="text-[#B7F34A]" />
-            <h3 className="font-display text-xs font-bold tracking-normal uppercase text-[#F5F7F2]">
-              Instant Checkout
-            </h3>
+    <div
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#0B0D0C]/85 backdrop-blur-md animate-in fade-in duration-150"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="min-h-full flex items-start sm:items-center justify-center p-3 sm:p-4 py-4 sm:py-6">
+        <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] sm:max-h-[90dvh] flex flex-col glossy-card border border-white/[0.09] text-left overflow-hidden my-auto shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
+          {/* Top Header */}
+          <div className="shrink-0 flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-white/[0.09] bg-[#171C19]">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={15} className="text-[#B7F34A]" />
+              <h3 className="font-display text-xs font-bold tracking-normal uppercase text-[#F5F7F2]">
+                Instant Checkout
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-w-[40px] min-h-[40px] rounded-xl hover:bg-white/10 text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors flex items-center justify-center cursor-pointer"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-7 h-7 rounded-xl hover:bg-white/10 text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors flex items-center justify-center cursor-pointer"
-            aria-label="Close"
-          >
-            <X size={15} />
-          </button>
-        </div>
 
-        {/* 1. COMPLETED OR PENDING SUBMISSION VIEW */}
-        {completedOrder ? (
-          <div className="p-5 space-y-4">
-            <div className="text-center py-1">
-              <div className="w-11 h-11 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A] text-[#B7F34A] mx-auto flex items-center justify-center mb-2.5">
-                {isAutoVerified ? <ShieldCheck size={22} /> : <CheckCircle size={22} />}
-              </div>
-              <h4 className="font-display text-lg font-bold text-[#F5F7F2] mb-0.5">
-                {isAutoVerified ? 'Payment Verified & Completed' : 'Order Submitted (Pending Verification)'}
-              </h4>
-              <p className="text-xs text-[#A1AAA2]">
-                Order ID: <span className="text-[#F5F7F2] font-semibold">{completedOrder.id}</span>
-              </p>
-            </div>
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {/* 1. COMPLETED OR PENDING SUBMISSION VIEW */}
+            {completedOrder ? (
+              <div className="p-4 sm:p-5 space-y-4">
+                <div className="text-center py-1">
+                  <div className="w-11 h-11 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A] text-[#B7F34A] mx-auto flex items-center justify-center mb-2.5">
+                    {isAutoVerified ? <ShieldCheck size={22} /> : <CheckCircle size={22} />}
+                  </div>
+                  <h4 className="font-display text-lg font-bold text-[#F5F7F2] mb-0.5">
+                    {isAutoVerified ? 'Payment Verified & Completed' : 'Order Submitted (Pending Verification)'}
+                  </h4>
+                  <p className="text-xs text-[#A1AAA2]">
+                    Order ID: <span className="text-[#F5F7F2] font-semibold">{completedOrder.id}</span>
+                  </p>
+                </div>
 
-            {/* Receipt Summary */}
-            <div className="bg-[#121614] border border-white/[0.09] rounded-xl p-3.5 space-y-1.5 text-xs">
-              <div className="flex justify-between py-1 border-b border-white/[0.06]">
-                <span className="text-[#A1AAA2]">Item</span>
-                <span className="text-[#F5F7F2] font-medium truncate max-w-[200px]">{completedOrder.itemName}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.06]">
-                <span className="text-[#A1AAA2]">Amount</span>
-                <span className="text-[#B7F34A] font-bold">{completedOrder.itemPrice}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.06]">
-                <span className="text-[#A1AAA2]">Method</span>
-                <span className="text-[#F5F7F2] font-medium">{completedOrder.paymentMethod}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.06]">
-                <span className="text-[#A1AAA2]">TrxID</span>
-                <span className="text-[#F5F7F2] font-semibold">{completedOrder.trxId}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-[#A1AAA2]">Account</span>
-                <span className="text-[#B7F34A] font-medium truncate max-w-[200px]">
-                  {user ? user.email : completedOrder.customerEmail}
-                </span>
-              </div>
-            </div>
+                {/* Receipt Summary */}
+                <div className="bg-[#121614] border border-white/[0.09] rounded-xl p-3.5 space-y-1.5 text-xs">
+                  <div className="flex flex-wrap justify-between gap-2 py-1 border-b border-white/[0.06]">
+                    <span className="text-[#A1AAA2]">Item</span>
+                    <span className="text-[#F5F7F2] font-medium break-words text-right">{completedOrder.itemName}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 py-1 border-b border-white/[0.06]">
+                    <span className="text-[#A1AAA2]">Amount</span>
+                    <span className="text-[#B7F34A] font-bold tabular-nums">{completedOrder.itemPrice}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 py-1 border-b border-white/[0.06]">
+                    <span className="text-[#A1AAA2]">Method</span>
+                    <span className="text-[#F5F7F2] font-medium">{completedOrder.paymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between gap-2 py-1 border-b border-white/[0.06]">
+                    <span className="text-[#A1AAA2]">TrxID</span>
+                    <span className="text-[#F5F7F2] font-semibold break-all">{completedOrder.trxId}</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2 py-1">
+                    <span className="text-[#A1AAA2]">Account</span>
+                    <span className="text-[#B7F34A] font-medium break-all text-right">
+                      {user ? user.email : completedOrder.customerEmail}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Auto-Verified: Server-Delivered Unlock Link & Vault Binding */}
-            {isAutoVerified && completedOrder.downloadUrl && (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onSelectDownload) {
-                      onSelectDownload({
-                        title: completedOrder.itemName,
-                        downloadUrl: completedOrder.downloadUrl!,
-                        orderId: completedOrder.id,
-                        category: 'Plugin',
-                        trxId: completedOrder.trxId,
-                      });
-                    } else {
-                      window.open(completedOrder.downloadUrl!, '_blank', 'noopener,noreferrer');
-                    }
-                  }}
-                  className="w-full py-3.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Download size={15} />
-                  <span>Secure Download &amp; Install Now (Google Drive)</span>
-                </button>
+                {/* Auto-Verified: Server-Delivered Unlock Link & Vault Binding */}
+                {isAutoVerified && completedOrder.downloadUrl && (
+                  <div className="space-y-2">
+                    {onSelectDownload ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectDownload({
+                            title: completedOrder.itemName,
+                            downloadUrl: completedOrder.downloadUrl!,
+                            orderId: completedOrder.id,
+                            category: 'Plugin',
+                            trxId: completedOrder.trxId,
+                          });
+                        }}
+                        className="w-full min-h-[44px] py-3.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Download size={15} />
+                        <span>Secure Download &amp; Install Now</span>
+                      </button>
+                    ) : (
+                      <a
+                        href={completedOrder.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full min-h-[44px] py-3.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Download size={15} />
+                        <span>Secure Download &amp; Install Now</span>
+                      </a>
+                    )}
 
-                {completedOrder.licenseKey && (
-                  <div className="p-2.5 bg-[#121614] border border-[#B7F34A]/30 rounded-xl flex items-center justify-between text-[11px]">
-                    <span className="text-[#A1AAA2]">License Key:</span>
-                    <code className="text-[#B7F34A] font-mono font-bold select-all">
-                      {completedOrder.licenseKey}
-                    </code>
+                    {completedOrder.licenseKey && (
+                      <div className="p-2.5 bg-[#121614] border border-[#B7F34A]/30 rounded-xl flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                        <span className="text-[#A1AAA2]">License Key:</span>
+                        <code className="text-[#B7F34A] font-mono font-bold select-all break-all">
+                          {completedOrder.licenseKey}
+                        </code>
+                      </div>
+                    )}
+
+                    {onOpenVault && user && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onOpenVault();
+                        }}
+                        className="w-full min-h-[44px] py-2.5 text-xs font-semibold uppercase tracking-normal glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <FolderDown size={14} className="text-[#B7F34A]" />
+                        <span>View in My Creator Vault</span>
+                      </button>
+                    )}
+
+                    <div className="p-2.5 bg-[#121614] border border-white/[0.09] rounded-xl text-[10px] text-[#A1AAA2] flex items-center gap-2">
+                      <Lock size={12} className="text-[#B7F34A] shrink-0" />
+                      <span className="break-words">
+                        License is bound to your account ({completedOrder.customerEmail}). You can re-download anytime by logging into your dashboard.
+                      </span>
+                    </div>
                   </div>
                 )}
 
-                {onOpenVault && user && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenVault();
-                    }}
-                    className="w-full py-2.5 text-xs font-semibold uppercase tracking-normal glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <FolderDown size={14} className="text-[#B7F34A]" />
-                    <span>View in My Creator Vault</span>
-                  </button>
+                {/* Manual Review Pending Notice (No download URL exposed until Admin SDK approves) */}
+                {!isAutoVerified && (
+                  <div className="p-3.5 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span>অর্ডার Pending — এডমিন যাচাইয়ের অপেক্ষায়</span>
+                    </div>
+                    <p className="text-[11px] text-[#A1AAA2] leading-relaxed">
+                      {verificationMessage ||
+                        'আপনার TrxID এবং পেমেন্ট এডমিন দ্বারা যাচাই করার পর লাইসেন্স ও গুগল ড্রাইভ এক্সেস সক্রিয় করা হবে। দ্রুত অ্যাক্টিভেশনের জন্য নিচের বাটনে ক্লিক করে সরাসরি WhatsApp-এ মেসেজ দিন।'}
+                    </p>
+                  </div>
                 )}
 
-                <div className="p-2.5 bg-[#121614] border border-white/[0.09] rounded-xl text-[10px] text-[#A1AAA2] flex items-center gap-2">
-                  <Lock size={12} className="text-[#B7F34A] shrink-0" />
-                  <span>License is bound to your account ({completedOrder.customerEmail}). You can re-download anytime by logging into your dashboard.</span>
+                {/* WhatsApp Link & Close */}
+                <div className="space-y-2">
+                  <a
+                    href={customerWhatsAppLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full min-h-[44px] py-2.5 text-xs font-bold uppercase tracking-normal rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      isAutoVerified ? 'glossy-btn-secondary' : 'glossy-btn'
+                    }`}
+                  >
+                    <MessageCircle size={14} />
+                    <span>{isAutoVerified ? 'Open WhatsApp Support' : 'Message on WhatsApp'}</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full min-h-[40px] py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer text-center"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
-            )}
-
-            {/* Manual Review Pending Notice (No download URL exposed until Admin SDK approves) */}
-            {!isAutoVerified && (
-              <div className="p-3.5 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
-                  <AlertCircle size={14} />
-                  <span>অর্ডার Pending — এডমিন যাচাইয়ের অপেক্ষায়</span>
+            ) : (
+              /* 2. MINIMAL UNCLUTTERED CHECKOUT FORM */
+              <div className="p-4 sm:p-5 space-y-3.5">
+                {/* Clean Item Name & Price Banner */}
+                <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.09]">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] uppercase tracking-normal text-[#707A72] block">
+                      Item
+                    </span>
+                    <span className="font-display text-sm sm:text-base font-bold text-[#F5F7F2] break-words block">
+                      {item.name}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-[10px] uppercase tracking-normal text-[#707A72] block">
+                      Price
+                    </span>
+                    <span className="font-display text-base sm:text-xl font-bold text-[#B7F34A] tabular-nums">
+                      {item.price}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-[#A1AAA2] leading-relaxed">
-                  {verificationMessage ||
-                    'আপনার TrxID এবং পেমেন্ট এডমিন দ্বারা যাচাই করার পর লাইসেন্স ও গুগল ড্রাইভ এক্সেস সক্রিয় করা হবে। দ্রুত অ্যাক্টিভেশনের জন্য নিচের বাটনে ক্লিক করে সরাসরি WhatsApp-এ মেসেজ দিন।'}
-                </p>
-              </div>
-            )}
 
-            {/* WhatsApp Link & Close */}
-            <div className="space-y-2">
-              <a
-                href={customerWhatsAppLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`w-full py-2.5 text-xs font-bold uppercase tracking-normal rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  isAutoVerified
-                    ? 'glossy-btn-secondary'
-                    : 'glossy-btn'
-                }`}
-              >
-                <MessageCircle size={14} />
-                <span>{isAutoVerified ? 'Open WhatsApp Support' : 'Message on WhatsApp'}</span>
-              </a>
-
-              <button
-                onClick={onClose}
-                className="w-full py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer text-center"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* 2. MINIMAL UNCLUTTERED CHECKOUT FORM */
-          <div className="p-5 space-y-3.5">
-            {/* Clean Item Name & Price Banner */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.09]">
-              <div>
-                <span className="text-[10px] uppercase tracking-normal text-[#707A72] block">
-                  Item
-                </span>
-                <span className="font-display text-sm sm:text-base font-bold text-[#F5F7F2] truncate max-w-[220px] block">
-                  {item.name}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] uppercase tracking-normal text-[#707A72] block">
-                  Price
-                </span>
-                <span className="font-display text-lg sm:text-xl font-bold text-[#B7F34A] tabular-nums">
-                  {item.price}
-                </span>
-              </div>
-            </div>
-
-            {/* Account Binding Indicator or Quick Login */}
-            {user ? (
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/25 text-xs text-[#B7F34A]">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck size={14} />
-                  <span>Licensed to: <strong>{user.email}</strong></span>
-                </div>
-                <span className="text-[10px] font-semibold bg-[#B7F34A] text-black px-1.5 py-0.5 rounded">
-                  Vault Ready
-                </span>
-              </div>
-            ) : onSignIn ? (
-              <div className="flex items-center justify-between p-2 rounded-xl bg-[#121614] border border-white/[0.09] text-xs text-[#A1AAA2]">
-                <span>Want to save this to your permanent Vault?</span>
-                <button
-                  type="button"
-                  onClick={onSignIn}
-                  className="text-xs font-semibold text-[#B7F34A] hover:underline cursor-pointer flex items-center gap-1"
-                >
-                  <UserIcon size={12} />
-                  <span>Sign In</span>
-                </button>
-              </div>
-            ) : null}
-
-            {/* Payment Method Selector Tabs with Name & Icon */}
-            <div>
-              <span className="text-[10px] uppercase tracking-normal text-[#707A72] block mb-1.5">
-                Payment Method
-              </span>
-              <div className="grid grid-cols-5 gap-1 p-1 bg-[#121614] rounded-xl border border-white/[0.09]">
-                {paymentMethods.map(({ method, label }) => {
-                  const isActive = selectedMethod === method;
-                  return (
+                {/* Account Binding Indicator or Quick Login */}
+                {user ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/25 text-xs text-[#B7F34A]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ShieldCheck size={14} className="shrink-0" />
+                      <span className="truncate">
+                        Licensed to: <strong className="break-all">{user.email}</strong>
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold bg-[#B7F34A] text-black px-1.5 py-0.5 rounded shrink-0">
+                      Vault Ready
+                    </span>
+                  </div>
+                ) : onSignIn ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-[#121614] border border-white/[0.09] text-xs text-[#A1AAA2]">
+                    <span>Want to save this to your permanent Vault?</span>
                     <button
-                      key={method}
                       type="button"
-                      onClick={() => {
-                        setSelectedMethod(method);
-                        setVerificationFailed(false);
-                      }}
-                      className={`py-2 px-1 text-[11px] font-medium rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 cursor-pointer ${
-                        isActive
-                          ? 'bg-[#B7F34A] text-black font-semibold shadow-sm'
-                          : 'text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/5'
-                      }`}
+                      onClick={onSignIn}
+                      className="text-xs font-semibold text-[#B7F34A] hover:underline cursor-pointer flex items-center gap-1 shrink-0"
                     >
-                      <MethodIcon method={method} className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{label}</span>
+                      <UserIcon size={12} />
+                      <span>Sign In</span>
                     </button>
-                  );
-                })}
-              </div>
-            </div>
+                  </div>
+                ) : null}
+
+                {/* Payment Method Selector Tabs with Name & Icon */}
+                <div>
+                  <span className="text-[10px] uppercase tracking-normal text-[#707A72] block mb-1.5">
+                    Payment Method
+                  </span>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 p-1 bg-[#121614] rounded-xl border border-white/[0.09]">
+                    {paymentMethods.map(({ method, label }) => {
+                      const isActive = selectedMethod === method;
+                      return (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => {
+                            setSelectedMethod(method);
+                            setVerificationFailed(false);
+                          }}
+                          className={`min-h-[40px] py-2 px-1 text-[11px] font-medium rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            isActive
+                              ? 'bg-[#B7F34A] text-black font-semibold shadow-sm'
+                              : 'text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/5'
+                          }`}
+                        >
+                          <MethodIcon method={method} className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
             {/* Dynamic Account Details Box */}
             <div className="bg-[#121614] border border-white/[0.09] rounded-xl p-3">
@@ -589,7 +606,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <form onSubmit={handleVerifyAndComplete} className="space-y-3">
               {/* If user is not logged in, collect email for licensing, otherwise prefilled */}
               {!user && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="text-[10px] text-[#A1AAA2] mb-1 block">
                       Name (Optional)
@@ -599,7 +616,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your Name"
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                     />
                   </div>
 
@@ -613,13 +630,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="yourname@gmail.com"
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[10px] text-[#A1AAA2] mb-1 block font-medium">
                     Your {selectedMethod} / Phone Number *
@@ -634,7 +651,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       if (!senderAccount) setSenderAccount(val);
                     }}
                     placeholder="01XXXXXXXXX"
-                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
+                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                   />
                 </div>
 
@@ -651,19 +668,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       setVerificationFailed(false);
                     }}
                     placeholder="e.g. BL92XK9P1Q"
-                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-2.5 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-semibold font-mono uppercase"
+                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-lg px-3 py-2 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-semibold font-mono uppercase"
                   />
                 </div>
               </div>
 
-              <div className="p-2 rounded-lg bg-[#121614] border border-white/[0.06] text-[10px] text-[#A1AAA2] flex items-center justify-between">
+              <div className="p-2.5 rounded-lg bg-[#121614] border border-white/[0.06] text-[10px] text-[#A1AAA2] flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-2">
                 <span>Payment Sent From:</span>
                 <input
                   type="text"
                   value={senderAccount}
                   onChange={(e) => setSenderAccount(e.target.value)}
                   placeholder="Last 4 digits or Number"
-                  className="bg-transparent border-b border-white/[0.12] focus:border-[#B7F34A] text-right text-[11px] text-[#B7F34A] focus:outline-none font-mono max-w-[150px]"
+                  className="bg-transparent border-b border-white/[0.12] focus:border-[#B7F34A] min-[380px]:text-right text-base sm:text-[11px] text-[#B7F34A] focus:outline-none font-mono w-full min-[380px]:max-w-[160px]"
                 />
               </div>
 
@@ -671,7 +688,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <button
                   type="submit"
                   disabled={isVerifying}
-                  className="w-full py-2.5 sm:py-3 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full min-h-[44px] py-3 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isVerifying ? (
                     <>
@@ -691,8 +708,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </p>
               </div>
             </form>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

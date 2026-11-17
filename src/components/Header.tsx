@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#0B0D0C]/85 border-b border-white/[0.09] transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand Lockup with MirrorBook Official Icon */}
         <a
           href="/"
@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
               window.location.href = '/';
             }
           }}
-          className="flex items-center gap-3 group text-left cursor-pointer shrink-0"
+          className="flex items-center gap-2.5 sm:gap-3 group text-left cursor-pointer shrink-0"
         >
           <img
             src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
@@ -86,14 +86,14 @@ export const Header: React.FC<HeaderProps> = ({
                 target.src = 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png';
               }
             }}
-            className="w-9 h-9 rounded-xl object-contain transition-transform duration-150 group-hover:scale-105"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain transition-transform duration-150 group-hover:scale-105"
           />
 
           <div className="flex flex-col">
-            <span className="font-display text-lg font-bold tracking-tight text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight whitespace-nowrap">
+            <span className="font-display text-base sm:text-lg font-bold tracking-tight text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight whitespace-nowrap">
               MirrorBook
             </span>
-            <span className="text-[11px] text-[#A1AAA2] font-normal leading-tight whitespace-nowrap hidden sm:block">
+            <span className="text-[11px] text-[#A1AAA2] font-normal leading-tight whitespace-nowrap hidden xl:block">
               Reflecting Creativity
             </span>
           </div>
@@ -102,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Desktop Navigation */}
         <nav
           aria-label="Primary Navigation"
-          className="hidden lg:flex items-center gap-1 bg-[#121614]/80 border border-white/[0.09] px-2 py-1 rounded-xl"
+          className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-[#121614]/80 border border-white/[0.09] px-1.5 xl:px-2 py-1 rounded-xl min-w-0"
         >
           {navLinks.map((link) => {
             const isCurrent =
@@ -113,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
                 key={link.name}
                 href={link.href}
                 onClick={(e) => handleLinkClick(e, link.href)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 ${
+                className={`text-[11px] xl:text-xs font-medium px-2 xl:px-3 py-1.5 rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 ${
                   isCurrent
                     ? 'text-[#0B0D0C] bg-[#B7F34A] font-semibold'
                     : 'text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/[0.06]'
@@ -126,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Action Buttons & User Account Lockup */}
-        <div className="hidden lg:flex items-center gap-2.5 shrink-0">
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
           {/* Studio Owner Console Access */}
           {isOwner && onOpenAdmin && (
             <button
@@ -190,12 +190,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile Quick Account & Menu Toggle */}
-        <div className="flex lg:hidden items-center gap-2">
+        <div className="flex lg:hidden items-center gap-1.5 shrink-0">
           {user ? (
             <button
               type="button"
               onClick={onOpenVault}
-              className="p-2 rounded-xl bg-[#171C19] border border-white/[0.09] text-[#B7F34A] cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#171C19] border border-white/[0.09] text-[#B7F34A] cursor-pointer"
               title="My Account"
             >
               <FolderDown size={18} />
@@ -204,7 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onSignIn}
-              className="p-2 rounded-xl bg-[#171C19] border border-white/[0.09] text-[#F5F7F2] cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#171C19] border border-white/[0.09] text-[#F5F7F2] cursor-pointer"
               title="Sign In"
             >
               <UserIcon size={18} />
@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/[0.05] transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/[0.05] transition-colors cursor-pointer"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -224,8 +224,8 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b border-white/[0.09] bg-[#121614]/98 backdrop-blur-2xl px-5 sm:px-6 py-5 space-y-4">
-          <div className="flex flex-col space-y-1.5">
+        <div className="lg:hidden max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain border-b border-white/[0.09] bg-[#121614]/98 backdrop-blur-2xl px-4 sm:px-6 py-4 space-y-4">
+          <div className="flex flex-col space-y-1">
             {navLinks.map((link) => {
               const isCurrent =
                 link.href === currentPath ||
@@ -238,7 +238,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setMobileMenuOpen(false);
                     handleLinkClick(e, link.href);
                   }}
-                  className={`text-sm font-medium transition-colors px-3 py-2 rounded-xl ${
+                  className={`text-sm font-medium transition-colors px-3 py-2.5 min-h-[44px] flex items-center rounded-xl ${
                     isCurrent
                       ? 'text-[#0B0D0C] bg-[#B7F34A] font-semibold'
                       : 'text-[#A1AAA2] hover:text-[#F5F7F2] hover:bg-white/[0.05]'
@@ -250,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
             })}
           </div>
 
-          <div className="pt-4 border-t border-white/[0.09] space-y-2.5">
+          <div className="pt-3 border-t border-white/[0.09] space-y-2.5">
             {isOwner && onOpenAdmin && (
               <button
                 type="button"
@@ -258,7 +258,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   onOpenAdmin();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] py-2.5 text-center text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShieldAlert size={14} className="text-amber-400" />
                 <span>Studio Owner Console</span>
@@ -272,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   onOpenVault();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FolderDown size={14} className="text-[#B7F34A]" />
                 <span>My Account Dashboard ({purchaseCount} items)</span>
@@ -284,7 +284,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   onSignIn();
                 }}
-                className="w-full py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UserIcon size={14} className="text-[#B7F34A]" />
                 <span>Sign In / Create Account</span>
@@ -297,7 +297,7 @@ export const Header: React.FC<HeaderProps> = ({
                 setMobileMenuOpen(false);
                 onStartProject();
               }}
-              className="w-full py-3 text-center text-xs glossy-btn rounded-xl cursor-pointer"
+              className="w-full min-h-[44px] py-3 text-center text-xs glossy-btn rounded-xl cursor-pointer"
             >
               Start a Project
             </button>

@@ -35,7 +35,6 @@ import {
   isVerifiedAdminUser,
   generateDeterministicLicenseKey,
 } from './types';
-import { INITIAL_PRODUCTS } from './data/content';
 import {
   loadPaymentConfig,
   savePaymentConfig,
@@ -55,6 +54,7 @@ import {
   subscribeToProductSecrets,
   saveProductToFirestore,
   deleteProductFromFirestore,
+  ensureMirrorPOSProductInFirestore,
   subscribeToPaymentConfig,
   subscribeToAdminConfig,
   savePaymentConfigToFirestore,
@@ -76,7 +76,6 @@ import {
   recordDownloadHistory,
   subscribeToDownloadHistory,
   formatFirebaseAuthError,
-  OBSOLETE_PRODUCT_IDS,
 } from './utils/firebase';
 
 const KNOWN_ROUTES = new Set([
@@ -134,37 +133,9 @@ export default function App() {
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(loadPaymentConfig);
 
-  // Dynamic Products and Google Sheets state (paid protectedUrl always stripped before storing)
-  const [products, setProducts] = useState<ProductItem[]>(() => {
-    try {
-      const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-      if (raw) {
-        const parsed: ProductItem[] = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = sanitizeProductsForPublic(
-            parsed.filter((p) => !OBSOLETE_PRODUCT_IDS.has(p.id))
-          );
-          const hasNewTutorials = cleaned.some((p) => p.id === 'tut-bangladeshi-money-explosion');
-          if (hasNewTutorials) {
-            try {
-              localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(cleaned));
-            } catch {}
-            return cleaned;
-          }
-          const nonTutorials = cleaned.filter((p) => p.type !== 'Free Tutorial');
-          const canonicalTutorials = INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial');
-          const merged = sanitizeProductsForPublic([...nonTutorials, ...canonicalTutorials]);
-          try {
-            localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(merged));
-          } catch {}
-          return merged;
-        }
-      }
-    } catch {
-      // fallback
-    }
-    return sanitizeProductsForPublic(INITIAL_PRODUCTS);
-  });
+  // Dynamic Products (strictly synced with Firestore /products single source of truth)
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [productsLoading, setProductsLoading] = useState<boolean>(true);
   const [sheetsUrl, setSheetsUrl] = useState<string>(() => {
     try {
       return localStorage.getItem(SHEETS_URL_KEY) || '';
@@ -204,10 +175,11 @@ export default function App() {
 
   // 1. Firebase Auth state listener with Backend Session Verification & Role Resolution
   useEffect(() => {
-    // Clean up legacy insecure auth cache keys from earlier versions
+    // Clean up legacy insecure auth & stale product cache keys from earlier versions
     try {
       localStorage.removeItem('mirrorbook_active_user');
       localStorage.removeItem('mirrorbook_admin_passkey');
+      localStorage.removeItem(PRODUCTS_STORAGE_KEY);
     } catch {}
 
     let isMounted = true;
@@ -347,20 +319,18 @@ export default function App() {
 
   // 3. Public Firestore Catalog & Public Payment Config Listeners
   useEffect(() => {
-    const unsubscribeProducts = subscribeToProducts((cloudProducts) => {
-      if (cloudProducts.length > 0) {
-        const hasTutorials = cloudProducts.some((p) => p.type === 'Free Tutorial');
-        const finalProducts = sanitizeProductsForPublic(
-          hasTutorials
-            ? cloudProducts
-            : [...cloudProducts, ...INITIAL_PRODUCTS.filter((p) => p.type === 'Free Tutorial')]
-        );
+    setProductsLoading(true);
+    const unsubscribeProducts = subscribeToProducts(
+      (cloudProducts) => {
+        const finalProducts = sanitizeProductsForPublic(cloudProducts);
         setProducts(finalProducts);
-        try {
-          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(finalProducts));
-        } catch {}
-      }
-    }, isAdminVerified);
+        setProductsLoading(false);
+      },
+      () => {
+        setProductsLoading(false);
+      },
+      isAdminVerified
+    );
 
     const unsubscribeConfig = subscribeToPaymentConfig((cloudConfig) => {
       setPaymentConfig((prev) => ({
@@ -453,12 +423,14 @@ export default function App() {
   }, [navigateTo]);
 
   // Public Catalog Security Sanitization:
-  // Paid items NEVER have their protectedUrl exposed in public React tree
+  // Paid items NEVER have their protectedUrl exposed in public React tree; draft/archived items never show publicly
   const publicProducts = useMemo(() => {
-    return sanitizeProductsForPublic(products);
+    return sanitizeProductsForPublic(
+      products.filter((p) => p.status !== 'draft' && p.status !== 'archived')
+    );
   }, [products]);
 
-  // Admin-only catalog view merges protectedUrl from admin-only /productSecrets collection
+  // Admin-only catalog view includes all statuses & merges protectedUrl from /productSecrets
   const adminProducts = useMemo(() => {
     if (!isAdminVerified) return publicProducts;
     return products.map((p) => {
@@ -467,10 +439,6 @@ export default function App() {
     });
   }, [products, productSecrets, isAdminVerified, publicProducts]);
 
-  const publicPackages = useMemo(
-    () => publicProducts.filter((p) => p.type === 'Agency Package'),
-    [publicProducts]
-  );
   const publicPlugins = useMemo(
     () => publicProducts.filter((p) => p.type === 'Plugin'),
     [publicProducts]
@@ -483,32 +451,10 @@ export default function App() {
     () => publicProducts.filter((p) => p.type === 'Course'),
     [publicProducts]
   );
-  const publicTutorials = useMemo(() => {
-    const canonicalIds = [
-      'tut-bangladeshi-money-explosion',
-      'tut-dune-2-scene-recreation',
-      'tut-social-media-poster-design',
-      'tut-improve-design-skill',
-    ];
-    const map = new Map<string, ProductItem>();
-    publicProducts.forEach((p) => {
-      if (p.type === 'Free Tutorial') {
-        map.set(p.id, p);
-      }
-    });
-
-    const result: ProductItem[] = [];
-    for (const id of canonicalIds) {
-      const match = map.get(id);
-      if (match) {
-        result.push(match);
-      } else {
-        const fallback = INITIAL_PRODUCTS.find((p) => p.id === id);
-        if (fallback) result.push(fallback);
-      }
-    }
-    return result;
-  }, [publicProducts]);
+  const publicTutorials = useMemo(
+    () => publicProducts.filter((p) => p.type === 'Free Tutorial'),
+    [publicProducts]
+  );
 
   // Auth Handlers (Real Firebase Auth + Backend Session Verification)
   const syncAfterCustomerAuth = async (
@@ -685,93 +631,117 @@ export default function App() {
     showToast('Signed out of account.', 'info');
   };
 
-  // Product mutations with instant Firebase Firestore sync & Google Sheets sync
-  const handleAddProduct = (newProduct: ProductItem) => {
+  // Product mutations strictly persisted to Firestore single source of truth & verified before toast
+  const handleAddProduct = async (
+    newProduct: ProductItem
+  ): Promise<{ success: boolean; error?: string }> => {
     const itemWithTime: ProductItem = {
       ...newProduct,
       updatedAt: new Date().toISOString(),
     };
-    const sanitized = sanitizeProductsForPublic([
-      itemWithTime,
-      ...products.filter((p) => p.id !== newProduct.id),
-    ]);
-    setProducts(sanitized);
-    if (isAdminVerified && itemWithTime.price > 0 && itemWithTime.protectedUrl) {
-      setProductSecrets((prev) => ({
-        ...prev,
-        [itemWithTime.id]: itemWithTime.protectedUrl!,
-      }));
-    }
     try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(sanitized));
-    } catch {}
-    saveProductToFirestore(itemWithTime).catch((err) => console.warn('Firestore add error', err));
-    const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
-    if (targetUrl) {
-      syncProductsToSheet(targetUrl, sanitized).catch(() => {});
+      const saved = await saveProductToFirestore(itemWithTime);
+      const nextSanitized = sanitizeProductsForPublic([
+        saved,
+        ...products.filter((p) => p.id !== saved.id),
+      ]);
+      setProducts(nextSanitized);
+      if (isAdminVerified && itemWithTime.price > 0 && itemWithTime.protectedUrl) {
+        setProductSecrets((prev) => ({
+          ...prev,
+          [saved.id]: itemWithTime.protectedUrl!,
+        }));
+      }
+      const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
+      if (targetUrl) {
+        syncProductsToSheet(targetUrl, nextSanitized).catch(() => {});
+      }
+      showToast(`✓ "${saved.title}" added to catalog.`);
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save product to Firestore.';
+      showToast(msg, 'error');
+      return { success: false, error: msg };
     }
-    showToast(`✓ "${newProduct.title}" added to catalog.`);
   };
 
-  const handleUpdateProduct = (updatedProduct: ProductItem) => {
+  const handleUpdateProduct = async (
+    updatedProduct: ProductItem
+  ): Promise<{ success: boolean; error?: string }> => {
     const itemWithTime: ProductItem = {
       ...updatedProduct,
       updatedAt: new Date().toISOString(),
     };
-    let found = false;
-    const updated = products.map((p) => {
-      if (
-        p.id === updatedProduct.id ||
-        (p.title && p.title.toLowerCase().trim() === updatedProduct.title.toLowerCase().trim())
-      ) {
-        found = true;
-        return itemWithTime;
-      }
-      return p;
-    });
-    const finalProducts = sanitizeProductsForPublic(
-      found ? updated : [itemWithTime, ...products]
-    );
-    setProducts(finalProducts);
-    if (isAdminVerified && itemWithTime.price > 0) {
-      setProductSecrets((prev) => {
-        const next = { ...prev };
-        if (itemWithTime.protectedUrl) {
-          next[itemWithTime.id] = itemWithTime.protectedUrl;
-        } else {
-          delete next[itemWithTime.id];
-        }
-        return next;
-      });
-    }
     try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(finalProducts));
-    } catch {}
-    saveProductToFirestore(itemWithTime).catch((err) => console.warn('Firestore update error', err));
-    const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
-    if (targetUrl) {
-      syncProductsToSheet(targetUrl, finalProducts).catch(() => {});
+      const saved = await saveProductToFirestore(itemWithTime);
+      const exists = products.some((p) => p.id === saved.id);
+      const nextList = exists
+        ? products.map((p) => (p.id === saved.id ? saved : p))
+        : [saved, ...products];
+      const finalProducts = sanitizeProductsForPublic(nextList);
+      setProducts(finalProducts);
+
+      if (isAdminVerified && itemWithTime.price > 0) {
+        setProductSecrets((prev) => {
+          const next = { ...prev };
+          if (itemWithTime.protectedUrl) {
+            next[saved.id] = itemWithTime.protectedUrl;
+          } else {
+            delete next[saved.id];
+          }
+          return next;
+        });
+      }
+
+      const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
+      if (targetUrl) {
+        syncProductsToSheet(targetUrl, finalProducts).catch(() => {});
+      }
+      showToast(`✓ "${saved.title}" saved to Firestore (${saved.priceDisplay}).`);
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update product in Firestore.';
+      showToast(msg, 'error');
+      return { success: false, error: msg };
     }
-    showToast(`✓ "${updatedProduct.title}" updated successfully! Price: ${updatedProduct.priceDisplay}`);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    const updated = sanitizeProductsForPublic(products.filter((p) => p.id !== id));
-    setProducts(updated);
-    setProductSecrets((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
+  const handleDeleteProduct = async (
+    id: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
-    deleteProductFromFirestore(id).catch((err) => console.warn('Firestore delete error', err));
-    const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
-    if (targetUrl) {
-      syncProductsToSheet(targetUrl, updated).catch(() => {});
+      await deleteProductFromFirestore(id);
+      const updated = sanitizeProductsForPublic(products.filter((p) => p.id !== id));
+      setProducts(updated);
+      setProductSecrets((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      const targetUrl = sheetsUrl || paymentConfig.webAppUrl || '';
+      if (targetUrl) {
+        syncProductsToSheet(targetUrl, updated).catch(() => {});
+      }
+      showToast('✓ Item permanently removed from catalog.', 'info');
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete product from Firestore.';
+      showToast(msg, 'error');
+      return { success: false, error: msg };
     }
-    showToast('✓ Item removed from catalog.', 'info');
+  };
+
+  const handleEnsureMirrorPOSCatalog = async (): Promise<void> => {
+    try {
+      const saved = await ensureMirrorPOSProductInFirestore();
+      setProducts((prev) =>
+        sanitizeProductsForPublic([saved, ...prev.filter((p) => p.id !== saved.id)])
+      );
+      showToast('✓ MirrorPOS added/refreshed in Firestore catalog.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to verify MirrorPOS in catalog.';
+      showToast(msg, 'error');
+    }
   };
 
   const handleSyncProducts = async (urlOverride?: string) => {
@@ -881,7 +851,7 @@ export default function App() {
       />
 
       {/* Main Content Area: switches cleanly across Storefront, Customer Auth, Dashboard, Admin Portal, MirrorPOS, and Founder Profile */}
-      <main className="flex-grow pb-24 md:pb-0">
+      <main className="flex-grow pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] md:pb-0">
         {currentPath === '/login' || currentPath === '/signup' ? (
           <CustomerAuthPage
             mode={currentPath === '/signup' ? 'signup' : 'login'}
@@ -923,6 +893,7 @@ export default function App() {
             onAddProduct={handleAddProduct}
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
+            onEnsureMirrorPOS={handleEnsureMirrorPOSCatalog}
             onSyncProducts={handleSyncProducts}
             sheetsUrl={sheetsUrl}
             onSaveSheetsUrl={handleSaveSheetsUrl}
@@ -988,19 +959,28 @@ export default function App() {
             />
 
             {/* 6. Plugin Store */}
-            <PluginStore plugins={publicPlugins} onBuyItem={(item) => setCheckoutItem(item)} />
+            <PluginStore
+              plugins={publicPlugins}
+              loading={productsLoading}
+              onBuyItem={(item) => setCheckoutItem(item)}
+            />
 
             {/* 6.5 PC & Phone Software Library (Includes MirrorPOS) */}
             <SoftwareStore
               softwareList={publicSoftware}
+              loading={productsLoading}
               onBuyItem={(item) => setCheckoutItem(item)}
               onOpenMirrorPOS={() => navigateTo('/mirrorpos')}
+              user={user}
+              onOpenSignIn={() => setIsAuthModalOpen(true)}
+              onNotify={showToast}
             />
 
             {/* 7. Courses & Video Masterclasses */}
             <CoursesAndTutorials
               courses={publicCourses}
               tutorials={publicTutorials}
+              loading={productsLoading}
               onEnrollCourse={(item) => setCheckoutItem(item)}
               onSelectTutorial={(tut: TutorialItem) =>
                 setActiveVideo({

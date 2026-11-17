@@ -176,88 +176,98 @@ Sent via https://mirrorbook.site/`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/85 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-      <div className="relative w-full max-w-xl glossy-card bg-[#121614] border border-white/[0.09] rounded-2xl overflow-hidden shadow-2xl my-6">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.09] bg-[#171C19]">
-          <div>
-            <span className="text-xs uppercase tracking-normal text-[#B7F34A] font-semibold">
-              Direct Inquiry
-            </span>
-            <h3 className="font-display text-lg font-bold text-[#F5F7F2] mt-1">
-              Start a Project
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors p-1.5 rounded-xl hover:bg-white/[0.06] cursor-pointer"
-            aria-label="Close project modal"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {isSubmitted ? (
-          <div className="p-8 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(183,243,74,0.2)]">
-              <CheckCircle2 size={32} />
-            </div>
-
-            <div>
-              <span className="text-[11px] uppercase tracking-wider text-[#B7F34A] font-bold">
-                Project Request Received
+    <div
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#0B0D0C]/85 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="min-h-full flex items-start sm:items-center justify-center p-3 sm:p-4 py-4 sm:py-6">
+        <div className="relative w-full max-w-xl max-h-[calc(100dvh-2rem)] sm:max-h-[90dvh] flex flex-col glossy-card bg-[#121614] border border-white/[0.09] rounded-2xl overflow-hidden shadow-2xl my-auto">
+          {/* Sticky Header */}
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-white/[0.09] bg-[#171C19]">
+            <div className="min-w-0">
+              <span className="text-xs uppercase tracking-normal text-[#B7F34A] font-semibold block">
+                Direct Inquiry
               </span>
-              <h4 className="font-display text-xl font-bold text-[#F5F7F2] mt-1">
-                Thank You, {submittedInfo?.name || clientName}!
-              </h4>
+              <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] mt-0.5 truncate">
+                Start a Project
+              </h3>
             </div>
-
-            <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-3.5 max-w-md mx-auto text-left space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#A1AAA2]">Reference ID:</span>
-                <span className="font-mono font-bold text-[#B7F34A]">{orderRef}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#A1AAA2]">Scope:</span>
-                <span className="text-[#F5F7F2] font-medium">{submittedInfo?.service || projectType}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#A1AAA2]">Confirmation Email:</span>
-                <span className="text-[#F5F7F2] font-medium">{submittedInfo?.email || clientEmail}</span>
-              </div>
-            </div>
-
-            <div className="p-3 bg-[#B7F34A]/10 border border-[#B7F34A]/30 rounded-xl text-left flex items-start gap-2 text-xs text-[#A1AAA2]">
-              <Mail size={15} className="text-[#B7F34A] shrink-0 mt-0.5" />
-              <p className="text-[11px] leading-relaxed">
-                Confirmation email sent to <strong className="text-[#F5F7F2]">{submittedInfo?.email || clientEmail}</strong>. Our team will review your project brief and follow up shortly.
-              </p>
-            </div>
-
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const text = constructWhatsAppSummary(orderRef);
-                  const url = `https://wa.me/${PAYMENT_CONFIG.whatsAppNumber}?text=${encodeURIComponent(text)}`;
-                  window.open(url, '_blank');
-                }}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-              >
-                <MessageSquare size={15} />
-                <span>Chat on WhatsApp</span>
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors rounded-xl hover:bg-white/[0.06] cursor-pointer shrink-0"
+              aria-label="Close project modal"
+            >
+              <X size={20} />
+            </button>
           </div>
-        ) : (
-          <form onSubmit={(e) => handleProjectSubmit(e, false)} className="p-6 md:p-8 space-y-5">
+
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {isSubmitted ? (
+              <div className="p-5 sm:p-8 text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(183,243,74,0.2)]">
+                  <CheckCircle2 size={32} />
+                </div>
+
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-[#B7F34A] font-bold">
+                    Project Request Received
+                  </span>
+                  <h4 className="font-display text-xl font-bold text-[#F5F7F2] mt-1">
+                    Thank You, {submittedInfo?.name || clientName}!
+                  </h4>
+                </div>
+
+                <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-3.5 max-w-md mx-auto text-left space-y-1.5 text-xs">
+                  <div className="flex flex-wrap justify-between gap-1">
+                    <span className="text-[#A1AAA2]">Reference ID:</span>
+                    <span className="font-mono font-bold text-[#B7F34A]">{orderRef}</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-1">
+                    <span className="text-[#A1AAA2]">Scope:</span>
+                    <span className="text-[#F5F7F2] font-medium break-words">
+                      {submittedInfo?.service || projectType}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-1">
+                    <span className="text-[#A1AAA2]">Confirmation Email:</span>
+                    <span className="text-[#F5F7F2] font-medium break-all">
+                      {submittedInfo?.email || clientEmail}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-[#B7F34A]/10 border border-[#B7F34A]/30 rounded-xl text-left flex items-start gap-2 text-xs text-[#A1AAA2]">
+                  <Mail size={15} className="text-[#B7F34A] shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed break-words">
+                    Confirmation email sent to <strong className="text-[#F5F7F2] break-all">{submittedInfo?.email || clientEmail}</strong>. Our team will review your project brief and follow up shortly.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <a
+                    href={`https://wa.me/${PAYMENT_CONFIG.whatsAppNumber}?text=${encodeURIComponent(
+                      constructWhatsAppSummary(orderRef)
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <MessageSquare size={15} />
+                    <span>Chat on WhatsApp</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+          <form onSubmit={(e) => handleProjectSubmit(e, false)} className="p-4 sm:p-6 md:p-8 space-y-5">
             {/* Honeypot field (hidden from real users, traps spam bots) */}
             <div style={{ display: 'none' }} aria-hidden="true">
               <label htmlFor="project-hp">Leave this empty</label>
@@ -289,7 +299,7 @@ Sent via https://mirrorbook.site/`;
                     key={type}
                     type="button"
                     onClick={() => setProjectType(type)}
-                    className={`py-2.5 px-3 text-xs text-left transition-all rounded-xl border cursor-pointer ${
+                    className={`min-h-[44px] py-2.5 px-3 text-xs text-left transition-all rounded-xl border cursor-pointer ${
                       projectType === type
                         ? 'bg-[#B7F34A] text-black font-bold border-[#B7F34A]'
                         : 'bg-[#171C19] text-[#A1AAA2] hover:text-[#F5F7F2] border-white/[0.09]'
@@ -312,7 +322,7 @@ Sent via https://mirrorbook.site/`;
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="Name or Brand"
-                  className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
+                  className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
                 />
               </div>
               <div>
@@ -325,7 +335,7 @@ Sent via https://mirrorbook.site/`;
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="+8801XXXXXXXX"
-                  className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
+                  className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none font-mono"
                 />
               </div>
             </div>
@@ -340,7 +350,7 @@ Sent via https://mirrorbook.site/`;
                 value={clientEmail}
                 onChange={(e) => setClientEmail(e.target.value)}
                 placeholder="name@company.com"
-                className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
+                className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
               />
             </div>
 
@@ -354,7 +364,7 @@ Sent via https://mirrorbook.site/`;
                 value={projectBrief}
                 onChange={(e) => setProjectBrief(e.target.value)}
                 placeholder="Goals, target timeline, or reference links..."
-                className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none resize-none"
+                className="w-full bg-[#0B0D0C] border border-white/[0.09] rounded-xl focus:border-[#B7F34A] px-4 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none resize-none"
               />
             </div>
 
@@ -362,7 +372,7 @@ Sent via https://mirrorbook.site/`;
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="w-full min-h-[44px] py-3.5 text-xs font-bold uppercase tracking-normal glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>
@@ -381,7 +391,7 @@ Sent via https://mirrorbook.site/`;
                 type="button"
                 disabled={isSubmitting}
                 onClick={(e) => handleProjectSubmit(e, true)}
-                className="w-full py-2.5 text-xs glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] py-2.5 text-xs glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <MessageSquare size={13} className="text-[#25D366]" />
                 <span>Or Connect Directly on WhatsApp</span>
@@ -398,7 +408,7 @@ Sent via https://mirrorbook.site/`;
                     category: 'Project Initiation',
                   });
                 }}
-                className="w-full py-2 text-[11px] text-[#707A72] hover:text-[#F5F7F2] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                className="w-full min-h-[40px] py-2 text-[11px] text-[#707A72] hover:text-[#F5F7F2] flex items-center justify-center gap-1 transition-colors cursor-pointer"
               >
                 <span>Or book immediate initial slot via payment checkout</span>
                 <ArrowRight size={12} />
@@ -406,6 +416,8 @@ Sent via https://mirrorbook.site/`;
             </div>
           </form>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
   return (
     <section
       id="services"
-      className="py-16 sm:py-20 px-5 sm:px-6 lg:px-8 bg-[#121614] text-[#F5F7F2] border-b border-white/[0.09] relative overflow-hidden"
+      className="scroll-mt-20 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-[#121614] text-[#F5F7F2] border-b border-white/[0.09] relative overflow-x-clip"
     >
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Aligned Section Header */}
@@ -29,12 +29,12 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
         </div>
 
         {/* Equal-Height Elevated Dark Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 items-stretch">
           {SERVICES.map((service) => (
             <div
               key={service.id}
               onClick={() => onSelectService?.(service.title)}
-              className="glossy-card glossy-card-hover p-6 flex flex-col justify-between h-full group cursor-default"
+              className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col justify-between h-full group cursor-default"
             >
               <div className="space-y-2.5">
                 <div className="flex items-start justify-between gap-3">

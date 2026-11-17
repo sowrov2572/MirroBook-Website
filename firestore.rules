@@ -47,9 +47,9 @@ service cloud.firestore {
     function isValidProduct(data) {
       return data.keys().hasAll(['id', 'type', 'category', 'title', 'description', 'price'])
         && data.keys().hasOnly([
-          'id', 'type', 'category', 'title', 'description', 'price', 'priceDisplay',
-          'period', 'thumbnailUrl', 'protectedUrl', 'duration', 'instructor',
-          'featured', 'createdAt', 'updatedAt'
+          'id', 'type', 'category', 'title', 'description', 'price', 'isFree', 'priceDisplay',
+          'period', 'thumbnailUrl', 'iconUrl', 'launchUrl', 'protectedUrl', 'features',
+          'status', 'duration', 'instructor', 'featured', 'createdAt', 'updatedAt'
         ])
         && isValidId(data.id)
         && data.type is string && data.type in ['Plugin', 'Course', 'Software', 'Free Tutorial', 'Agency Package']
@@ -57,15 +57,20 @@ service cloud.firestore {
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
         && data.description is string && data.description.size() >= 0 && data.description.size() <= 3000
         && (data.price is int || data.price is float) && data.price >= 0 && data.price <= 10000000
+        && (!('isFree' in data) || data.isFree is bool)
         && (!('priceDisplay' in data) || (data.priceDisplay is string && data.priceDisplay.size() <= 60))
         && (!('period' in data) || (data.period is string && data.period.size() <= 40))
         && (!('thumbnailUrl' in data) || (data.thumbnailUrl is string && data.thumbnailUrl.size() <= 1000))
-        // Paid items (price > 0) MUST NOT store non-empty protectedUrl in public /products collection
+        && (!('iconUrl' in data) || (data.iconUrl is string && data.iconUrl.size() <= 1000))
+        && (!('launchUrl' in data) || (data.launchUrl is string && data.launchUrl.size() <= 1000))
+        // Non-tutorial items (Software, Plugins, Courses, Packages) MUST NOT expose protectedUrl in public /products
         && (
           !('protectedUrl' in data) ||
-          (data.price == 0 && data.protectedUrl is string && data.protectedUrl.size() <= 1000) ||
-          (data.price > 0 && data.protectedUrl is string && data.protectedUrl.size() == 0)
+          (data.type == 'Free Tutorial' && data.price == 0 && data.protectedUrl is string && data.protectedUrl.size() <= 1000) ||
+          (data.protectedUrl is string && data.protectedUrl.size() == 0)
         )
+        && (!('features' in data) || (data.features is list && data.features.size() <= 15 && (data.features.size() == 0 || data.features[0] is string)))
+        && (!('status' in data) || (data.status is string && data.status in ['active', 'draft', 'archived']))
         && (!('duration' in data) || (data.duration is string && data.duration.size() <= 60))
         && (!('instructor' in data) || (data.instructor is string && data.instructor.size() <= 120))
         && (!('featured' in data) || data.featured is bool)

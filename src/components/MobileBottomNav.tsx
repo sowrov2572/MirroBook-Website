@@ -24,10 +24,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenCartOrStore,
 }) => {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none px-3 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 pointer-events-none px-2.5 sm:px-3 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
       <nav
         aria-label="Mobile Navigation"
-        className="pointer-events-auto glossy-glass-dock rounded-2xl px-2 py-1.5 flex items-center justify-around max-w-md mx-auto"
+        className="pointer-events-auto glossy-glass-dock rounded-2xl px-1.5 sm:px-2 py-1.5 flex items-center justify-between gap-1 max-w-md mx-auto"
       >
         {/* Home */}
         <button
@@ -39,38 +39,38 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }
           }}
-          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1 sm:px-2 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'home'
               ? 'text-[#B7F34A] bg-white/[0.06]'
               : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
           }`}
         >
           <Home size={18} />
-          <span className="text-[10px] font-medium mt-0.5">Home</span>
+          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Home</span>
         </button>
 
         {/* Plugin Store */}
         <button
           type="button"
           onClick={() => onNavigate('plugins')}
-          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1 sm:px-2 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'plugins'
               ? 'text-[#B7F34A] bg-white/[0.06]'
               : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
           }`}
         >
           <Sparkles size={18} />
-          <span className="text-[10px] font-medium mt-0.5">Plugins</span>
+          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Plugins</span>
         </button>
 
         {/* Store / Cart Action */}
         <button
           type="button"
           onClick={onOpenCartOrStore}
-          className="relative flex flex-col items-center justify-center min-h-[44px] min-w-[56px] px-3 py-1 rounded-xl glossy-btn cursor-pointer"
+          className="relative flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1.5 sm:px-2.5 py-1 rounded-xl glossy-btn cursor-pointer"
         >
           <ShoppingBag size={17} className="text-[#0B0D0C]" />
-          <span className="text-[10px] font-bold text-[#0B0D0C] mt-0.5">Store</span>
+          <span className="text-[10px] font-bold text-[#0B0D0C] mt-0.5 truncate max-w-full">Store</span>
           {cartCount > 0 && (
             <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0B0D0C] text-[#B7F34A] border border-[#B7F34A] text-[9px] font-bold flex items-center justify-center tabular-nums">
               {cartCount}
@@ -88,14 +88,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               onSignIn();
             }
           }}
-          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl transition-colors cursor-pointer ${
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1 sm:px-2 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'vault'
               ? 'text-[#B7F34A] bg-white/[0.06]'
               : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
           }`}
         >
           <FolderDown size={18} />
-          <span className="text-[10px] font-medium mt-0.5">Vault</span>
+          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Vault</span>
         </button>
 
         {/* User Account / Profile */}
@@ -103,7 +103,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <button
             type="button"
             onClick={onOpenVault}
-            className="flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl text-[#F5F7F2] hover:bg-white/[0.05] transition-colors cursor-pointer"
+            className="flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1 sm:px-2 rounded-xl text-[#F5F7F2] hover:bg-white/[0.05] transition-colors cursor-pointer"
           >
             {user.photoURL ? (
               <img
@@ -116,7 +116,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 {(user.displayName || user.email || 'U')[0].toUpperCase()}
               </div>
             )}
-            <span className="text-[10px] font-medium text-[#B7F34A] mt-0.5 truncate max-w-[46px]">
+            <span className="text-[10px] font-medium text-[#B7F34A] mt-0.5 truncate max-w-full">
               Account
             </span>
           </button>
@@ -124,10 +124,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <button
             type="button"
             onClick={onSignIn}
-            className="flex flex-col items-center justify-center min-h-[44px] min-w-[52px] px-2.5 rounded-xl text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer"
+            className="flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1 sm:px-2 rounded-xl text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer"
           >
             <User size={18} />
-            <span className="text-[10px] font-medium mt-0.5">Login</span>
+            <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Login</span>
           </button>
         )}
       </nav>

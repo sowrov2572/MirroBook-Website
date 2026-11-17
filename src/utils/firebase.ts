@@ -130,8 +130,8 @@ const USERS_COLLECTION = 'users';
 const PAYMENT_CONFIG_DOC = 'paymentConfig';
 const ADMIN_CONFIG_DOC = 'adminConfig';
 
-function stripPaidUrl(product: ProductItem): ProductItem {
-  if (Number(product.price) > 0 && 'protectedUrl' in product) {
+function stripPublicSecretUrl(product: ProductItem): ProductItem {
+  if ((Number(product.price) > 0 || product.type !== 'Free Tutorial') && 'protectedUrl' in product) {
     const { protectedUrl: _omit, ...rest } = product;
     return rest as ProductItem;
   }
@@ -274,10 +274,11 @@ export function formatFirebaseAuthError(err: unknown): string {
 
 /**
  * Real-time listener for products.
- * Public visitors ONLY read; only verified admins perform seeding/cleanup mutations.
+ * Firestore /products is the strict single source of truth — never auto-seeds, never resurrects deleted items from localStorage.
  */
 export function subscribeToProducts(
   onUpdate: (products: ProductItem[]) => void,
+  onError?: (errInfo: FirestoreErrorInfo) => void,
   isAdminVerified = false
 ): () => void {
   const colRef = collection(db, PRODUCTS_COLLECTION);
@@ -286,96 +287,88 @@ export function subscribeToProducts(
   return onSnapshot(
     q,
     (snapshot) => {
-      if (snapshot.empty && !snapshot.metadata.fromCache) {
-        if (isAdminVerified) {
-          seedProductsIfEmpty().catch(() => {});
+      const cloudList: ProductItem[] = [];
+      snapshot.forEach((docSnap) => {
+        if (OBSOLETE_PRODUCT_IDS.has(docSnap.id)) {
+          return;
         }
-        return;
-      }
+        const rawData = docSnap.data() as Record<string, any>;
+        const priceNum = Number(rawData.price) || 0;
+        const normalized: ProductItem = {
+          id: docSnap.id,
+          type: (rawData.type as ProductItem['type']) || 'Plugin',
+          category: String(rawData.category || 'General'),
+          title: String(rawData.title || ''),
+          description: String(rawData.description || ''),
+          price: priceNum,
+          isFree: typeof rawData.isFree === 'boolean' ? rawData.isFree : priceNum === 0,
+          priceDisplay:
+            typeof rawData.priceDisplay === 'string' && rawData.priceDisplay
+              ? rawData.priceDisplay
+              : priceNum === 0
+              ? 'Free'
+              : `৳${priceNum.toLocaleString()}`,
+          period: rawData.period ? String(rawData.period) : undefined,
+          thumbnailUrl: rawData.thumbnailUrl ? String(rawData.thumbnailUrl) : undefined,
+          iconUrl: rawData.iconUrl ? String(rawData.iconUrl) : undefined,
+          launchUrl: rawData.launchUrl ? String(rawData.launchUrl) : undefined,
+          protectedUrl:
+            rawData.type === 'Free Tutorial' && priceNum === 0 && rawData.protectedUrl
+              ? String(rawData.protectedUrl)
+              : undefined,
+          features: Array.isArray(rawData.features)
+            ? rawData.features.filter((f): f is string => typeof f === 'string').slice(0, 15)
+            : undefined,
+          status:
+            rawData.status === 'draft' || rawData.status === 'archived'
+              ? rawData.status
+              : 'active',
+          duration: rawData.duration ? String(rawData.duration) : undefined,
+          instructor: rawData.instructor ? String(rawData.instructor) : undefined,
+          featured: typeof rawData.featured === 'boolean' ? rawData.featured : undefined,
+          createdAt: rawData.createdAt ? String(rawData.createdAt) : undefined,
+          updatedAt: rawData.updatedAt ? String(rawData.updatedAt) : undefined,
+        };
 
-      if (!snapshot.empty) {
-        const cloudList: ProductItem[] = [];
-        snapshot.forEach((docSnap) => {
-          if (OBSOLETE_PRODUCT_IDS.has(docSnap.id)) {
-            if (isAdminVerified) {
-              deleteDoc(docSnap.ref).catch(() => {});
-            }
-            return;
-          }
-          const rawItem = docSnap.data() as ProductItem;
-          // Migrate legacy paid protectedUrl off public /products into /productSecrets when verified Admin is viewing
-          if (
-            isAdminVerified &&
-            Number(rawItem.price) > 0 &&
-            typeof rawItem.protectedUrl === 'string' &&
-            rawItem.protectedUrl.trim().length > 0
-          ) {
-            setDoc(
-              doc(db, PRODUCT_SECRETS_COLLECTION, rawItem.id),
-              {
-                id: rawItem.id,
-                protectedUrl: rawItem.protectedUrl.trim(),
-                updatedAt: new Date().toISOString(),
-              },
-              { merge: true }
+        // Migrate any legacy protectedUrl on non-tutorial items into /productSecrets when verified Admin is viewing
+        if (
+          isAdminVerified &&
+          normalized.type !== 'Free Tutorial' &&
+          typeof rawData.protectedUrl === 'string' &&
+          rawData.protectedUrl.trim().length > 0
+        ) {
+          setDoc(
+            doc(db, PRODUCT_SECRETS_COLLECTION, docSnap.id),
+            {
+              id: docSnap.id,
+              protectedUrl: rawData.protectedUrl.trim(),
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: false }
+          )
+            .then(() =>
+              updateDoc(docSnap.ref, {
+                protectedUrl: deleteField(),
+              }).catch(() => {})
             )
-              .then(() =>
-                updateDoc(docSnap.ref, {
-                  protectedUrl: deleteField(),
-                }).catch(() => {})
-              )
-              .catch(() => {});
-          }
-          cloudList.push(stripPaidUrl(rawItem));
-        });
-
-        const filteredCloudList = cloudList.filter((cp) => !OBSOLETE_PRODUCT_IDS.has(cp.id));
-        let mergedList = [...filteredCloudList];
-
-        try {
-          const localRaw = localStorage.getItem('mirrorbook_products');
-          if (localRaw && isAdminVerified) {
-            const localProducts: ProductItem[] = JSON.parse(localRaw);
-            const filteredLocal = localProducts.filter((lp) => !OBSOLETE_PRODUCT_IDS.has(lp.id));
-            const localMap = new Map<string, ProductItem>();
-            filteredLocal.forEach((lp) => localMap.set(lp.id, lp));
-
-            mergedList = filteredCloudList.map((cp) => {
-              const lp = localMap.get(cp.id);
-              if (lp && lp.updatedAt && (!cp.updatedAt || lp.updatedAt > cp.updatedAt)) {
-                saveProductToFirestore(lp).catch(() => {});
-                return stripPaidUrl(lp);
-              }
-              return stripPaidUrl(cp);
-            });
-
-            filteredLocal.forEach((lp) => {
-              if (!mergedList.some((p) => p.id === lp.id)) {
-                mergedList.push(stripPaidUrl(lp));
-                saveProductToFirestore(lp).catch(() => {});
-              }
-            });
-          }
-
-          localStorage.setItem(
-            'mirrorbook_products',
-            JSON.stringify(mergedList.map(stripPaidUrl))
-          );
-        } catch {
-          // fallback
+            .catch(() => {});
         }
 
-        onUpdate(mergedList.map(stripPaidUrl));
-      }
+        cloudList.push(stripPublicSecretUrl(normalized));
+      });
+
+      cloudList.sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''));
+      onUpdate(cloudList);
     },
     (err) => {
-      handleFirestoreError(err, OperationType.GET, PRODUCTS_COLLECTION);
+      const info = handleFirestoreError(err, OperationType.LIST, PRODUCTS_COLLECTION);
+      if (onError) onError(info);
     }
   );
 }
 
 /**
- * Admin-only real-time listener for paid product download URLs in /productSecrets.
+ * Admin-only real-time listener for protected product download URLs in /productSecrets.
  * Never subscribe for unauthenticated or non-admin users.
  */
 export function subscribeToProductSecrets(
@@ -417,54 +410,99 @@ export const OBSOLETE_PRODUCT_IDS = new Set([
 ]);
 
 /**
- * Saves or updates a single product in Firestore (Admin only).
- * Paid protectedUrl values are written exclusively to /productSecrets/{id} and stripped from public /products/{id}.
+ * Saves or updates a single product in Firestore (Admin only) with full server-write verification.
+ * All non-tutorial protectedUrl values are written exclusively to /productSecrets/{id} and excluded from /products/{id}.
  */
-export async function saveProductToFirestore(product: ProductItem): Promise<void> {
-  if (OBSOLETE_PRODUCT_IDS.has(product.id)) {
-    return;
+export async function saveProductToFirestore(product: ProductItem): Promise<ProductItem> {
+  if (!product.id || !/^[a-zA-Z0-9_-]+$/.test(product.id)) {
+    throw new Error('Invalid product ID format (alphanumeric, hyphens, and underscores only).');
   }
+
   const docPath = `${PRODUCTS_COLLECTION}/${product.id}`;
   const priceNum = Number(product.price) || 0;
+  const isFree = typeof product.isFree === 'boolean' ? product.isFree : priceNum === 0;
+  const effectivePrice = isFree ? 0 : priceNum;
+  const nowIso = new Date().toISOString();
+
   try {
     const docRef = doc(db, PRODUCTS_COLLECTION, product.id);
     const cleaned: Record<string, any> = {
       id: product.id,
       type: product.type || 'Plugin',
-      category: product.category || 'General',
-      title: product.title || '',
-      description: product.description || 'MirrorBook digital asset',
-      price: priceNum,
-      priceDisplay: product.priceDisplay || `৳${priceNum.toLocaleString()}`,
-      thumbnailUrl: product.thumbnailUrl || '',
-      createdAt: product.createdAt || new Date().toISOString().split('T')[0],
-      updatedAt: product.updatedAt || new Date().toISOString(),
+      category: (product.category || 'General').trim().slice(0, 80),
+      title: (product.title || '').trim().slice(0, 200),
+      description: (product.description || '').trim().slice(0, 3000),
+      price: effectivePrice,
+      isFree,
+      priceDisplay:
+        product.priceDisplay ||
+        (effectivePrice === 0 ? 'Free' : `৳${effectivePrice.toLocaleString()}`),
+      status: product.status || 'active',
+      createdAt: (product.createdAt || nowIso.split('T')[0]).slice(0, 64),
+      updatedAt: nowIso,
     };
-    if (priceNum === 0) {
-      cleaned.protectedUrl = product.protectedUrl || '';
-    } else {
-      cleaned.protectedUrl = deleteField();
-    }
-    if (product.period) cleaned.period = product.period;
-    if (product.duration) cleaned.duration = product.duration;
-    if (product.instructor) cleaned.instructor = product.instructor;
-    if (typeof product.featured === 'boolean') cleaned.featured = product.featured;
 
-    await setDoc(docRef, cleaned, { merge: true });
-
-    if (priceNum > 0 && product.protectedUrl && product.protectedUrl.trim()) {
-      await setDoc(
-        doc(db, PRODUCT_SECRETS_COLLECTION, product.id),
-        {
-          id: product.id,
-          protectedUrl: product.protectedUrl.trim(),
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-    } else if (priceNum > 0 && product.protectedUrl === '') {
-      await deleteDoc(doc(db, PRODUCT_SECRETS_COLLECTION, product.id)).catch(() => {});
+    if (product.thumbnailUrl && product.thumbnailUrl.trim()) {
+      cleaned.thumbnailUrl = product.thumbnailUrl.trim().slice(0, 1000);
     }
+    if (product.iconUrl && product.iconUrl.trim()) {
+      cleaned.iconUrl = product.iconUrl.trim().slice(0, 1000);
+    }
+    if (product.launchUrl && product.launchUrl.trim()) {
+      cleaned.launchUrl = product.launchUrl.trim().slice(0, 1000);
+    }
+    if (product.period && product.period.trim()) {
+      cleaned.period = product.period.trim().slice(0, 40);
+    }
+    if (product.duration && product.duration.trim()) {
+      cleaned.duration = product.duration.trim().slice(0, 60);
+    }
+    if (product.instructor && product.instructor.trim()) {
+      cleaned.instructor = product.instructor.trim().slice(0, 120);
+    }
+    if (typeof product.featured === 'boolean') {
+      cleaned.featured = product.featured;
+    }
+    if (Array.isArray(product.features) && product.features.length > 0) {
+      cleaned.features = product.features
+        .map((f) => f.trim().slice(0, 200))
+        .filter(Boolean)
+        .slice(0, 15);
+    }
+
+    // Only Free Tutorials store public YouTube playback links inside /products/{id}
+    if (cleaned.type === 'Free Tutorial' && effectivePrice === 0 && product.protectedUrl) {
+      cleaned.protectedUrl = product.protectedUrl.trim().slice(0, 1000);
+    }
+
+    // Use canonical overwrite ({ merge: false }) so stale shadow fields can never violate security rules
+    await setDoc(docRef, cleaned, { merge: false });
+
+    // Manage /productSecrets/{id} for Software, Plugins, Courses, Agency Packages
+    if (cleaned.type !== 'Free Tutorial') {
+      if (typeof product.protectedUrl === 'string' && product.protectedUrl.trim()) {
+        await setDoc(
+          doc(db, PRODUCT_SECRETS_COLLECTION, product.id),
+          {
+            id: product.id,
+            protectedUrl: product.protectedUrl.trim().slice(0, 1000),
+            updatedAt: nowIso,
+          },
+          { merge: false }
+        );
+      } else if (product.protectedUrl === '') {
+        await deleteDoc(doc(db, PRODUCT_SECRETS_COLLECTION, product.id)).catch(() => {});
+      }
+    }
+
+    // Verify persistence directly on Firestore server
+    const verifiedSnap = await getDocFromServer(docRef);
+    if (!verifiedSnap.exists()) {
+      throw new Error('Product write could not be verified on the Firestore server.');
+    }
+
+    const saved = verifiedSnap.data() as ProductItem;
+    return stripPublicSecretUrl({ ...saved, id: verifiedSnap.id });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, docPath);
     throw err;
@@ -472,13 +510,19 @@ export async function saveProductToFirestore(product: ProductItem): Promise<void
 }
 
 /**
- * Deletes a product (and any associated secret URL) from Firestore (Admin only).
+ * Deletes a product (and any associated secret URL) from Firestore (Admin only) and verifies deletion.
  */
 export async function deleteProductFromFirestore(id: string): Promise<void> {
   const docPath = `${PRODUCTS_COLLECTION}/${id}`;
   try {
-    await deleteDoc(doc(db, PRODUCTS_COLLECTION, id));
+    const docRef = doc(db, PRODUCTS_COLLECTION, id);
+    await deleteDoc(docRef);
     await deleteDoc(doc(db, PRODUCT_SECRETS_COLLECTION, id)).catch(() => {});
+
+    const verifySnap = await getDocFromServer(docRef);
+    if (verifySnap.exists()) {
+      throw new Error('Product still exists on Firestore server after delete request.');
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, docPath);
     throw err;
@@ -486,16 +530,48 @@ export async function deleteProductFromFirestore(id: string): Promise<void> {
 }
 
 /**
- * Seeds initial products into Firestore if database collection is empty (Admin only).
+ * Explicit manual Admin utility: seeds missing default MirrorPOS or default catalog items ONLY when invoked by Admin.
  */
-export async function seedProductsIfEmpty(): Promise<void> {
-  try {
-    for (const item of INITIAL_PRODUCTS) {
-      await saveProductToFirestore(item);
-    }
-  } catch (err) {
-    console.warn('Seeding initial products notification:', err);
+export async function ensureMirrorPOSProductInFirestore(): Promise<ProductItem> {
+  const mirrorPosSeed = INITIAL_PRODUCTS.find((p) => p.id === 'software-mirrorpos');
+  if (!mirrorPosSeed) {
+    throw new Error('MirrorPOS template record not found.');
   }
+  return saveProductToFirestore(mirrorPosSeed);
+}
+
+/**
+ * Explicit manual Admin utility: deletes legacy obsolete demo IDs if present in Firestore.
+ */
+export async function cleanupObsoleteProductsFromFirestore(): Promise<number> {
+  let removed = 0;
+  for (const oldId of OBSOLETE_PRODUCT_IDS) {
+    try {
+      const ref = doc(db, PRODUCTS_COLLECTION, oldId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        await deleteDoc(ref);
+        await deleteDoc(doc(db, PRODUCT_SECRETS_COLLECTION, oldId)).catch(() => {});
+        removed++;
+      }
+    } catch {
+      // ignore non-existent or permission issues per doc
+    }
+  }
+  return removed;
+}
+
+/**
+ * Explicit manual Admin utility to seed initial products if desired. Never runs automatically.
+ */
+export async function seedProductsIfEmpty(): Promise<number> {
+  let count = 0;
+  for (const item of INITIAL_PRODUCTS) {
+    if (OBSOLETE_PRODUCT_IDS.has(item.id)) continue;
+    await saveProductToFirestore(item);
+    count++;
+  }
+  return count;
 }
 
 /**

@@ -117,7 +117,23 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     createdAt: '2026-09-28'
   },
 
-  // PC & Phone Software (paid download/access URLs stored exclusively in server-only /productSecrets)
+  // PC & Phone Software (download/access URLs stored exclusively in server-only /productSecrets)
+  {
+    id: 'software-mirrorpos',
+    type: 'Software',
+    category: 'PC & Mac',
+    title: 'MirrorPOS',
+    description: 'Smart POS Software',
+    price: 0,
+    isFree: true,
+    priceDisplay: 'Free',
+    iconUrl: '/mirror-pos-icon.png',
+    thumbnailUrl: '/mirror-pos-icon.png',
+    launchUrl: 'https://mirror-pos.vercel.app/',
+    status: 'active',
+    featured: true,
+    createdAt: '2026-11-15'
+  },
   {
     id: 'software-mirrorflow-studio',
     type: 'Software',

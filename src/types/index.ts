@@ -4,6 +4,8 @@ export type ProductType = 'Plugin' | 'Course' | 'Software' | 'Free Tutorial' | '
 
 export type UserRole = 'customer' | 'admin';
 
+export type ProductStatus = 'active' | 'draft' | 'archived';
+
 export interface ProductItem {
   id: string;
   type: ProductType;
@@ -11,10 +13,15 @@ export interface ProductItem {
   title: string;
   description: string;
   price: number;
+  isFree?: boolean;
   priceDisplay?: string;
   period?: string;
   thumbnailUrl?: string;
+  iconUrl?: string;
+  launchUrl?: string;
   protectedUrl?: string;
+  features?: string[];
+  status?: ProductStatus;
   duration?: string;
   instructor?: string;
   createdAt?: string;
