@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CheckoutItem, TutorialItem, ProductItem } from '../types';
-import { Play, Clock, ArrowRight, Video, ExternalLink, Maximize2, X } from 'lucide-react';
+import { COURSE_VIDEO_EDITING_FUNDAMENTALS_ID } from '../data/content';
+import { Play, Clock, ArrowRight, Video, ExternalLink, Maximize2, X, GraduationCap } from 'lucide-react';
 
 interface CoursesAndTutorialsProps {
   onEnrollCourse: (item: CheckoutItem) => void;
+  onOpenCourseDetails?: (course: ProductItem) => void;
   onSelectTutorial: (tutorial: TutorialItem) => void;
   courses?: ProductItem[];
   tutorials?: ProductItem[];
+  enrolledCourseIds?: string[];
   loading?: boolean;
 }
 
@@ -20,20 +23,22 @@ function extractYouTubeId(url?: string): string {
 
 export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
   onEnrollCourse,
+  onOpenCourseDetails,
   onSelectTutorial,
   courses = [],
   tutorials = [],
+  enrolledCourseIds = [],
   loading = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'tutorials' | 'courses' | 'all'>('tutorials');
+  const [activeTab, setActiveTab] = useState<'tutorials' | 'courses' | 'all'>('all');
   const [inlinePlayingId, setInlinePlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#tutorials' || hash === '#tutorial') {
-        setActiveTab('tutorials');
-      } else if (hash === '#courses' || hash === '#course') {
+        setActiveTab('all');
+      } else if (hash === '#courses' || hash === '#course' || hash === '#course-video-editing-fundamentals') {
         setActiveTab('courses');
       }
     };
@@ -46,13 +51,14 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
     return courses
       .filter((c) => c.status !== 'draft' && c.status !== 'archived')
       .map((c) => ({
+        raw: c,
         id: c.id,
         title: c.title,
         price: c.price,
         priceDisplay: c.priceDisplay || `৳${c.price.toLocaleString()}`,
         description: c.description,
         thumbnailUrl: c.thumbnailUrl,
-        category: c.category,
+        category: c.category || 'Adobe After Effects & Adobe Premiere Pro',
       }));
   }, [courses]);
 
@@ -92,23 +98,14 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
           <div className="glass-tab-bar flex items-center gap-1 self-start md:self-auto max-w-full overflow-x-auto no-scrollbar">
             <button
               type="button"
-              onClick={() => setActiveTab('tutorials')}
-              className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                activeTab === 'tutorials'
+              onClick={() => setActiveTab('all')}
+              className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                activeTab === 'all'
                   ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold shadow-sm'
                   : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
               }`}
             >
-              <span>Free Tutorials</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
-                  activeTab === 'tutorials'
-                    ? 'bg-[#0B0D0C]/15 text-[#0B0D0C]'
-                    : 'bg-white/10 text-[#A1AAA2]'
-                }`}
-              >
-                {displayTutorials.length}
-              </span>
+              View All
             </button>
             <button
               type="button"
@@ -132,14 +129,23 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('all')}
-              className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                activeTab === 'all'
+              onClick={() => setActiveTab('tutorials')}
+              className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'tutorials'
                   ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold shadow-sm'
                   : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
               }`}
             >
-              View All
+              <span>Free Tutorials</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
+                  activeTab === 'tutorials'
+                    ? 'bg-[#0B0D0C]/15 text-[#0B0D0C]'
+                    : 'bg-white/10 text-[#A1AAA2]'
+                }`}
+              >
+                {displayTutorials.length}
+              </span>
             </button>
           </div>
         </div>
@@ -157,11 +163,124 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
           </div>
         ) : (
           <>
-            {/* Tab: Tutorials (Primary / Default) */}
-            {(activeTab === 'tutorials' || activeTab === 'all') && (
+            {/* Paid Premium Courses */}
+            {(activeTab === 'courses' || activeTab === 'all') && (
               <div className={activeTab === 'all' ? 'mb-12 sm:mb-14' : ''}>
                 {activeTab === 'all' && (
                   <div className="mb-6 flex items-center gap-3">
+                    <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">
+                      Premium Courses
+                    </h3>
+                    <span className="text-xs font-semibold text-[#B7F34A]">Lifetime Access</span>
+                  </div>
+                )}
+
+                {displayCourses.length === 0 ? (
+                  <div className="glossy-card p-8 sm:p-12 text-center max-w-2xl mx-auto">
+                    <div className="w-11 h-11 rounded-xl bg-white/[0.05] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] mx-auto mb-3">
+                      <Video size={20} />
+                    </div>
+                    <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] mb-1">
+                      No Courses Available Right Now
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[#A1AAA2]">
+                      Paid courses published in the Studio Catalog will appear here automatically.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
+                    {displayCourses.map((course) => {
+                      const isEnrolled = enrolledCourseIds.includes(course.id);
+                      const hasDetailsCurriculum =
+                        course.id === COURSE_VIDEO_EDITING_FUNDAMENTALS_ID && Boolean(onOpenCourseDetails);
+
+                      return (
+                        <div
+                          key={course.id}
+                          className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col justify-between h-full group border-[#B7F34A]/20"
+                        >
+                          <div className="min-w-0">
+                            {course.thumbnailUrl ? (
+                              <div className="aspect-video w-full rounded-xl bg-[#121614] border border-white/[0.09] mb-4 overflow-hidden relative">
+                                <img
+                                  src={course.thumbnailUrl}
+                                  alt={`${course.title} – MirrorBook Premium Course`}
+                                  loading="lazy"
+                                  decoding="async"
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#0B0D0C]/90 border border-[#B7F34A]/40 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
+                                  Premium Course
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="aspect-video w-full rounded-xl bg-[#121614] border border-white/[0.09] mb-4 overflow-hidden flex flex-col items-center justify-center p-4">
+                                <div className="w-11 h-11 rounded-xl bg-[#B7F34A]/15 border border-[#B7F34A]/30 text-[#B7F34A] flex items-center justify-center mb-2">
+                                  <GraduationCap size={20} />
+                                </div>
+                                <span className="text-xs text-[#B7F34A] font-semibold">
+                                  Premium Course
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="text-xs font-semibold text-[#B7F34A] mb-1 truncate">
+                              {course.category}
+                            </div>
+
+                            <h3 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors mb-2 leading-snug break-words">
+                              {course.title}
+                            </h3>
+
+                            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-5 line-clamp-3">
+                              {course.description}
+                            </p>
+                          </div>
+
+                          <div>
+                            <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between gap-2 mb-4">
+                              <span className="text-xs text-[#A1AAA2] font-medium">
+                                {isEnrolled ? 'Enrolled · Lifetime Access' : 'Lifetime Access'}
+                              </span>
+                              <span className="font-display text-2xl font-bold text-[#F5F7F2] tabular-nums">
+                                {course.priceDisplay}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (hasDetailsCurriculum && onOpenCourseDetails) {
+                                  onOpenCourseDetails(course.raw);
+                                } else {
+                                  onEnrollCourse({
+                                    id: course.id,
+                                    name: course.title,
+                                    price: course.priceDisplay,
+                                    category: 'Course Enrollment',
+                                  });
+                                }
+                              }}
+                              className="w-full min-h-[44px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                              <span>{isEnrolled ? 'Open Course' : 'Get Access'}</span>
+                              <ArrowRight size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Free Masterclass Tutorials */}
+            {(activeTab === 'tutorials' || activeTab === 'all') && (
+              <div>
+                {activeTab === 'all' && (
+                  <div className="mb-6 pt-8 border-t border-white/[0.09] flex items-center gap-3">
                     <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">
                       Free Masterclass Tutorials
                     </h3>
@@ -295,102 +414,6 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                         </div>
                       );
                     })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tab: Courses */}
-            {(activeTab === 'courses' || activeTab === 'all') && (
-              <div>
-                {activeTab === 'all' && (
-                  <div className="mb-6 pt-8 border-t border-white/[0.09] flex items-center gap-3">
-                    <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">
-                      Professional Masterclass Courses
-                    </h3>
-                    <span className="text-xs font-semibold text-[#B7F34A]">Paid Enrollment</span>
-                  </div>
-                )}
-
-                {displayCourses.length === 0 ? (
-                  <div className="glossy-card p-8 sm:p-12 text-center max-w-2xl mx-auto">
-                    <div className="w-11 h-11 rounded-xl bg-white/[0.05] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] mx-auto mb-3">
-                      <Video size={20} />
-                    </div>
-                    <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] mb-1">
-                      No Courses Available Right Now
-                    </h3>
-                    <p className="text-xs sm:text-sm text-[#A1AAA2]">
-                      Paid courses published in the Studio Catalog will appear here automatically.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
-                    {displayCourses.map((course) => (
-                      <div
-                        key={course.id}
-                        className="glossy-card glossy-card-hover p-5 sm:p-7 min-w-0 flex flex-col justify-between h-full group"
-                      >
-                        <div className="min-w-0">
-                          {course.thumbnailUrl ? (
-                            <div className="aspect-video w-full rounded-xl bg-[#121614] border border-white/[0.09] mb-5 overflow-hidden">
-                              <img
-                                src={course.thumbnailUrl}
-                                alt={`${course.title} – Professional Course by MirrorBook`}
-                                loading="lazy"
-                                decoding="async"
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            </div>
-                          ) : (
-                            <div className="aspect-video w-full rounded-xl bg-[#121614] border border-white/[0.09] mb-5 overflow-hidden flex flex-col items-center justify-center p-4">
-                              <div className="w-11 h-11 rounded-xl bg-[#B7F34A]/15 border border-[#B7F34A]/30 text-[#B7F34A] flex items-center justify-center mb-2">
-                                <Video size={20} />
-                              </div>
-                              <span className="text-xs text-[#A1AAA2] font-medium">
-                                Masterclass Video Feed
-                              </span>
-                            </div>
-                          )}
-
-                          <h3 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors mb-2 leading-snug break-words">
-                            {course.title}
-                          </h3>
-
-                          <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-6">
-                            {course.description}
-                          </p>
-                        </div>
-
-                        <div>
-                          <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between gap-2 mb-5">
-                            <span className="text-xs text-[#A1AAA2] font-medium">
-                              Lifetime Access
-                            </span>
-                            <span className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tabular-nums">
-                              {course.priceDisplay}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onEnrollCourse({
-                                id: course.id,
-                                name: course.title,
-                                price: course.priceDisplay,
-                                category: 'Course Enrollment',
-                              })
-                            }
-                            className="w-full min-h-[44px] py-3.5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-                          >
-                            <span>Enroll Now</span>
-                            <ArrowRight size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 )}
               </div>

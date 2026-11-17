@@ -6,6 +6,7 @@ import {
   generateServerLicenseKey,
   isFirebaseAdminConfigured,
 } from '../_lib/firebaseAdmin';
+import { getServerProductFallback } from '../_lib/courseCatalog';
 
 export interface AdminApproveInput {
   authorizationHeader?: string;
@@ -108,10 +109,12 @@ export async function processAdminApproveOrder(
     const productId = String(order.productId || order.itemId || '').trim();
     const productDoc = productId ? await tx.get('products', productId) : null;
     const secretDoc = productId ? await tx.get('productSecrets', productId) : null;
+    const canonicalFallback = getServerProductFallback(productId, String(order.itemName || ''));
 
     const resolvedDownloadUrl =
       (typeof order.downloadUrl === 'string' && order.downloadUrl.trim()) ||
       (secretDoc && typeof secretDoc.protectedUrl === 'string' && secretDoc.protectedUrl.trim()) ||
+      canonicalFallback?.protectedUrl ||
       '';
 
     if (!resolvedDownloadUrl) {
@@ -125,8 +128,8 @@ export async function processAdminApproveOrder(
       };
     }
 
-    const title = String(productDoc?.title || order.itemName || 'Digital Product');
-    const category = String(productDoc?.type || productDoc?.category || 'Plugin');
+    const title = String(productDoc?.title || canonicalFallback?.title || order.itemName || 'Digital Product');
+    const category = String(productDoc?.type || productDoc?.category || canonicalFallback?.type || 'Plugin');
     const licenseKey =
       (typeof order.licenseKey === 'string' && order.licenseKey.trim()) ||
       generateServerLicenseKey(title, order.customerEmail, normalizedTrx || orderId);

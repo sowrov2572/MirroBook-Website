@@ -121,12 +121,12 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
   };
 
   return (
-    <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-12 bg-[#0B0D0C]">
-      <div className="w-full max-w-md space-y-6">
+    <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-8 sm:py-12 bg-[#0B0D0C] overflow-x-clip">
+      <div className="w-full max-w-md space-y-5 sm:space-y-6">
         <button
           type="button"
           onClick={() => onNavigate('/')}
-          className="inline-flex items-center gap-2 text-xs text-[#A1AAA2] hover:text-[#B7F34A] transition-colors cursor-pointer"
+          className="inline-flex items-center gap-2 min-h-[44px] text-xs text-[#A1AAA2] hover:text-[#B7F34A] transition-colors cursor-pointer"
         >
           <ArrowLeft size={14} />
           <span>Back to MirrorBook</span>
@@ -134,16 +134,16 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
 
         <div className="glossy-card rounded-2xl overflow-hidden shadow-[0_24px_60px_-15px_rgba(0,0,0,0.75)]">
           {/* Clean Brand Header */}
-          <div className="px-7 py-6 border-b border-white/[0.09] bg-[#121614]/80 flex items-center gap-3.5">
+          <div className="px-5 sm:px-7 py-5 sm:py-6 border-b border-white/[0.09] bg-[#121614]/80 flex items-center gap-3.5">
             <img
               src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
               alt="MirrorBook Official Logo"
               width={42}
               height={42}
-              className="w-10 h-10 rounded-xl object-contain"
+              className="w-10 h-10 rounded-xl object-contain shrink-0"
             />
-            <div>
-              <h1 className="font-display text-lg font-bold text-[#F5F7F2] tracking-normal">
+            <div className="min-w-0">
+              <h1 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] tracking-normal">
                 {isResetMode
                   ? 'Reset Password'
                   : mode === 'signup'
@@ -160,14 +160,14 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
             </div>
           </div>
 
-          <div className="p-7 space-y-5">
+          <div className="p-5 sm:p-7 space-y-5">
             {!isResetMode && (
               <>
                 <button
                   type="button"
                   onClick={handleGoogleClick}
                   disabled={isLoadingGoogle || isSubmitting}
-                  className="w-full py-3.5 px-4 bg-[#F5F7F2] hover:bg-white text-[#0B0D0C] font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-60"
+                  className="w-full min-h-[44px] py-3.5 px-4 bg-[#F5F7F2] hover:bg-white text-[#0B0D0C] font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-60"
                 >
                   {isLoadingGoogle ? (
                     <>
@@ -210,7 +210,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                   <button
                     type="button"
                     onClick={() => onNavigate('/login')}
-                    className={`py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                    className={`min-h-[40px] py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                       mode === 'login'
                         ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold'
                         : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
@@ -221,7 +221,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                   <button
                     type="button"
                     onClick={() => onNavigate('/signup')}
-                    className={`py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                    className={`min-h-[40px] py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                       mode === 'signup'
                         ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold'
                         : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
@@ -250,7 +250,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Enter your full name"
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -272,7 +272,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     autoComplete="email"
-                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
+                    className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -310,12 +310,12 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                         mode === 'signup' ? 'Create a password (min 6 chars)' : 'Enter your password'
                       }
                       autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-10 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors font-mono"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-11 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#707A72] hover:text-[#F5F7F2] cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-[#707A72] hover:text-[#F5F7F2] cursor-pointer"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -342,7 +342,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm your password"
                       autoComplete="new-password"
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors font-mono"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-10 pr-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors font-mono"
                     />
                   </div>
                 </div>
@@ -365,7 +365,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting || isLoadingGoogle}
-                className="glossy-btn w-full py-3.5 text-xs font-bold tracking-wide rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="glossy-btn w-full min-h-[44px] py-3.5 text-xs font-bold tracking-wide rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>
@@ -393,7 +393,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
-                  className="w-full py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer"
                 >
                   Back to Sign In
                 </button>

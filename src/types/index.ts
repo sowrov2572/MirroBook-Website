@@ -80,6 +80,18 @@ export interface CourseItem {
   thumbnailUrl?: string;
 }
 
+export type CourseLessonStatus = 'Available' | 'Coming Soon';
+
+export interface CourseLessonSlot {
+  lessonNumber: number;
+  title: string;
+  status: CourseLessonStatus;
+  duration?: string;
+  youtubeId?: string | null;
+  thumbnailUrl?: string | null;
+  embedUrl?: string | null;
+}
+
 export interface TutorialItem {
   id: string;
   title: string;

@@ -5,6 +5,7 @@ import {
   isFirebaseAdminConfigured,
 } from '../_lib/firebaseAdmin';
 import { checkRateLimitBucket } from '../_lib/security';
+import { getServerProductFallback } from '../_lib/courseCatalog';
 
 function cleanId(val: unknown): string {
   if (typeof val !== 'string') return '';
@@ -80,7 +81,10 @@ export async function processSoftwareAccess(
     };
   }
 
-  const productDoc = await store.getDoc('products', productId);
+  const canonicalFallback = getServerProductFallback(productId);
+  const productDoc =
+    (await store.getDoc('products', productId)) ||
+    (canonicalFallback && canonicalFallback.type === 'Software' ? canonicalFallback : null);
   if (!productDoc) {
     return {
       status: 404,

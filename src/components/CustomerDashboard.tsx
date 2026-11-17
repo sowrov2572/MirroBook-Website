@@ -59,6 +59,7 @@ interface CustomerDashboardProps {
   onSendResetPassword: (email: string) => Promise<void>;
   onResendVerification: () => Promise<void>;
   onBrowseStore: () => void;
+  onOpenCourse?: (courseId: string) => void;
 }
 
 export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
@@ -74,6 +75,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onSendResetPassword,
   onResendVerification,
   onBrowseStore,
+  onOpenCourse,
 }) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -146,8 +148,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
   if (!user) {
     return (
-      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-16 bg-[#0B0D0C]">
-        <div className="max-w-md w-full glossy-card rounded-2xl p-8 text-center space-y-5">
+      <section className="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-12 sm:py-16 bg-[#0B0D0C] overflow-x-clip">
+        <div className="max-w-md w-full glossy-card rounded-2xl p-6 sm:p-8 text-center space-y-5">
           <div className="w-14 h-14 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] mx-auto flex items-center justify-center">
             <UserCheck size={26} />
           </div>
@@ -161,14 +163,14 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('/login')}
-              className="glossy-btn flex-1 py-3 text-xs font-bold rounded-xl cursor-pointer"
+              className="glossy-btn flex-1 min-h-[44px] py-3 text-xs font-bold rounded-xl cursor-pointer"
             >
               Sign In
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/signup')}
-              className="glossy-btn-secondary flex-1 py-3 text-xs font-semibold rounded-xl cursor-pointer"
+              className="glossy-btn-secondary flex-1 min-h-[44px] py-3 text-xs font-semibold rounded-xl cursor-pointer"
             >
               Create Account
             </button>
@@ -225,7 +227,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const renderPurchaseCards = (items: UserPurchase[], emptyTitle: string, emptyDesc: string) => {
     if (items.length === 0) {
       return (
-        <div className="glossy-card rounded-2xl p-10 text-center space-y-4">
+        <div className="glossy-card rounded-2xl p-6 sm:p-10 text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-[#121614] border border-white/[0.09] text-[#A1AAA2] mx-auto flex items-center justify-center">
             <ShoppingBag size={22} />
           </div>
@@ -236,7 +238,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           <button
             type="button"
             onClick={onBrowseStore}
-            className="glossy-btn px-5 py-2.5 text-xs font-bold rounded-xl inline-flex items-center gap-2 cursor-pointer"
+            className="glossy-btn min-h-[44px] px-5 py-2.5 text-xs font-bold rounded-xl inline-flex items-center gap-2 cursor-pointer"
           >
             <Sparkles size={14} />
             <span>Browse Store</span>
@@ -254,10 +256,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           return (
             <div
               key={item.id}
-              className="glossy-card glossy-card-hover rounded-2xl p-5 flex flex-col justify-between gap-4"
+              className="glossy-card glossy-card-hover rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 min-w-0"
             >
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
+              <div className="space-y-2.5 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold text-[#B7F34A] bg-[#B7F34A]/15 px-2.5 py-0.5 rounded-lg">
                     {item.category || 'Digital Product'}
                   </span>
@@ -265,13 +267,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     {item.purchasedAt || 'Active'}
                   </span>
                 </div>
-                <h3 className="font-display text-base font-bold text-[#F5F7F2]">{item.title}</h3>
-                <div className="flex items-center justify-between text-[11px] bg-[#121614] border border-white/[0.09] rounded-xl px-3 py-2">
+                <h3 className="font-display text-base font-bold text-[#F5F7F2] break-words">{item.title}</h3>
+                <div className="flex items-center justify-between text-[11px] bg-[#121614] border border-white/[0.09] rounded-xl px-3 py-2 min-w-0">
                   <span className="text-[#A1AAA2] font-mono truncate">{itemLicense}</span>
                   <button
                     type="button"
                     onClick={() => handleCopy(itemLicense, `lic-${item.id}`)}
-                    className="text-[#B7F34A] hover:text-[#F5F7F2] ml-2 shrink-0 cursor-pointer"
+                    className="text-[#B7F34A] hover:text-[#F5F7F2] ml-2 shrink-0 cursor-pointer p-1"
                     title="Copy License Key"
                   >
                     {copiedKey === `lic-${item.id}` ? <Check size={13} /> : <Copy size={13} />}
@@ -279,24 +281,37 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  onSelectDownload({
-                    id: item.id,
-                    orderId: item.id,
-                    title: item.title,
-                    category: item.category,
-                    downloadUrl: item.downloadUrl,
-                    purchasedAt: item.purchasedAt,
-                    trxId: item.trxId,
-                  })
-                }
-                className="glossy-btn w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Download size={14} />
-                <span>Secure Download</span>
-              </button>
+              {onOpenCourse &&
+              (item.productId === 'course-video-editing-fundamentals' ||
+                item.title.toLowerCase().includes('video editing fundamentals')) ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenCourse('course-video-editing-fundamentals')}
+                  className="glossy-btn w-full min-h-[44px] py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <GraduationCap size={14} />
+                  <span>Open Course</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onSelectDownload({
+                      id: item.id,
+                      orderId: item.id,
+                      title: item.title,
+                      category: item.category,
+                      downloadUrl: item.downloadUrl,
+                      purchasedAt: item.purchasedAt,
+                      trxId: item.trxId,
+                    })
+                  }
+                  className="glossy-btn w-full min-h-[44px] py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Download size={14} />
+                  <span>Secure Download</span>
+                </button>
+              )}
             </div>
           );
         })}
@@ -305,41 +320,41 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   };
 
   return (
-    <section className="min-h-[calc(100vh-140px)] bg-[#0B0D0C] px-5 sm:px-6 lg:px-8 py-8">
+    <section className="min-h-[calc(100vh-140px)] bg-[#0B0D0C] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-x-clip">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Top Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.09]">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/[0.09]">
+          <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
             {user.photoURL ? (
               <img
                 src={user.photoURL}
                 alt={user.displayName || 'Customer'}
-                className="w-12 h-12 rounded-2xl object-cover border border-[#B7F34A]/50"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl object-cover border border-[#B7F34A]/50 shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-2xl bg-[#B7F34A] text-[#0B0D0C] font-display font-bold text-lg flex items-center justify-center">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#B7F34A] text-[#0B0D0C] font-display font-bold text-lg flex items-center justify-center shrink-0">
                 {(profile?.displayName || user.displayName || user.email || 'U')[0].toUpperCase()}
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display text-xl font-bold text-[#F5F7F2]">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] break-words">
                   {profile?.displayName || user.displayName || 'Customer Account'}
                 </h1>
-                <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-lg bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30">
+                <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-lg bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30 shrink-0">
                   Customer Portal
                 </span>
               </div>
-              <p className="text-xs text-[#A1AAA2] font-mono">{user.email}</p>
+              <p className="text-xs text-[#A1AAA2] font-mono break-all mt-0.5">{user.email}</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {isVerifiedAdminUser(user) && (
               <button
                 type="button"
                 onClick={() => onNavigate('/admin')}
-                className="px-4 py-2 text-xs font-semibold bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-yellow-300 rounded-xl cursor-pointer transition-colors"
+                className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-yellow-300 rounded-xl cursor-pointer transition-colors"
               >
                 Open Admin Console
               </button>
@@ -347,7 +362,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('/')}
-              className="glossy-btn-secondary px-4 py-2 text-xs font-medium rounded-xl flex items-center gap-1.5 cursor-pointer"
+              className="glossy-btn-secondary flex-1 sm:flex-none min-h-[44px] px-4 py-2 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <ArrowLeft size={13} />
               <span>Storefront</span>
@@ -358,7 +373,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 await onSignOut();
                 onNavigate('/login');
               }}
-              className="px-4 py-2 text-xs font-medium bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="flex-1 sm:flex-none min-h-[44px] px-4 py-2 text-xs font-medium bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
               <LogOut size={13} />
               <span>Logout</span>
@@ -367,13 +382,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
         </div>
 
         {/* Mobile Tab Selector */}
-        <div className="lg:hidden flex gap-2 overflow-x-auto pb-2">
+        <div className="lg:hidden flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {navItems.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+              className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold'
                   : 'bg-[#171C19] border border-white/[0.09] text-[#A1AAA2]'
@@ -434,16 +449,16 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
           </aside>
 
           {/* Content Area */}
-          <div className="lg:col-span-9 space-y-6">
+          <div className="lg:col-span-9 space-y-6 min-w-0">
             {/* Email verification banner for Email/Password users */}
             {user.emailVerified === false && (
               <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-start gap-2.5 text-xs text-yellow-200">
+                <div className="flex items-start gap-2.5 text-xs text-yellow-200 min-w-0">
                   <AlertCircle size={16} className="text-yellow-400 shrink-0 mt-0.5" />
-                  <div>
+                  <div className="min-w-0">
                     <strong className="text-[#F5F7F2] block">Verify your email address</strong>
-                    <span>
-                      Please verify <strong>{user.email}</strong> to keep your orders and license recovery synced automatically.
+                    <span className="break-words">
+                      Please verify <strong className="break-all">{user.email}</strong> to keep your orders and license recovery synced automatically.
                     </span>
                   </div>
                 </div>
@@ -454,7 +469,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     setVerificationSent(true);
                   }}
                   disabled={verificationSent}
-                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-[#0B0D0C] text-xs font-bold rounded-xl shrink-0 cursor-pointer disabled:opacity-60"
+                  className="min-h-[44px] px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-[#0B0D0C] text-xs font-bold rounded-xl shrink-0 cursor-pointer disabled:opacity-60"
                 >
                   {verificationSent ? 'Verification Sent ✓' : 'Send Verification Email'}
                 </button>
@@ -464,28 +479,28 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             {/* 1. OVERVIEW */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="glossy-card rounded-2xl p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
                     <span className="text-[11px] text-[#A1AAA2] block">My Purchases</span>
-                    <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
+                    <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
                       {purchases.length}
                     </span>
                   </div>
-                  <div className="glossy-card rounded-2xl p-4">
+                  <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
                     <span className="text-[11px] text-[#A1AAA2] block">Active Licenses</span>
-                    <span className="text-2xl font-display font-bold text-[#B7F34A] tabular-nums mt-1 block">
+                    <span className="text-xl sm:text-2xl font-display font-bold text-[#B7F34A] tabular-nums mt-1 block">
                       {licenseEntries.length}
                     </span>
                   </div>
-                  <div className="glossy-card rounded-2xl p-4">
+                  <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
                     <span className="text-[11px] text-[#A1AAA2] block">Total Orders</span>
-                    <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
+                    <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
                       {orders.length}
                     </span>
                   </div>
-                  <div className="glossy-card rounded-2xl p-4">
+                  <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
                     <span className="text-[11px] text-[#A1AAA2] block">Downloads</span>
-                    <span className="text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
+                    <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
                       {downloadHistory.length}
                     </span>
                   </div>
@@ -723,22 +738,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             {/* 9. ACCOUNT INFORMATION */}
             {activeTab === 'account' && (
-              <div className="glossy-card rounded-2xl p-6 space-y-5">
+              <div className="glossy-card rounded-2xl p-5 sm:p-6 space-y-5">
                 <div className="flex items-center gap-2 border-b border-white/[0.09] pb-3">
-                  <ShieldCheck size={18} className="text-[#B7F34A]" />
+                  <ShieldCheck size={18} className="text-[#B7F34A] shrink-0" />
                   <h2 className="font-display text-lg font-bold text-[#F5F7F2]">Account Information</h2>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09]">
+                  <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09] min-w-0">
                     <span className="text-[#707A72] block mb-1">Full Name</span>
-                    <span className="text-[#F5F7F2] font-semibold">
+                    <span className="text-[#F5F7F2] font-semibold break-words">
                       {profile?.displayName || user.displayName || 'Customer'}
                     </span>
                   </div>
-                  <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09]">
+                  <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09] min-w-0">
                     <span className="text-[#707A72] block mb-1">Email Address</span>
-                    <span className="text-[#F5F7F2] font-mono">{user.email}</span>
+                    <span className="text-[#F5F7F2] font-mono break-all">{user.email}</span>
                   </div>
                   <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09]">
                     <span className="text-[#707A72] block mb-1">Account Role</span>
@@ -758,7 +773,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       {user.isGoogle ? 'Google OAuth' : 'Email & Password'}
                     </span>
                   </div>
-                  <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09]">
+                  <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09] min-w-0">
                     <span className="text-[#707A72] block mb-1">Account UID</span>
                     <span className="text-[#A1AAA2] font-mono text-[11px] break-all">{user.uid}</span>
                   </div>
@@ -768,7 +783,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             {/* 10. PROFILE SETTINGS */}
             {activeTab === 'settings' && (
-              <div className="glossy-card rounded-2xl p-6 space-y-6">
+              <div className="glossy-card rounded-2xl p-5 sm:p-6 space-y-6">
                 <div className="border-b border-white/[0.09] pb-3">
                   <h2 className="font-display text-lg font-bold text-[#F5F7F2]">Profile Settings</h2>
                   <p className="text-xs text-[#A1AAA2]">
@@ -786,7 +801,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       required
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F7F2] focus:outline-none transition-colors"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] focus:outline-none transition-colors"
                     />
                   </div>
 
@@ -799,7 +814,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
                       placeholder="+880 1XXX-XXXXXX"
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
                     />
                   </div>
 
@@ -812,7 +827,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       value={editCompany}
                       onChange={(e) => setEditCompany(e.target.value)}
                       placeholder="Your creative brand or channel name"
-                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
+                      className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
                     />
                   </div>
 
@@ -825,9 +840,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       }`}
                     >
                       {profileNotice.type === 'success' ? (
-                        <CheckCircle2 size={14} className="text-[#B7F34A]" />
+                        <CheckCircle2 size={14} className="text-[#B7F34A] shrink-0" />
                       ) : (
-                        <AlertCircle size={14} className="text-red-400" />
+                        <AlertCircle size={14} className="text-red-400 shrink-0" />
                       )}
                       <span>{profileNotice.text}</span>
                     </div>
@@ -836,7 +851,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   <button
                     type="submit"
                     disabled={isSavingProfile}
-                    className="glossy-btn px-5 py-2.5 text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                    className="glossy-btn w-full sm:w-auto min-h-[44px] px-5 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                   >
                     <Save size={14} />
                     <span>{isSavingProfile ? 'Saving...' : 'Save Changes'}</span>
@@ -846,9 +861,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 {!user.isGoogle && user.email && (
                   <div className="pt-4 border-t border-white/[0.09] space-y-3">
                     <h3 className="text-sm font-semibold text-[#F5F7F2]">Password Security</h3>
-                    <p className="text-xs text-[#A1AAA2]">
+                    <p className="text-xs text-[#A1AAA2] break-words">
                       Need to change your password? Request a secure Firebase password reset link to{' '}
-                      <strong className="text-[#F5F7F2]">{user.email}</strong>.
+                      <strong className="text-[#F5F7F2] break-all">{user.email}</strong>.
                     </p>
                     <button
                       type="button"
@@ -867,7 +882,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           });
                         }
                       }}
-                      className="glossy-btn-secondary px-4 py-2 text-xs font-semibold rounded-xl inline-flex items-center gap-2 cursor-pointer"
+                      className="glossy-btn-secondary w-full sm:w-auto min-h-[44px] px-4 py-2 text-xs font-semibold rounded-xl inline-flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Mail size={13} className="text-[#B7F34A]" />
                       <span>Send Password Reset Email</span>

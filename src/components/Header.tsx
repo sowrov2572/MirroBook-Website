@@ -31,8 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
     { name: 'Portfolio', href: '#portfolio' },
     { name: 'Founder', href: '/sowrov-hosen' },
     { name: 'Packages', href: '#packages' },
-    { name: 'Plugin Store', href: '#plugins' },
-    { name: 'Software', href: '#software' },
+    { name: 'Plugins & Software', href: '#plugins-software' },
     { name: 'Courses & Tutorials', href: '#tutorials' },
   ];
 
@@ -107,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
           {navLinks.map((link) => {
             const isCurrent =
               link.href === currentPath ||
-              (currentPath === '/mirrorpos' && link.href === '#software');
+              (currentPath === '/mirrorpos' && link.href === '#plugins-software');
             return (
               <a
                 key={link.name}
@@ -229,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
             {navLinks.map((link) => {
               const isCurrent =
                 link.href === currentPath ||
-                (currentPath === '/mirrorpos' && link.href === '#software');
+                (currentPath === '/mirrorpos' && link.href === '#plugins-software');
               return (
                 <a
                   key={link.name}

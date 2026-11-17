@@ -9,6 +9,9 @@ import { processPaymentSmsWebhook } from './api/payment-sms/receive';
 import { processGetPaymentSmsLogs } from './api/payment-sms/logs';
 import { processSubmitAndVerifyOrder } from './api/orders/submit-and-verify';
 import { processAdminApproveOrder } from './api/orders/admin-approve';
+import { processFreeSoftwareAccess } from './api/software/free-access';
+import { processSoftwareAccess } from './api/software/access';
+import { processGetCourseLessons } from './api/courses/lessons';
 
 dotenv.config();
 
@@ -148,6 +151,93 @@ function apiDevServerPlugin(): Plugin {
             sendJson(res, result.status, result.data);
           } catch (err: any) {
             sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/software/free-access') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+            return;
+          }
+
+          const bodyStr = await readRequestBody(req);
+          try {
+            const result = await processFreeSoftwareAccess({
+              authorizationHeader: authHeader,
+              body: bodyStr || '{}',
+              clientIp,
+            });
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/software/access') {
+          if (req.method !== 'POST' && req.method !== 'GET') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed.' });
+            return;
+          }
+
+          const bodyStr = req.method === 'POST' ? await readRequestBody(req) : '';
+          try {
+            let parsedBody: Record<string, any> = {};
+            if (bodyStr) {
+              try {
+                parsedBody = JSON.parse(bodyStr);
+              } catch {
+                sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+                return;
+              }
+            }
+            const params = new URLSearchParams(queryStr || '');
+            const productId = params.get('productId') || parsedBody.productId || '';
+            const mode = params.get('mode') || parsedBody.mode || 'launch';
+            const shouldRedirect =
+              req.method === 'GET' && (params.get('go') === '1' || params.get('redirect') === '1');
+
+            const result = await processSoftwareAccess({
+              method: req.method,
+              authorizationHeader: authHeader,
+              productId,
+              mode,
+              clientIp,
+            });
+
+            if (shouldRedirect && result.status === 200 && result.redirectUrl) {
+              res.statusCode = 302;
+              res.setHeader('Cache-Control', 'no-store');
+              res.setHeader('Location', result.redirectUrl);
+              res.end();
+              return;
+            }
+
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/courses/lessons') {
+          if (req.method !== 'GET') {
+            sendJson(res, 405, { enrolled: false, success: false, error: 'Method not allowed. Use GET.' });
+            return;
+          }
+
+          try {
+            const params = new URLSearchParams(queryStr || '');
+            const courseId = params.get('courseId') || undefined;
+            const result = await processGetCourseLessons({
+              authorizationHeader: authHeader,
+              courseId,
+              clientIp,
+            });
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { enrolled: false, success: false, error: err?.message || 'Server error' });
           }
           return;
         }

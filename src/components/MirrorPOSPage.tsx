@@ -17,31 +17,77 @@ import {
   ScanBarcode,
   ShieldCheck,
   Laptop,
-  ArrowRight,
-  ChevronRight,
   Layers,
   Languages,
+  ChevronDown,
+  Mail,
+  Loader2,
+  AlertCircle,
+  WifiOff,
+  HardDriveDownload,
+  Truck,
+  Wallet,
+  LayoutDashboard,
+  LifeBuoy,
 } from 'lucide-react';
+import { AppUser } from '../types';
+import { auth } from '../utils/firebase';
 
 interface MirrorPOSPageProps {
   onNavigateHome: () => void;
   onStartProject?: () => void;
+  user?: AppUser | null;
+  desktopDownloadUrl?: string;
 }
 
 type BrowserTab = 'chrome' | 'edge';
-type GuideLang = 'bn' | 'en';
+type GuideLang = 'en' | 'bn';
+
+interface UserGuideCategory {
+  number: string;
+  title: string;
+  summary: string;
+  steps: string[];
+}
 
 export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
   onNavigateHome,
   onStartProject,
+  user = null,
+  desktopDownloadUrl,
 }) => {
   const [activeScreenshot, setActiveScreenshot] = useState<number>(0);
   const [browserTab, setBrowserTab] = useState<BrowserTab>('chrome');
-  const [activeManualChapter, setActiveManualChapter] = useState<number>(0);
-  const [guideLang, setGuideLang] = useState<GuideLang>('bn');
+  const [openGuideIndex, setOpenGuideIndex] = useState<number | null>(0);
+  const [guideLang, setGuideLang] = useState<GuideLang>('en');
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
+  // Free Access Registration Form State
+  const [fullName, setFullName] = useState<string>(user?.displayName || '');
+  const [email, setEmail] = useState<string>(user?.email || '');
+  const [isSubmittingAccess, setIsSubmittingAccess] = useState<boolean>(false);
+  const [accessError, setAccessError] = useState<string>('');
+  const [accessConfirmed, setAccessConfirmed] = useState<{
+    email: string;
+    referenceId: string;
+    message: string;
+  } | null>(null);
+
   const MIRRORPOS_APP_URL = 'https://mirror-pos.vercel.app/';
+  const verifiedDesktopUrl =
+    desktopDownloadUrl && /^https?:\/\//i.test(desktopDownloadUrl.trim())
+      ? desktopDownloadUrl.trim()
+      : typeof import.meta.env.VITE_MIRRORPOS_DESKTOP_URL === 'string' &&
+        /^https?:\/\//i.test(import.meta.env.VITE_MIRRORPOS_DESKTOP_URL.trim())
+      ? import.meta.env.VITE_MIRRORPOS_DESKTOP_URL.trim()
+      : '';
+
+  useEffect(() => {
+    if (user) {
+      setFullName((prev) => prev || user.displayName || '');
+      setEmail((prev) => prev || user.email || '');
+    }
+  }, [user]);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -51,7 +97,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     let metaDesc = document.querySelector('meta[name="description"]');
     const originalDesc = metaDesc?.getAttribute('content') || '';
     const newDesc =
-      'MirrorPOS by MirrorBook is smart POS software for modern businesses with offline billing, online sync, inventory, sales, expense, customer & reporting tools.';
+      'MirrorPOS by MirrorBook is Smart POS Software for Modern Businesses with offline-first billing, online synchronization, inventory, sales, expenses, customer & supplier management, and analytics.';
     if (metaDesc) {
       metaDesc.setAttribute('content', newDesc);
     } else {
@@ -101,65 +147,13 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
       alternateName: 'MirrorPOS by MirrorBook',
       headline: 'Smart POS Software for Modern Businesses.',
       applicationCategory: 'BusinessApplication',
-      operatingSystem: 'Windows, macOS, Web, Android, iOS',
+      operatingSystem: 'Windows, macOS, Web',
       url: 'https://mirrorbook.site/mirrorpos',
       installUrl: 'https://mirror-pos.vercel.app/',
       image: 'https://mirrorbook.site/mirror-pos-icon.png',
       description: newDesc,
-      featureList: [
-        'Offline billing support',
-        'Online data synchronization',
-        'Inventory management',
-        'Sales and expense tracking',
-        'Customer management',
-        'Smart business reporting',
-      ],
-      brand: {
-        '@type': 'Brand',
-        name: 'MirrorBook',
-        url: 'https://mirrorbook.site/',
-      },
-      author: {
-        '@type': 'Organization',
-        '@id': 'https://mirrorbook.site/#organization',
-        name: 'MirrorBook',
-        url: 'https://mirrorbook.site/',
-      },
-      creator: {
-        '@type': 'Organization',
-        '@id': 'https://mirrorbook.site/#organization',
-        name: 'MirrorBook',
-        url: 'https://mirrorbook.site/',
-      },
-      publisher: {
-        '@type': 'Organization',
-        '@id': 'https://mirrorbook.site/#organization',
-        name: 'MirrorBook',
-        url: 'https://mirrorbook.site/',
-      },
-      isPartOf: {
-        '@type': 'WebSite',
-        '@id': 'https://mirrorbook.site/#website',
-        name: 'MirrorBook',
-        url: 'https://mirrorbook.site/',
-      },
-      breadcrumb: {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'MirrorBook',
-            item: 'https://mirrorbook.site/',
-          },
-          {
-            '@type': 'ListItem',
-            position: 2,
-            name: 'MirrorPOS',
-            item: 'https://mirrorbook.site/mirrorpos',
-          },
-        ],
-      },
+      brand: { '@type': 'Brand', name: 'MirrorBook', url: 'https://mirrorbook.site/' },
+      author: { '@type': 'Organization', name: 'MirrorBook', url: 'https://mirrorbook.site/' },
     };
 
     let scriptTag = document.getElementById('mirrorpos-schema') as HTMLScriptElement | null;
@@ -171,7 +165,17 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     }
     scriptTag.textContent = JSON.stringify(softwareSchema, null, 2);
 
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      setTimeout(() => {
+        const targetEl = document.getElementById(hash);
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }
 
     return () => {
       document.title = originalTitle;
@@ -204,7 +208,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         });
         return;
       } catch {
-        // User cancelled share
+        // ignore cancel
       }
     }
     if (navigator.clipboard) {
@@ -213,7 +217,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         setCopiedLink(true);
         setTimeout(() => setCopiedLink(false), 2500);
       } catch {
-        // Ignore clipboard denial
+        // ignore clipboard denial
       }
     }
   };
@@ -225,59 +229,161 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     }
   };
 
-  const features = [
+  const handleFreeAccessSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmittingAccess) return;
+
+    const cleanName = fullName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (cleanName.length < 2) {
+      setAccessError('Please enter your full name.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
+      setAccessError('Please enter a valid email address.');
+      return;
+    }
+
+    setIsSubmittingAccess(true);
+    setAccessError('');
+
+    try {
+      let idToken = '';
+      if (auth.currentUser) {
+        idToken = await auth.currentUser.getIdToken().catch(() => '');
+      }
+
+      const res = await fetch('/api/software/free-access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({
+          productId: 'software-mirrorpos',
+          name: cleanName,
+          email: cleanEmail,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setAccessError(
+          data?.error ||
+            'Unable to send confirmation email right now. Please verify your email address or try again.'
+        );
+        return;
+      }
+
+      setAccessConfirmed({
+        email: data.email || cleanEmail,
+        referenceId: data.referenceId || 'MB-SW-READY',
+        message:
+          data.message ||
+          `Your MirrorPOS access details and user guide links have been sent to ${cleanEmail}.`,
+      });
+    } catch {
+      setAccessError(
+        'Network error while sending access confirmation email. Please try again.'
+      );
+    } finally {
+      setIsSubmittingAccess(false);
+    }
+  };
+
+  const overviewSpecs = [
+    { label: 'Product Name', value: 'MirrorPOS' },
+    { label: 'Tagline', value: 'Smart POS Software for Modern Businesses.' },
+    { label: 'Developed by', value: 'MirrorBook' },
+    { label: 'Product Type', value: 'Desktop POS Software' },
+    { label: 'Access Type', value: 'Lifetime Access' },
+    { label: 'Internet Requirement', value: 'Offline-first with online synchronization.' },
+  ];
+
+  const keyFeatures = [
     {
       icon: Printer,
-      title: 'Offline billing support',
+      title: 'Sales and billing management',
       description:
-        'Keep counter billing running even when internet connectivity drops. Create invoices, print 58mm/80mm thermal or PDF receipts, and continue selling without disruption.',
-    },
-    {
-      icon: Cloud,
-      title: 'Online data synchronization',
-      description:
-        'Automatically sync sales, inventory updates, and store backups online with cloud backup sync and Google Sheets integration across your authorized devices.',
+        'Create fast counter bills, apply discounts, select Cash/Card/Mobile Banking/Due payments, and generate thermal or PDF invoices.',
     },
     {
       icon: ScanBarcode,
-      title: 'Inventory management',
+      title: 'Product and inventory management',
       description:
-        'Manage SKUs, USB/Bluetooth barcodes, size and color variants, purchase rates, selling prices, and automatic low-stock alerts with real-time deduction.',
-    },
-    {
-      icon: ShoppingCart,
-      title: 'Sales and expense tracking',
-      description:
-        'Process fast POS counter checkouts with discounts and split payments while logging daily shop expenses like rent, electricity, staff, and courier costs.',
+        'Organize items with SKUs, barcodes, size and color variants, purchase rates, selling prices, and automatic stock deduction.',
     },
     {
       icon: Users,
       title: 'Customer management',
       description:
-        'Maintain complete customer profiles, track partial payments or credit receivables, record supplier payables, and reconcile balances with transparent ledgers.',
+        'Save customer profiles, track partial payments or receivable dues, and reconcile balances cleanly.',
+    },
+    {
+      icon: Truck,
+      title: 'Supplier management',
+      description:
+        'Log wholesale stock purchases, maintain supplier ledgers, and track payables accurately.',
+    },
+    {
+      icon: Wallet,
+      title: 'Expense tracking',
+      description:
+        'Record daily shop operating expenses such as rent, utilities, staff, and logistics so net profit stays exact.',
     },
     {
       icon: BarChart3,
-      title: 'Smart business reporting',
+      title: 'Sales reports and analytics',
       description:
-        'Review real-time Today, This Month, and All-Time financial statements covering gross revenue, COGS, operating expenses, and net profit margins.',
+        'View Today, This Month, and All-Time financial summaries including revenue, COGS, expenses, and net profit.',
+    },
+    {
+      icon: LayoutDashboard,
+      title: 'Business dashboard',
+      description:
+        'Monitor daily sales, cash flow, net profit, and low-stock warnings at a glance from a clean command center.',
+    },
+    {
+      icon: WifiOff,
+      title: 'Offline functionality',
+      description:
+        'Operate counter sales, product lookups, and receipt printing seamlessly even when internet connectivity drops.',
+    },
+    {
+      icon: Cloud,
+      title: 'Automatic online synchronization',
+      description:
+        'Synchronize invoices, inventory counts, and store data online automatically once connectivity is available.',
+    },
+    {
+      icon: Globe,
+      title: 'Google account integration',
+      description:
+        'Connect your Google account for Google Sheets synchronization and authorized workspace cloud storage.',
+    },
+    {
+      icon: HardDriveDownload,
+      title: 'Data backup and synchronization',
+      description:
+        'Export local store backups, run cloud backup syncs, and restore records reliably whenever switching devices.',
     },
   ];
 
-  // Compact screenshots using the user's exact 3 ImgBB links with local static fallbacks
   const screenshots = [
     {
       id: 'pos',
-      label: '01. POS Terminal & Checkout',
-      caption: 'Quick Actions, Today’s Sales, Cash, Net Profit & Cloud Sync.',
+      label: '01. POS Terminal & Dashboard',
+      caption: 'Business Dashboard, Quick Actions, Today’s Sales, Cash, Net Profit & Cloud Sync.',
       image: 'https://i.ibb.co/XfQDsJGq/Screenshot-2026-11-16-153436.png',
       fallback: '/mirrorpos-shot-1.png',
-      alt: 'MirrorPOS Dashboard and Quick POS Checkout Terminal',
+      alt: 'MirrorPOS Business Dashboard and Quick POS Billing Terminal',
     },
     {
       id: 'inventory',
       label: '02. Inventory & Barcode',
-      caption: 'Product Catalog, Barcode, Stock Quantity & Variant Management.',
+      caption: 'Product Catalog, Barcodes, Stock Quantities & Variant Management.',
       image: 'https://i.ibb.co/4ng8NJ7R/Screenshot-2026-11-16-153459.png',
       fallback: '/mirrorpos-shot-2.png',
       alt: 'MirrorPOS Inventory and Barcode Stock Management Screen',
@@ -285,12 +391,283 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     {
       id: 'analytics',
       label: '03. Reports & Ledgers',
-      caption: 'Profit & Loss Statement, Customer Dues & Supplier Payables.',
+      caption: 'Sales Reports, Expense Tracking, Customer Receivables & Supplier Payables.',
       image: 'https://i.ibb.co/v4s6khWt/Screenshot-2026-11-16-153530.png',
       fallback: '/mirrorpos-shot-3.png',
-      alt: 'MirrorPOS Financial Reports, Ledgers and Profit Statement',
+      alt: 'MirrorPOS Sales Reports, Expenses, and Due Ledgers',
     },
   ];
+
+  const userGuideCategories: Record<GuideLang, UserGuideCategory[]> = {
+    en: [
+      {
+        number: '01',
+        title: 'Getting Started',
+        summary: 'Understand MirrorPOS system overview, browser/desktop launch, and main workspace layout.',
+        steps: [
+          'Open https://mirror-pos.vercel.app/ in Google Chrome or Microsoft Edge on Windows 10/11 (or launch your installed desktop app shortcut).',
+          'For dedicated desktop window mode without browser tabs, click the Install icon in the browser address bar to pin MirrorPOS to your taskbar.',
+          'Review the left navigation sidebar covering Business Dashboard, POS Billing, Product & Inventory, Customers, Suppliers, Shop Expenses, Reports, and Backup.',
+        ],
+      },
+      {
+        number: '02',
+        title: 'Account Registration and Login',
+        summary: 'Register your store access on MirrorBook and switch securely between Owner Mode and Staff Mode.',
+        steps: [
+          'Submit your Full Name and Email Address in the Free Access form above to receive your official MirrorPOS launch confirmation and User Guide reference.',
+          'Open MirrorPOS and sign in or link your business account.',
+          'Switch between Owner Mode (full financial reports, settings, backup controls) and Staff Mode (counter billing and basic lookups) depending on counter staff.',
+        ],
+      },
+      {
+        number: '03',
+        title: 'Initial Business Setup',
+        summary: 'Configure your business name, currency symbol, invoice footer details, and printer preferences.',
+        steps: [
+          'Navigate to Store Settings from the MirrorPOS sidebar.',
+          'Enter your business name, shop address, phone number, and custom cash memo thank-you footer note.',
+          'Select your preferred receipt width (58mm/80mm thermal roll or A4 PDF invoice) and currency formatting.',
+        ],
+      },
+      {
+        number: '04',
+        title: 'Adding Products',
+        summary: 'Create items with purchase cost, retail selling price, barcodes/SKUs, and variants.',
+        steps: [
+          'Open Product & Stock and click "+ Add Product".',
+          'Enter product title, category, SKU/barcode number, purchase rate, and retail selling price.',
+          'Specify opening stock quantity and optional size/color variants if managing multi-variant retail inventory, then save.',
+        ],
+      },
+      {
+        number: '05',
+        title: 'Creating Sales and Invoices',
+        summary: 'Process fast counter checkouts with barcode scanning, discounts, split payments, and receipts.',
+        steps: [
+          'Click POS Billing Counter (or "+ New Invoice" Quick Action) on the Business Dashboard.',
+          'Scan product barcodes with a USB/Bluetooth scanner or search by product name to add items to the cart.',
+          'Adjust item quantities, apply optional item or bill discounts, attach a customer profile if recording credit/due, and pick the payment method (Cash, Mobile Banking, Card, or Due).',
+          'Click Complete Sale to finalize the invoice, deduct inventory automatically, and print or save the thermal/PDF receipt.',
+        ],
+      },
+      {
+        number: '06',
+        title: 'Managing Inventory',
+        summary: 'Track stock levels in real time, restock from suppliers, and respond to low-stock alerts.',
+        steps: [
+          'Use the Quick Stock adjustment button to update shelf counts or log damaged/returned stock.',
+          'Record wholesale stock-in deliveries through Suppliers / Purchases so unit costs and inventory totals update together.',
+          'Check Low-Stock Alerts directly on the Business Dashboard to restock popular items ahead of time.',
+        ],
+      },
+      {
+        number: '07',
+        title: 'Customer Management',
+        summary: 'Maintain customer directory profiles, partial payments, and due/receivable ledgers.',
+        steps: [
+          'Open Customer Management / Customer Ledger and add customers with name and phone number.',
+          'Select a customer during POS checkout whenever an invoice has a partial payment or credit balance.',
+          'Log due collections from the customer ledger anytime; balances and daily cash collected update immediately.',
+        ],
+      },
+      {
+        number: '08',
+        title: 'Expense Management',
+        summary: 'Record shop operating costs so profit calculations remain accurate.',
+        steps: [
+          'Open the Shop Expense section from the navigation panel.',
+          'Add daily or monthly expenses such as rent, electricity, staff wages, packaging, or courier fees with date and category.',
+          'Review categorized expense totals inside financial reports to control store overhead.',
+        ],
+      },
+      {
+        number: '09',
+        title: 'Reports and Analytics',
+        summary: 'Analyze sales volume, cost of goods sold, expenses, and net profit over any timeframe.',
+        steps: [
+          'Open Financial Reports & Analytics and filter between Today, This Month, or All-Time ranges.',
+          'Inspect Gross Revenue, COGS, Operating Expenses, and Final Net Profit figures side by side.',
+          'Use the Print Report action to print or save a PDF summary for accounting.',
+        ],
+      },
+      {
+        number: '10',
+        title: 'Offline Mode',
+        summary: 'Keep counter operations uninterrupted when internet connectivity drops.',
+        steps: [
+          'Continue opening POS Billing, scanning barcodes, adding products, and completing customer invoices even offline.',
+          'All offline entries are safely queued and stored locally in your browser/desktop app storage.',
+          'Once internet connectivity returns, pending updates synchronize automatically without losing a single transaction.',
+        ],
+      },
+      {
+        number: '11',
+        title: 'Google Account Synchronization',
+        summary: 'Link your Google account for Google Sheets sync and authorized online storage.',
+        steps: [
+          'Open Sync / Integrations inside MirrorPOS and connect your Google account.',
+          'Authorize Google Sheets synchronization or trigger "Save to Google Sheets" from the Quick Actions bar.',
+          'Verify synced rows across sales, inventory, and ledger sheets on your connected Google workspace.',
+        ],
+      },
+      {
+        number: '12',
+        title: 'Data Backup and Recovery',
+        summary: 'Export local backups, trigger cloud sync backups, and restore your store cleanly.',
+        steps: [
+          'Visit Data Backup in MirrorPOS settings and click Export Backup to download a timestamped backup file of your store.',
+          'Run Cloud Backup Sync regularly when online to keep your latest encrypted snapshot safely stored.',
+          'If setting up a new PC or after clearing browser data, open Restore Backup and select your backup file or cloud snapshot.',
+        ],
+      },
+      {
+        number: '13',
+        title: 'Troubleshooting and Support',
+        summary: 'Quick fixes for printers, barcode scanners, sync status, and contacting MirrorBook support.',
+        steps: [
+          'Thermal Printer Formatting: Ensure Chrome/Edge print settings match your 58mm/80mm paper size with Margins set to None.',
+          'Barcode Scanner Not Entering Items: Verify the scanner is in USB HID keyboard mode and focus is inside the POS search field.',
+          'Sync Delayed: Confirm stable internet connectivity and click the manual Cloud Sync button to push queued offline records.',
+          'Still need assistance? Contact MirrorBook Technical Support at khansaheb2572@gmail.com or via the Technical Support button below.',
+        ],
+      },
+    ],
+    bn: [
+      {
+        number: '০১',
+        title: 'Getting Started (শুরু করার নিয়ম)',
+        summary: 'MirrorPOS সফটওয়্যার ওপেন করা, ডেস্কটপ অ্যাপ ইনস্টল ও মূল ড্যাশবোর্ড পরিচিতি।',
+        steps: [
+          'আপনার Windows 10/11 পিসিতে Google Chrome বা Microsoft Edge দিয়ে https://mirror-pos.vercel.app/ ওপেন করুন।',
+          'ব্রাউজার ট্যাব ছাড়া আলাদা ডেস্কটপ অ্যাপ উইন্ডোতে চালাতে অ্যাড্রেস বারের Install আইকনে ক্লিক করে টাস্কবারে পিন করুন।',
+          'বাম দিকের সাইডবার থেকে বিজনেস ড্যাশবোর্ড, পজ (POS), প্রোডাক্ট ও স্টক, কাস্টমার, সাপ্লায়ার, খরচ ও রিপোর্ট মেনু দেখুন।',
+        ],
+      },
+      {
+        number: '০২',
+        title: 'Account Registration and Login',
+        summary: 'ফ্রি অ্যাক্সেস রেজিস্ট্রেশন ও ওনার/স্টাফ মোড লগইন পরিচালনা।',
+        steps: [
+          'এই পেজের Free Access ফর্মে আপনার Full Name এবং Email Address সাবমিট করে ইমেইলে লঞ্চ লিংক ও গাইড সংগ্রহ করুন।',
+          'MirrorPOS ওপেন করে আপনার অ্যাকাউন্ট দিয়ে সাইন-ইন করুন।',
+          'কাউন্টার পরিচালনার জন্য প্রয়োজন অনুযায়ী Owner Mode বা Staff Mode নির্বাচন করুন।',
+        ],
+      },
+      {
+        number: '০৩',
+        title: 'Initial Business Setup',
+        summary: 'দোকানের নাম, ঠিকানা, কারেন্সি এবং থার্মাল/PDF ইনভয়েস সেটিংস নির্ধারণ।',
+        steps: [
+          'সাইডবার থেকে Store Settings অপশনে প্রবেশ করুন।',
+          'আপনার দোকানের নাম, ঠিকানা, মোবাইল নম্বর ও মেমোর নিচের ফুটনোট যুক্ত করুন।',
+          '৫৮মিমি/৮০মিমি থার্মাল প্রিন্টার অথবা A4 PDF পেপার সাইজ সেট করে সেভ করুন।',
+        ],
+      },
+      {
+        number: '০৪',
+        title: 'Adding Products',
+        summary: 'ক্রয়মূল্য, বিক্রয়মূল্য, বারকোড ও ভ্যারিয়েন্টসহ পণ্য যুক্ত করার নিয়ম।',
+        steps: [
+          '"Product & Stock" মেনু থেকে "+ Add Product" বাটনে ক্লিক করুন।',
+          'পণ্যের নাম, ক্যাটাগরি, বারকোড/SKU, কেনা দাম ও বিক্রয় দাম লিখুন।',
+          'ওপেনিং স্টক সংখ্যা এবং প্রয়োজন হলে সাইজ বা কালার ভ্যারিয়েন্ট দিয়ে সেভ করুন।',
+        ],
+      },
+      {
+        number: '০৫',
+        title: 'Creating Sales and Invoices',
+        summary: 'বারকোড স্ক্যান করে দ্রুত বিল তৈরি, ডিসকাউন্ট ও মেমো প্রিন্ট।',
+        steps: [
+          'ড্যাশবোর্ডের POS Billing বা "+ New Invoice" বাটনে ক্লিক করুন।',
+          'বারকোড স্ক্যানার দিয়ে স্ক্যান করে বা নাম লিখে সার্চ করে পণ্য কার্টে যোগ করুন।',
+          'ডিসকাউন্ট, কাস্টমার প্রোফাইল ও পেমেন্ট মেথড (Cash, Mobile Banking, Card বা Due) সিলেক্ট করুন।',
+          'Complete Sale ক্লিক করলে স্টক অটোমেটিক আপডেট হবে এবং থার্মাল বা PDF ক্যাশ মেমো তৈরি হবে।',
+        ],
+      },
+      {
+        number: '০৬',
+        title: 'Managing Inventory',
+        summary: 'রিয়েল-টাইম স্টক কন্ট্রোল, দ্রুত স্টক আপডেট এবং লো-স্টক সতর্কতা।',
+        steps: [
+          'যেকোনো পণ্যের পরিমাণ আপডেট করতে Quick Stock বাটন ব্যবহার করুন।',
+          'Suppliers / Purchases অপশন থেকে নতুন মাল কেনা এন্ট্রি করলে ক্রয়মূল্য ও স্টক একসাথে আপডেট হয়।',
+          'ড্যাশবোর্ডে থাকা Low-Stock Alerts দেখে চাহিদাসম্পন্ন পণ্য আগেই রি-স্টক করুন।',
+        ],
+      },
+      {
+        number: '০৭',
+        title: 'Customer Management',
+        summary: 'কাস্টমার প্রোফাইল সংরক্ষণ ও বাকি-বকেয়া (Receivables) লেজার হিসাব।',
+        steps: [
+          'Customer Management সেকশনে নিয়মিত ক্রেতাদের নাম ও ফোন নম্বর সংরক্ষণ করুন।',
+          'বাকি বা আংশিক পেমেন্টে বিক্রি করার সময় কাস্টমার সিলেক্ট করে বিল সম্পন্ন করুন।',
+          'কাস্টমার বকেয়া টাকা পরিশোধ করলে জমা এন্ট্রি করুন; সাথে সাথেই ব্যালেন্স আপডেট হবে।',
+        ],
+      },
+      {
+        number: '০৮',
+        title: 'Expense Management',
+        summary: 'দোকানের দৈনিক ও মাসিক খরচ হিসাব করে নিট লাভ নির্ভুল রাখা।',
+        steps: [
+          'ন্যাভিগেশন থেকে Shop Expense ট্যাবে যান।',
+          'দোকান ভাড়া, বিদ্যুৎ বিল, কর্মচারী বেতন, প্যাকেজিং বা কুরিয়ার খরচ ক্যাটাগরি অনুযায়ী এন্ট্রি করুন।',
+          'আর্থিক রিপোর্টে মোট খরচ ও প্রকৃত লাভ সরাসরি পর্যবেক্ষণ করুন।',
+        ],
+      },
+      {
+        number: '০৯',
+        title: 'Reports and Analytics',
+        summary: 'দৈনিক, মাসিক ও সর্বমোট বিক্রি এবং Profit & Loss বিবরণী দেখা।',
+        steps: [
+          'Reports & Analytics অপশনে গিয়ে Today, This Month বা All-Time ফিল্টার বেছে নিন।',
+          'মোট বিক্রি (Gross Revenue), পণ্যের ব্যয় (COGS), দোকান খরচ এবং নিট লাভ দেখুন।',
+          'Print Report বাটনের মাধ্যমে প্রিন্ট বা PDF রিপোর্ট সংরক্ষণ করুন।',
+        ],
+      },
+      {
+        number: '১০',
+        title: 'Offline Mode',
+        summary: 'ইন্টারনেট না থাকলেও বিরতিহীন বিলিং ও পরবর্তী অটো সিঙ্ক।',
+        steps: [
+          'ইন্টারনেট সংযোগ বিচ্ছিন্ন থাকলেও পজ বিলিং, পণ্য সার্চ এবং রসিদ প্রিন্ট স্বাভাবিকভাবে চালিয়ে যান।',
+          'অফলাইন থাকাকালীন সব হিসাব আপনার ডিভাইসে নিরাপদে সংরক্ষিত থাকবে।',
+          'ইন্টারনেট ফিরে এলেই পেন্ডিং সব সেলস ও স্টক ডাটা অটোমেটিক অনলাইনে সিঙ্ক হয়ে যাবে।',
+        ],
+      },
+      {
+        number: '১১',
+        title: 'Google Account Synchronization',
+        summary: 'Google অ্যাকাউন্ট যুক্ত করে Google Sheets সিঙ্ক ও ওয়ার্কস্পেস ইন্টিগ্রেশন।',
+        steps: [
+          'MirrorPOS-এর Sync সেটিংসে আপনার Google অ্যাকাউন্ট সংযুক্ত করুন।',
+          'ড্যাশবোর্ডের কুইক অ্যাকশন থেকে "Save to Google Sheets" ব্যবহার করে সরাসরি তথ্য সিঙ্ক করুন।',
+          'আপনার কানেক্টেড Google Sheets-এ সেলস, স্টক ও হিসাবের তথ্য যাচাই করুন।',
+        ],
+      },
+      {
+        number: '১২',
+        title: 'Data Backup and Recovery',
+        summary: 'লোকাল ব্যাকআপ ডাউনলোড, ক্লাউড সিঙ্ক ও রিস্টোর করার পদ্ধতি।',
+        steps: [
+          'Data Backup মেনু থেকে Export Backup ক্লিক করে দোকানের সম্পূর্ণ ডাটা ব্যাকআপ ফাইল ডাউনলোড করে রাখুন।',
+          'অনলাইনে থাকা অবস্থায় নিয়মিত Cloud Backup Sync চালিয়ে ক্লাউড কপি সুরক্ষিত রাখুন।',
+          'নতুন পিসি ব্যবহার করলে বা ডাটা রিসেট হলে Restore Backup অপশন দিয়ে পূর্বের সব তথ্য ফিরিয়ে আনুন।',
+        ],
+      },
+      {
+        number: '১৩',
+        title: 'Troubleshooting and Support',
+        summary: 'প্রিন্টার, বারকোড স্ক্যানার ও সিঙ্ক সমস্যার সমাধান এবং সাপোর্ট যোগাযোগ।',
+        steps: [
+          'থার্মাল প্রিন্ট সেটিংস: Chrome/Edge প্রিন্ট ডায়ালগে পেপার সাইজ 58mm/80mm এবং Margins: None রাখুন।',
+          'বারকোড স্ক্যান না হলে: স্ক্যানার USB HID কিবোর্ড মোডে আছে কিনা দেখুন এবং POS সার্চ বক্সে ক্লিক করে স্ক্যান করুন।',
+          'সিঙ্ক সমস্যা হলে: ইন্টারনেট কানেকশন নিশ্চিত করে Cloud Sync বাটনে ক্লিক করুন।',
+          'অতিরিক্ত সহায়তার জন্য khansaheb2572@gmail.com ইমেইলে বা নিচের Technical Support বাটনে যোগাযোগ করুন।',
+        ],
+      },
+    ],
+  };
 
   const installGuide = {
     en: {
@@ -305,25 +682,25 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'Step 01',
           title: 'Open MirrorPOS in Google Chrome',
           detail:
-            'Launch Google Chrome on your Windows 10 or Windows 11 PC and visit https://mirror-pos.vercel.app/. Wait a moment for the app to finish loading.',
+            'Launch Google Chrome on your Windows 10 or Windows 11 PC and visit https://mirror-pos.vercel.app/.',
         },
         {
           step: 'Step 02',
           title: 'Click the Install Icon in Address Bar',
           detail:
-            'Click the small Install icon on the right side of Chrome’s address bar, or open the three-dot menu (⋮) → Cast, save, and share → Install page as app.',
+            'Click the Install icon on the right side of Chrome’s address bar, or open menu (⋮) → Cast, save, and share → Install page as app.',
         },
         {
           step: 'Step 03',
           title: 'Confirm Installation',
           detail:
-            'Click "Install" in the confirmation popup. MirrorPOS will immediately open in its own clean Windows desktop window without browser tabs.',
+            'Click "Install" in the confirmation popup to launch MirrorPOS in a standalone desktop window.',
         },
         {
           step: 'Step 04',
           title: 'Pin to Windows Taskbar & Desktop',
           detail:
-            'Right-click the MirrorPOS icon on your Windows Taskbar and select "Pin to taskbar". A Desktop shortcut is also created automatically.',
+            'Right-click the MirrorPOS icon on your Taskbar and choose "Pin to taskbar" for instant daily access.',
         },
       ],
       edgeSteps: [
@@ -331,31 +708,31 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'Step 01',
           title: 'Open MirrorPOS in Microsoft Edge',
           detail:
-            'Open Microsoft Edge on your Windows 10 or Windows 11 PC and go to https://mirror-pos.vercel.app/.',
+            'Open Microsoft Edge on Windows 10/11 and visit https://mirror-pos.vercel.app/.',
         },
         {
           step: 'Step 02',
           title: 'Click "Install this site as an app"',
           detail:
-            'Click the "App available" icon on the right side of the Edge address bar, or open the three-dot menu (⋯) → Apps → Install this site as an app.',
+            'Click the App available icon in the Edge address bar, or open menu (⋯) → Apps → Install this site as an app.',
         },
         {
           step: 'Step 03',
           title: 'Confirm App Name & Install',
           detail:
-            'Keep the name as "MirrorPOS" and click "Install". Edge sets up MirrorPOS as a standalone Windows desktop app.',
+            'Keep the name "MirrorPOS" and click "Install" to add it as a desktop app.',
         },
         {
           step: 'Step 04',
           title: 'Pin to Taskbar & Desktop',
           detail:
-            'Check "Pin to taskbar", "Pin to Start", and "Create Desktop shortcut" in the confirmation prompt for instant one-click access.',
+            'Check "Pin to taskbar" and "Create Desktop shortcut" for quick counter launches.',
         },
       ],
     },
     bn: {
       heading: 'মিররপস (MirrorPOS) ইনস্টল করার নিয়ম',
-      sub: 'আপনার Windows 10 বা Windows 11 কম্পিউটারে Google Chrome অথবা Microsoft Edge ব্রাউজার দিয়ে খুব সহজেই MirrorPOS অ্যাপ হিসেবে ইনস্টল করুন।',
+      sub: 'Windows 10 বা Windows 11 পিসিতে Google Chrome অথবা Microsoft Edge দিয়ে MirrorPOS অ্যাপ হিসেবে ইনস্টল করুন।',
       sysReqLabel: 'সিস্টেম রিকোয়ারমেন্ট:',
       sysReqText:
         'Windows 10/11 পিসি, Google Chrome বা Microsoft Edge ব্রাউজার এবং ঐচ্ছিক বারকোড স্ক্যানার ও 58mm/80mm থার্মাল প্রিন্টার।',
@@ -365,25 +742,25 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'ধাপ ০১',
           title: 'Google Chrome-এ MirrorPOS ওপেন করুন',
           detail:
-            'আপনার কম্পিউটারে Google Chrome ব্রাউজার চালু করে https://mirror-pos.vercel.app/ লিংকে প্রবেশ করুন এবং পুরোপুরি লোড হওয়া পর্যন্ত ২ সেকেন্ড অপেক্ষা করুন।',
+            'Google Chrome চালু করে https://mirror-pos.vercel.app/ লিংকে প্রবেশ করুন।',
         },
         {
           step: 'ধাপ ০২',
           title: 'অ্যাড্রেস বারের Install আইকনে ক্লিক করুন',
           detail:
-            'Chrome-এর অ্যাড্রেস বারের ডান পাশে থাকা ছোট ডাউনলোড/ইনস্টল (Install MirrorPOS) আইকনে ক্লিক করুন। অথবা উপরে ডান কোণায় ৩-ডট মেনু (⋮) → Cast, save, and share → Install page as app সিলেক্ট করুন।',
+            'Chrome অ্যাড্রেস বারের ডান পাশে থাকা Install আইকনে ক্লিক করুন অথবা মেনু (⋮) থেকে Install page as app সিলেক্ট করুন।',
         },
         {
           step: 'ধাপ ০৩',
           title: 'ইনস্টল কনফার্ম করুন',
           detail:
-            'পপআপ বক্সে নীল রঙের "Install" বাটনে ক্লিক করুন। সাথে সাথেই MirrorPOS আলাদা একটি পরিচ্ছন্ন Windows অ্যাপ উইন্ডোতে ওপেন হবে।',
+            'পপআপ বক্সে "Install" বাটনে ক্লিক করুন; সাথে সাথেই এটি আলাদা ডেস্কটপ অ্যাপ উইন্ডোতে ওপেন হবে।',
         },
         {
           step: 'ধাপ ০৪',
           title: 'টাস্কবার ও ডেস্কটপে পিন করুন',
           detail:
-            'উইন্ডোজ টাস্কবারে MirrorPOS আইকনে মাউসের রাইট-ক্লিক করে "Pin to taskbar" সিলেক্ট করুন। ডেস্কটপেও অটোমেটিক একটি শর্টকাট তৈরি হয়ে যাবে।',
+            'টাস্কবারে MirrorPOS আইকনে রাইট-ক্লিক করে "Pin to taskbar" সিলেক্ট করুন।',
         },
       ],
       edgeSteps: [
@@ -391,166 +768,25 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'ধাপ ০১',
           title: 'Microsoft Edge-এ MirrorPOS ওপেন করুন',
           detail:
-            'আপনার Windows 10 বা Windows 11 পিসিতে Microsoft Edge ব্রাউজার খুলে https://mirror-pos.vercel.app/ লিংকে যান।',
+            'Microsoft Edge খুলে https://mirror-pos.vercel.app/ লিংকে যান।',
         },
         {
           step: 'ধাপ ০২',
           title: '"Install this site as an app" সিলেক্ট করুন',
           detail:
-            'Edge অ্যাড্রেস বারের ডান পাশে থাকা App আইকনে ক্লিক করুন, অথবা ৩-ডট মেনু (⋯) → Apps → Install this site as an app অপশনে ক্লিক করুন।',
+            'Edge অ্যাড্রেস বারের App আইকনে ক্লিক করুন বা মেনু (⋯) → Apps → Install this site as an app সিলেক্ট করুন।',
         },
         {
           step: 'ধাপ ০৩',
           title: 'অ্যাপের নাম যাচাই করে Install দিন',
           detail:
-            'অ্যাপের নাম "MirrorPOS" রেখে "Install" বাটনে ক্লিক করুন। মুহূর্তেই এটি আপনার পিসিতে আলাদা সফটওয়্যার হিসেবে যুক্ত হবে।',
+            'নাম "MirrorPOS" রেখে "Install" বাটনে ক্লিক করুন।',
         },
         {
           step: 'ধাপ ০৪',
           title: 'ডেস্কটপ শর্টকাট ও টাস্কবার চালু করুন',
           detail:
-            'ইনস্টল হওয়ার পর দেখানো অপশন থেকে "Pin to taskbar", "Pin to Start" এবং "Create Desktop shortcut" টিক দিয়ে OK করুন।',
-        },
-      ],
-    },
-  };
-
-  const manualData = {
-    en: {
-      badge: 'Operator Guide',
-      heading: 'MirrorPOS User Manual',
-      sub: 'Everything you get inside MirrorPOS and how to operate daily sales, stock, customer dues, and accounts.',
-      includedTitle: 'What You Get Inside MirrorPOS:',
-      includedHighlights: [
-        'Owner Mode & Staff Mode Role Access',
-        'Quick POS Counter, Barcode & Variant Stock',
-        'Customer Receivables & Supplier Payables Ledgers',
-        'Daily Expenses & Profit/Loss Financial Report',
-        'Google Sheets Sync & Cloud Backup/Restore',
-        '58mm/80mm Thermal & A4 PDF Receipt Printing',
-      ],
-      chapters: [
-        {
-          number: '01',
-          title: 'Dashboard, Owner/Staff Mode & Cloud Sync',
-          summary: 'Understand the main command center, Google Sheets sync, and role access inside MirrorPOS.',
-          steps: [
-            'Open MirrorPOS and switch between Owner Mode and Staff Mode depending on who is operating the counter.',
-            'Use the top Quick Action buttons (+ New Invoice, + Customer, + Stock, Save to Google Sheets) for one-click daily tasks.',
-            'Monitor Today’s Sales, Cash Collected, Net Profit, and Low Stock alerts directly from the home dashboard.',
-            'Use Data Backup, Cloud Backup Sync, and Restore buttons anytime to keep your store data safely backed up.',
-          ],
-        },
-        {
-          number: '02',
-          title: 'Adding Products, Barcodes & Stock Control',
-          summary: 'Register items with purchase cost, selling price, SKU barcodes, and size/color variants.',
-          steps: [
-            'Go to Product & Stock from the left sidebar and click "+ Add Product" or "+ Quick Stock".',
-            'Enter the product name, category, barcode/SKU, purchase rate, and retail selling price.',
-            'Add opening stock quantities and enable size/color variants if you run a clothing, shoe, or multi-variant shop.',
-            'Receive automatic Low-Stock Alerts before high-demand items run out.',
-          ],
-        },
-        {
-          number: '03',
-          title: 'POS Billing, Checkout & Receipts',
-          summary: 'Process counter sales quickly with barcode scan, discounts, and thermal or PDF memo printing.',
-          steps: [
-            'Open POS from the sidebar or click the orange Sales (POS Counter) Quick Action card.',
-            'Search items by name or scan directly with a barcode scanner to add them to the bill.',
-            'Apply item/total discounts, attach a customer profile if needed, and choose Cash, Card, Mobile Banking, or Due.',
-            'Click Complete Sale to print a 58mm/80mm thermal cash memo or save a PDF invoice while stock updates automatically.',
-          ],
-        },
-        {
-          number: '04',
-          title: 'Customer & Supplier Due Ledgers',
-          summary: 'Keep transparent records of customer credit (receivables) and supplier balances (payables).',
-          steps: [
-            'Open Customer Ledger to add regular clients and track any remaining credit balance from partial payments.',
-            'Record due collections anytime; MirrorPOS updates both the customer’s balance and your daily cash total.',
-            'Open Suppliers to log wholesale stock-in purchases and track unpaid vendor balances cleanly.',
-          ],
-        },
-        {
-          number: '05',
-          title: 'Expenses, Profit/Loss & Financial Reports',
-          summary: 'Track daily operating expenses and generate full Profit & Loss income statements.',
-          steps: [
-            'Log daily shop expenses (rent, electricity, tea, staff, courier) from the Shop Expense tab.',
-            'Open Financial Reports for Today, This Month, or All Time to review Gross Revenue, COGS, Operating Expenses, and Net Profit.',
-            'Click "Print Report" to print or save official financial statements for your records.',
-          ],
-        },
-      ],
-    },
-    bn: {
-      badge: 'ব্যবহার নির্দেশিকা',
-      heading: 'মিররপস ইউজার ম্যানুয়াল (বাংলা)',
-      sub: 'MirrorPOS-এ আপনি কী কী পাচ্ছেন এবং কীভাবে ড্যাশবোর্ড, পজ বিলিং, স্টক, বাকি-বকেয়া ও আর্থিক রিপোর্ট পরিচালনা করবেন তার পূর্ণাঙ্গ গাইড।',
-      includedTitle: 'MirrorPOS সফটওয়্যারের ভেতরে যা যা পাচ্ছেন:',
-      includedHighlights: [
-        'ওনার মোড ও স্টাফ মোড (User Role Control)',
-        'দ্রুত পজ (POS) কাউন্টার, ক্যাশ মেমো ও বারকোড',
-        'প্রোডাক্ট, সাইজ/কালার ভ্যারিয়েন্ট ও লো-স্টক সতর্কতা',
-        'কাস্টমার বাকি (Receivables) ও সাপ্লায়ার পাওনা (Payables) খাতা',
-        'দৈনিক দোকান খরচ ও মাসিক লাভ-লস (Profit & Loss) হিসাব',
-        'গুগল শিট সিঙ্ক (Google Sheets) ও ক্লাউড ডাটা ব্যাকআপ',
-      ],
-      chapters: [
-        {
-          number: '০১',
-          title: 'ড্যাশবোর্ড, ওনার/স্টাফ মোড ও ক্লাউড ব্যাকআপ',
-          summary: 'মূল ড্যাশবোর্ডের কুইক অ্যাকশন, ডাটা ব্যাকআপ ও গুগল শিট সিঙ্ক ব্যবহারের নিয়ম।',
-          steps: [
-            'MirrorPOS ওপেন করে বাম দিকের উপরের অংশ থেকে আপনার প্রয়োজন অনুযায়ী ওনার মোড বা স্টাফ মোড ব্যবহার করতে পারবেন।',
-            'উপরের কুইক বাটন (+ New Invoice, + Customer, + Stock, গুগল শিটে সেভ) দিয়ে এক ক্লিকেই যেকোনো এন্ট্রি করতে পারবেন।',
-            'ড্যাশবোর্ড থেকেই আজকের মোট বিক্রি, নগদ জমা (Cash), আজকের খাঁটি লাভ (Net Profit) এবং লো-স্টক সতর্কতা দেখতে পাবেন।',
-            'ডাটা ব্যাকআপ, ক্লাউড ব্যাকআপ সিঙ্ক এবং রিস্টোর বাটনের মাধ্যমে আপনার ব্যবসার সকল তথ্য নিরাপদে সংরক্ষণ করতে পারবেন।',
-          ],
-        },
-        {
-          number: '০২',
-          title: 'প্রোডাক্ট, বারকোড ও স্টক ম্যানেজমেন্ট',
-          summary: 'নতুন পণ্য যোগ করা, কেনা-বেচার দাম সেট করা এবং বারকোড ও স্টক হিসাব রাখা।',
-          steps: [
-            'বাম পাশের মেনু থেকে "প্রোডাক্ট ও স্টক" অপশনে গিয়ে "+ নতুন পণ্য/পোশাক" অথবা "+ দ্রুত স্টক যোগ" বাটনে ক্লিক করুন।',
-            'পণ্যের নাম, ক্যাটাগরি, বারকোড নম্বর, ক্রয়মূল্য (কেনা দাম) এবং বিক্রয়মূল্য লিখে সেভ করুন।',
-            'গার্মেন্টস বা ফ্যাশন শপ হলে পণ্যের সাইজ ও কালার ভ্যারিয়েন্ট অনুযায়ী আলাদা স্টক ও বারকোড সেট করতে পারবেন।',
-            'কোনো পণ্য বিক্রি হওয়ার সাথে সাথেই স্টক অটোমেটিক কমে যাবে এবং স্টক কমে গেলে ড্যাশবোর্ডে সতর্কতা দেখাবে।',
-          ],
-        },
-        {
-          number: '০৩',
-          title: 'বিক্রয় (POS কাউন্টার) ও ক্যাশ মেমো প্রিন্ট',
-          summary: 'বারকোড স্ক্যান বা সার্চ করে দ্রুত বিল তৈরি করা এবং থার্মাল বা PDF রসিদ প্রিন্ট করা।',
-          steps: [
-            'ড্যাশবোর্ডের কমলা রঙের "বিক্রয় (পজ কাউন্টার)" কার্ডে অথবা বাম মেনু থেকে "পজ (POS)" অপশনে ক্লিক করুন।',
-            'বারকোড স্ক্যানার দিয়ে স্ক্যান করে অথবা পণ্যের নাম সার্চ করে কার্টে যোগ করুন এবং পরিমাণ (+/-) ঠিক করুন।',
-            'প্রয়োজনে ডিসকাউন্ট দিন, কাস্টমার সিলেক্ট করুন এবং ক্যাশ, বিকাশ/নগদ, কার্ড বা বাকি পেমেন্ট অপশন বেছে নিন।',
-            'বিক্রয় সম্পন্ন করলেই 58mm/80mm থার্মাল প্রিন্টারে ক্যাশ মেমো প্রিন্ট হবে বা PDF ইনভয়েস ডাউনলোড করতে পারবেন।',
-          ],
-        },
-        {
-          number: '০৪',
-          title: 'কাস্টমার বাকি ও সাপ্লায়ার (মহাজন) খাতা',
-          summary: 'কাস্টমারের বকেয়া হিসাব এবং সাপ্লায়ারদের পাওনা টাকার নির্ভুল লেজার।',
-          steps: [
-            '"কাস্টমার লেজার" থেকে নিয়মিত ক্রেতাদের নাম ও মোবাইল নম্বর যোগ করে বাকি বিক্রয়ের হিসাব রাখতে পারবেন।',
-            'কাস্টমার যখন বাকি টাকা পরিশোধ করবেন, "পেমেন্ট ও জমা" বা কাস্টমার খাতা থেকে জমা এন্ট্রি করলে বকেয়া অটোমেটিক সমন্বয় হবে।',
-            '"সাপ্লায়ার" ও "ক্রয় / পারচেজ" অপশন থেকে নতুন মাল কেনা ও মহাজনের পাওনা টাকার হিসাব সহজেই রাখতে পারবেন।',
-          ],
-        },
-        {
-          number: '০৫',
-          title: 'দৈনিক খরচ ও আর্থিক লাভ-ক্ষতি (Profit & Loss) রিপোর্ট',
-          summary: 'দোকানের প্রতিদিনের খরচ হিসাব রাখা এবং মাসিক খাঁটি লাভের পূর্ণ বিবরণী দেখা।',
-          steps: [
-            '"দোকান খরচ" অপশন থেকে প্রতিদিনকার ভাড়া, বিদ্যুৎ বিল, নাস্তা, কর্মচারী বা কুরিয়ার খরচ এন্ট্রি করে রাখুন।',
-            '"আর্থিক রিপোর্ট" অপশনে গিয়ে Today, This Month বা All Time সিলেক্ট করে মোট বিক্রি, পণ্যের ব্যয় (COGS), খরচ এবং চূড়ান্ত নিট লাভ (Final Net Profit) দেখুন।',
-            'উপরের "Print Report" বাটনে ক্লিক করে সম্পূর্ণ আর্থিক রিপোর্ট প্রিন্ট বা PDF হিসেবে সংরক্ষণ করতে পারবেন।',
-          ],
+            '"Pin to taskbar" এবং "Create Desktop shortcut" টিক দিয়ে OK করুন।',
         },
       ],
     },
@@ -558,28 +794,27 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
 
   const activeGuide = installGuide[guideLang];
   const activeSteps = browserTab === 'chrome' ? activeGuide.chromeSteps : activeGuide.edgeSteps;
-  const activeManual = manualData[guideLang];
-  const currentManual = activeManual.chapters[activeManualChapter] || activeManual.chapters[0];
+  const activeManualCategories = userGuideCategories[guideLang];
 
   return (
-    <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2]">
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-10 md:py-16">
+    <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2] overflow-x-clip">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-16">
         {/* Top Breadcrumb & Share Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-12 pb-6 border-b border-white/[0.09]">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#A1AAA2]">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-8 sm:mb-12 pb-5 sm:pb-6 border-b border-white/[0.09]">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs text-[#A1AAA2]">
             <a
               href="/"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigateHome();
               }}
-              className="hover:text-[#B7F34A] transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              className="hover:text-[#B7F34A] transition-colors flex items-center gap-1.5 whitespace-nowrap min-h-[36px]"
             >
               <ArrowLeft size={14} />
               <span>MirrorBook Home</span>
             </a>
             <span aria-hidden="true">/</span>
-            <span className="text-[#A1AAA2]">Software</span>
+            <span className="text-[#A1AAA2]">Software Library</span>
             <span aria-hidden="true">/</span>
             <span className="text-[#B7F34A] font-semibold">MirrorPOS</span>
           </nav>
@@ -587,7 +822,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           <button
             type="button"
             onClick={handleShare}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glossy-btn-secondary text-xs font-medium cursor-pointer whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-2 min-h-[40px] px-4 py-2 rounded-xl glossy-btn-secondary text-xs font-medium cursor-pointer whitespace-nowrap shrink-0"
           >
             {copiedLink ? (
               <>
@@ -603,92 +838,228 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </button>
         </div>
 
-        {/* 1. Clean Icon-First Header */}
-        <section className="max-w-3xl mb-20 space-y-6">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-[#121614] border border-white/[0.09] p-3.5 flex items-center justify-center shrink-0 shadow-[0_12px_30px_rgba(0,0,0,0.6)]">
-              <img
-                src="/mirror-pos-icon.png"
-                alt="MirrorPOS Official App Icon"
-                width={64}
-                height={64}
-                loading="eager"
-                decoding="async"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain"
-              />
+        {/* 1. Hero & Product Overview + Free Access Registration Card */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start mb-16">
+          {/* Left: Product Overview & Actions */}
+          <div className="lg:col-span-7 space-y-6 min-w-0">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#121614] border border-white/[0.09] p-3 sm:p-3.5 flex items-center justify-center shrink-0 shadow-[0_12px_30px_rgba(0,0,0,0.6)]">
+                <img
+                  src="/mirror-pos-icon.png"
+                  alt="MirrorPOS Official App Icon"
+                  width={64}
+                  height={64}
+                  loading="eager"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#B7F34A] mb-1">
+                  <span>Developed by MirrorBook</span>
+                  <span aria-hidden="true" className="text-[#707A72]">·</span>
+                  <span className="text-[#A1AAA2] font-normal">Desktop POS Software</span>
+                </div>
+                <h1 className="font-display text-3xl min-[375px]:text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F7F2] leading-none">
+                  MirrorPOS
+                </h1>
+              </div>
             </div>
 
-            <div>
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#B7F34A] mb-1">
-                <span>Developed by MirrorBook</span>
-                <span aria-hidden="true" className="text-[#707A72]">·</span>
-                <span className="text-[#A1AAA2] font-normal">Official Software Product</span>
-              </div>
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F7F2] leading-none">
-                MirrorPOS
-              </h1>
+            <p className="text-lg sm:text-2xl text-[#F5F7F2] font-semibold tracking-tight">
+              Smart POS Software for Modern Businesses.
+            </p>
+
+            {/* Product Overview Spec Table */}
+            <div className="glossy-card p-5 rounded-2xl border border-white/[0.09]">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[#B7F34A] mb-4">
+                Product Overview
+              </h2>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                {overviewSpecs.map((spec) => (
+                  <div
+                    key={spec.label}
+                    className="p-3 rounded-xl bg-[#0B0D0C]/80 border border-white/[0.07]"
+                  >
+                    <dt className="text-[#A1AAA2] mb-1">{spec.label}</dt>
+                    <dd className="text-[#F5F7F2] font-semibold break-words">{spec.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+              <a
+                href={MIRRORPOS_APP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-[44px] px-7 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
+              >
+                <span>Launch MirrorPOS</span>
+                <ExternalLink size={15} />
+              </a>
+
+              <button
+                type="button"
+                onClick={() => scrollToLocalSection('user-guide')}
+                className="min-h-[44px] px-6 py-3.5 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+              >
+                <BookOpen size={14} className="text-[#B7F34A]" />
+                <span>Complete User Guide</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollToLocalSection('install-mirrorpos')}
+                className="min-h-[44px] px-5 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+              >
+                <Download size={14} className="text-[#B7F34A]" />
+                <span>Install Guide</span>
+              </button>
             </div>
           </div>
 
-          <p className="text-lg sm:text-2xl text-[#F5F7F2] font-semibold tracking-tight">
-            Smart POS Software for Modern Businesses.
-          </p>
+          {/* Right: Free Access Registration Form (No Checkout / Real Email Confirmation) */}
+          <div id="get-access" className="lg:col-span-5 scroll-mt-24">
+            <div className="glossy-card p-6 sm:p-7 rounded-2xl border border-[#B7F34A]/30 space-y-5">
+              <div className="space-y-1.5 border-b border-white/[0.09] pb-4">
+                <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
+                  Free Lifetime Access
+                </span>
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">
+                  Get MirrorPOS Access
+                </h2>
+                <p className="text-xs text-[#A1AAA2] leading-relaxed">
+                  No payment or checkout required. Enter your details to register for Lifetime Access and receive official MirrorPOS launch and User Guide links by email.
+                </p>
+              </div>
 
-          <p className="text-sm sm:text-base text-[#A1AAA2] leading-relaxed font-normal">
-            A MirrorBook software product designed for offline billing support, online data synchronization, inventory management, sales and expense tracking, customer management, and smart business reporting.
-          </p>
+              {accessError && (
+                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/35 text-xs text-red-200 flex items-start gap-2.5">
+                  <AlertCircle size={15} className="text-red-400 shrink-0 mt-0.5" />
+                  <span className="break-words">{accessError}</span>
+                </div>
+              )}
 
-          {/* Clean Action Buttons */}
-          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3.5 pt-2">
-            <a
-              href={MIRRORPOS_APP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-4 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
-            >
-              <span>Launch MirrorPOS</span>
-              <ExternalLink size={15} />
-            </a>
+              {accessConfirmed ? (
+                <div className="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 size={20} className="text-[#B7F34A] shrink-0 mt-0.5" />
+                    <div className="space-y-1 min-w-0">
+                      <h3 className="text-sm font-bold text-[#F5F7F2]">
+                        Access Confirmed &amp; Email Sent
+                      </h3>
+                      <p className="text-xs text-[#D4DBD5] leading-relaxed break-words">
+                        {accessConfirmed.message}
+                      </p>
+                      <p className="text-[11px] font-mono text-[#B7F34A]">
+                        Reference ID: {accessConfirmed.referenceId}
+                      </p>
+                    </div>
+                  </div>
 
-            <button
-              type="button"
-              onClick={() => scrollToLocalSection('install-mirrorpos')}
-              className="px-7 py-4 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
-            >
-              <Download size={14} className="text-[#B7F34A]" />
-              <span>How to Install</span>
-            </button>
+                  <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                    <a
+                      href={MIRRORPOS_APP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-h-[44px] py-2.5 px-4 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2"
+                    >
+                      <span>Launch MirrorPOS</span>
+                      <ExternalLink size={13} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => scrollToLocalSection('user-guide')}
+                      className="min-h-[44px] py-2.5 px-4 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <BookOpen size={13} className="text-[#B7F34A]" />
+                      <span>User Guide</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleFreeAccessSubmit} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="mirrorpos-full-name"
+                      className="text-xs font-medium text-[#A1AAA2] block mb-1.5"
+                    >
+                      Full Name *
+                    </label>
+                    <input
+                      id="mirrorpos-full-name"
+                      type="text"
+                      required
+                      minLength={2}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Enter your full name"
+                      className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
+                    />
+                  </div>
 
-            <button
-              type="button"
-              onClick={() => scrollToLocalSection('user-manual')}
-              className="px-6 py-4 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
-            >
-              <BookOpen size={14} className="text-[#B7F34A]" />
-              <span>User Manual</span>
-            </button>
+                  <div>
+                    <label
+                      htmlFor="mirrorpos-email"
+                      className="text-xs font-medium text-[#A1AAA2] block mb-1.5"
+                    >
+                      Email Address *
+                    </label>
+                    <input
+                      id="mirrorpos-email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@business.com"
+                      className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingAccess}
+                    className="w-full min-h-[44px] py-3 px-5 text-xs font-bold glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {isSubmittingAccess ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" />
+                        <span>Sending Access Email...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={14} />
+                        <span>Get Free Access via Email</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* 2. What MirrorPOS Does */}
+        {/* 2. Key Features */}
         <section id="features" className="mb-16 pt-14 border-t border-white/[0.09]">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-[#B7F34A] block mb-2">
-                Developed by MirrorBook
+                Actual Product Capabilities
               </span>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
-                Key Features of MirrorPOS
+                Key Features
               </h2>
             </div>
             <p className="text-sm text-[#A1AAA2] max-w-md leading-relaxed">
-              Engineered under the MirrorBook ecosystem for reliable counter billing, stock control, due ledgers, and business reporting.
+              Every module inside MirrorPOS is engineered for reliable offline-first billing, stock tracking, customer &amp; supplier ledgers, and Google account synchronization.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map((feature) => {
+            {keyFeatures.map((feature) => {
               const IconComp = feature.icon;
               return (
                 <div
@@ -710,7 +1081,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </div>
         </section>
 
-        {/* 3. Compact Software Screenshots (User's 3 real screenshots) */}
+        {/* 3. Software Screenshots */}
         <section id="screenshots" className="mb-16 pt-12 border-t border-white/[0.09]">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
             <div>
@@ -722,7 +1093,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               </h2>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 glass-tab-bar p-1 rounded-xl">
+            <div className="flex items-center gap-1.5 glass-tab-bar p-1 rounded-xl overflow-x-auto no-scrollbar max-w-full">
               {screenshots.map((shot, idx) => {
                 const isActive = activeScreenshot === idx;
                 return (
@@ -730,7 +1101,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     key={shot.id}
                     type="button"
                     onClick={() => setActiveScreenshot(idx)}
-                    className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                    className={`min-h-[38px] px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       isActive
                         ? 'bg-[#B7F34A] text-black font-bold'
                         : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
@@ -768,9 +1139,9 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </div>
         </section>
 
-        {/* 4. How to Install MirrorPOS (Bangla + English) */}
-        <section id="install-mirrorpos" className="mb-16 pt-14 border-t border-white/[0.09]">
-          <div className="glossy-card p-6 sm:p-10">
+        {/* 4. Windows Desktop Installation Guide */}
+        <section id="install-mirrorpos" className="scroll-mt-20 mb-16 pt-14 border-t border-white/[0.09]">
+          <div className="glossy-card p-5 sm:p-8 lg:p-10">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 pb-6 border-b border-white/[0.09]">
               <div className="max-w-2xl">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#B7F34A] mb-2">
@@ -786,8 +1157,18 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-3 self-start lg:self-end">
-                {/* Language Switcher (বাংলা / English) */}
                 <div className="flex items-center gap-1 p-1 glass-tab-bar rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setGuideLang('en')}
+                    className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                      guideLang === 'en'
+                        ? 'bg-[#F5F7F2] text-black'
+                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
+                    }`}
+                  >
+                    English
+                  </button>
                   <button
                     type="button"
                     onClick={() => setGuideLang('bn')}
@@ -800,20 +1181,8 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     <Languages size={13} />
                     <span>বাংলা</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setGuideLang('en')}
-                    className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                      guideLang === 'en'
-                        ? 'bg-[#F5F7F2] text-black'
-                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
-                    }`}
-                  >
-                    English
-                  </button>
                 </div>
 
-                {/* Browser Switcher */}
                 <div className="flex items-center gap-1.5 p-1 glass-tab-bar rounded-xl">
                   <button
                     type="button"
@@ -860,7 +1229,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   <h3 className="font-display text-base font-bold text-[#F5F7F2] mb-1.5">
                     {item.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed break-words">
                     {item.detail}
                   </p>
                 </div>
@@ -868,7 +1237,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
 
             <div className="p-4 sm:p-5 rounded-2xl bg-[#121614] border border-white/[0.09] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start sm:items-center gap-3">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
                 <ShieldCheck size={18} className="text-[#B7F34A] shrink-0 mt-0.5 sm:mt-0" />
                 <div className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
                   <strong className="text-[#F5F7F2]">{activeGuide.sysReqLabel}</strong> {activeGuide.sysReqText}
@@ -879,7 +1248,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 href={MIRRORPOS_APP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="glossy-btn px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                className="glossy-btn min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
               >
                 <span>{activeGuide.openBtn}</span>
                 <ExternalLink size={13} />
@@ -888,24 +1257,34 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </div>
         </section>
 
-        {/* 5. User Manual (Bangla + English, Last Major Section) */}
-        <section id="user-manual" className="mb-16 pt-14 border-t border-white/[0.09]">
+        {/* 5. Complete User Guide (13 Expandable Accordion Categories) */}
+        <section id="user-guide" className="scroll-mt-20 mb-16 pt-14 border-t border-white/[0.09]">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
                 <BookOpen size={14} />
-                <span>{activeManual.badge}</span>
+                <span>Step-by-Step Software Documentation</span>
               </div>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
-                {activeManual.heading}
+                Complete User Guide
               </h2>
               <p className="text-sm text-[#A1AAA2] mt-2 max-w-2xl leading-relaxed">
-                {activeManual.sub}
+                Explore all 13 sections covering Getting Started, account setup, inventory, POS billing, offline operation, Google sync, backup/recovery, and troubleshooting.
               </p>
             </div>
 
-            {/* Language Switcher for Manual */}
             <div className="glass-tab-bar self-start md:self-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setGuideLang('en')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                  guideLang === 'en'
+                    ? 'bg-[#B7F34A] text-[#0B0D0C]'
+                    : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
+                }`}
+              >
+                English
+              </button>
               <button
                 type="button"
                 onClick={() => setGuideLang('bn')}
@@ -918,187 +1297,144 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 <Languages size={13} />
                 <span>বাংলা</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setGuideLang('en')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  guideLang === 'en'
-                    ? 'bg-[#B7F34A] text-[#0B0D0C]'
-                    : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
-                }`}
-              >
-                English
-              </button>
             </div>
           </div>
 
-          {/* What You Get Inside MirrorPOS Highlights Strip */}
-          <div className="mb-6 p-5 sm:p-6 rounded-2xl glossy-card">
-            <h3 className="text-xs font-bold tracking-wide text-[#B7F34A] mb-3">
-              {activeManual.includedTitle}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {activeManual.includedHighlights.map((item) => (
-                <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-[#F5F7F2]">
-                  <CheckCircle2 size={14} className="text-[#B7F34A] shrink-0" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-4 space-y-2">
-              {activeManual.chapters.map((chapter, idx) => {
-                const isActive = activeManualChapter === idx;
-                return (
+          <div className="space-y-3">
+            {activeManualCategories.map((cat, idx) => {
+              const isOpen = openGuideIndex === idx;
+              return (
+                <div
+                  key={cat.number}
+                  className={`glossy-card rounded-2xl border transition-colors ${
+                    isOpen ? 'border-[#B7F34A]/45' : 'border-white/[0.09]'
+                  }`}
+                >
                   <button
-                    key={chapter.number}
                     type="button"
-                    onClick={() => setActiveManualChapter(idx)}
-                    className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
-                      isActive
-                        ? 'bg-[#B7F34A]/10 border-[#B7F34A]/50 text-[#F5F7F2]'
-                        : 'bg-[#171C19] border-white/[0.09] hover:border-white/20 text-[#A1AAA2] hover:text-[#F5F7F2]'
-                    }`}
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenGuideIndex(isOpen ? null : idx)}
+                    className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left cursor-pointer"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className={`font-display text-sm font-bold tabular-nums shrink-0 ${
-                          isActive ? 'text-[#B7F34A]' : 'text-[#707A72]'
-                        }`}
-                      >
-                        {chapter.number}.
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <span className="font-display text-sm font-bold text-[#B7F34A] tabular-nums shrink-0">
+                        {cat.number}.
                       </span>
-                      <span className="text-sm font-semibold truncate">{chapter.title}</span>
+                      <div className="min-w-0">
+                        <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] break-words">
+                          {cat.title}
+                        </h3>
+                        <p className="text-xs text-[#A1AAA2] mt-0.5 line-clamp-1">
+                          {cat.summary}
+                        </p>
+                      </div>
                     </div>
-                    <ChevronRight
-                      size={15}
-                      className={`shrink-0 ${isActive ? 'text-[#B7F34A]' : 'text-[#707A72]'}`}
+
+                    <ChevronDown
+                      size={18}
+                      className={`text-[#B7F34A] shrink-0 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180' : ''
+                      }`}
                     />
                   </button>
-                );
-              })}
-            </div>
 
-            <div className="lg:col-span-8 glossy-card rounded-2xl p-6 sm:p-9">
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-5 border-b border-white/[0.09]">
-                <div>
-                  <span className="text-xs font-bold tracking-wide text-[#B7F34A] tabular-nums">
-                    {guideLang === 'bn'
-                      ? `অধ্যায় ${currentManual.number} / ০৫`
-                      : `Chapter ${currentManual.number} of 05`}
-                  </span>
-                  <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2] mt-1">
-                    {currentManual.title}
-                  </h3>
+                  {isOpen && (
+                    <div className="px-5 pb-5 pt-2 border-t border-white/[0.08] space-y-3">
+                      <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
+                        {cat.summary}
+                      </p>
+                      <ol className="space-y-2.5">
+                        {cat.steps.map((stepText, stepIdx) => (
+                          <li
+                            key={stepIdx}
+                            className="flex items-start gap-3 p-3.5 rounded-xl bg-[#0B0D0C]/80 border border-white/[0.08]"
+                          >
+                            <span className="w-6 h-6 rounded-full bg-[#B7F34A]/15 border border-[#B7F34A]/40 text-[#B7F34A] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
+                              {stepIdx + 1}
+                            </span>
+                            <span className="text-xs sm:text-sm text-[#F5F7F2] leading-relaxed break-words min-w-0">
+                              {stepText}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveManualChapter((prev) =>
-                        prev > 0 ? prev - 1 : activeManual.chapters.length - 1
-                      )
-                    }
-                    className="glossy-btn-secondary px-3 py-1.5 rounded-xl text-xs font-medium text-[#F5F7F2] cursor-pointer"
-                  >
-                    {guideLang === 'bn' ? 'পূর্ববর্তী' : 'Previous'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveManualChapter((prev) =>
-                        prev < activeManual.chapters.length - 1 ? prev + 1 : 0
-                      )
-                    }
-                    className="glossy-btn-secondary px-3 py-1.5 rounded-xl text-xs font-medium text-[#F5F7F2] cursor-pointer"
-                  >
-                    {guideLang === 'bn' ? 'পরবর্তী' : 'Next'}
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-sm text-[#A1AAA2] leading-relaxed mb-5">
-                {currentManual.summary}
-              </p>
-
-              <ol className="space-y-3">
-                {currentManual.steps.map((stepText, index) => (
-                  <li
-                    key={index}
-                    className="flex items-start gap-3 p-4 rounded-xl bg-[#121614] border border-white/[0.08]"
-                  >
-                    <span className="w-6 h-6 rounded-full bg-[#B7F34A]/15 border border-[#B7F34A]/40 text-[#B7F34A] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
-                      {index + 1}
-                    </span>
-                    <span className="text-xs sm:text-sm text-[#F5F7F2] leading-relaxed">{stepText}</span>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="mt-6 pt-5 border-t border-white/[0.09] flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-xs text-[#A1AAA2]">
-                  <CheckCircle2 size={14} className="text-[#B7F34A]" />
-                  <span>
-                    {guideLang === 'bn'
-                      ? 'কম্পিউটার, ট্যাবলেট ও মোবাইল সব ডিভাইসে কাজ করে'
-                      : 'Works on Desktop, Tablet & Mobile touchscreens'}
-                  </span>
-                </div>
-
-                <a
-                  href={MIRRORPOS_APP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-bold text-[#B7F34A] hover:underline inline-flex items-center gap-1.5"
-                >
-                  <span>Launch MirrorPOS</span>
-                  <ArrowRight size={13} />
-                </a>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </section>
 
-        {/* Bottom Action Bar */}
-        <section className="glossy-card border-[#B7F34A]/25 rounded-2xl p-8 text-center">
-          <div className="max-w-xl mx-auto space-y-4">
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-              Start using MirrorPOS today
+        {/* 6. Launch Software Section */}
+        <section className="glossy-card border-[#B7F34A]/25 rounded-2xl p-6 sm:p-10 text-center">
+          <div className="max-w-2xl mx-auto space-y-4">
+            <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
+              Ready to Start with MirrorPOS?
             </h2>
-            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
-              Launch MirrorPOS directly in your browser or install it on Windows Desktop via Chrome or Edge.
+            <p className="text-xs sm:text-base text-[#A1AAA2] leading-relaxed">
+              Access your business management software and manage your business smarter with MirrorPOS.
             </p>
-            <div className="pt-2 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
+            <div className="pt-3 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
               <a
                 href={MIRRORPOS_APP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="glossy-btn w-full sm:w-auto px-7 py-3.5 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                className="glossy-btn w-full sm:w-auto min-h-[44px] px-7 py-3.5 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
               >
                 <span>Launch MirrorPOS</span>
                 <ExternalLink size={14} />
               </a>
 
-              {onStartProject && (
-                <button
-                  type="button"
-                  onClick={onStartProject}
-                  className="glossy-btn-secondary w-full sm:w-auto px-6 py-3.5 rounded-xl text-xs font-semibold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+              {verifiedDesktopUrl && (
+                <a
+                  href={verifiedDesktopUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="glossy-btn-secondary w-full sm:w-auto min-h-[44px] px-6 py-3.5 rounded-xl text-xs font-semibold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  <Layers size={14} className="text-[#B7F34A]" />
-                  <span>Custom Enterprise Setup</span>
-                </button>
+                  <Download size={14} className="text-[#B7F34A]" />
+                  <span>Download Desktop App</span>
+                </a>
               )}
 
               <button
                 type="button"
-                onClick={onNavigateHome}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold tracking-wide transition-all cursor-pointer whitespace-nowrap shrink-0"
+                onClick={() => scrollToLocalSection('user-guide')}
+                className="glossy-btn-secondary w-full sm:w-auto min-h-[44px] px-6 py-3.5 rounded-xl text-xs font-semibold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
               >
-                Back to MirrorBook
+                <BookOpen size={14} className="text-[#B7F34A]" />
+                <span>Complete User Guide</span>
+              </button>
+
+              {onStartProject ? (
+                <button
+                  type="button"
+                  onClick={onStartProject}
+                  className="w-full sm:w-auto min-h-[44px] px-6 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <LifeBuoy size={14} className="text-[#B7F34A]" />
+                  <span>Technical Support</span>
+                </button>
+              ) : (
+                <a
+                  href="mailto:khansaheb2572@gmail.com?subject=MirrorPOS%20Technical%20Support"
+                  className="w-full sm:w-auto min-h-[44px] px-6 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold tracking-wide transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                >
+                  <LifeBuoy size={14} className="text-[#B7F34A]" />
+                  <span>Technical Support</span>
+                </a>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onNavigateHome}
+                className="inline-flex items-center gap-1.5 text-xs text-[#A1AAA2] hover:text-[#B7F34A] transition-colors cursor-pointer"
+              >
+                <Layers size={13} />
+                <span>Back to MirrorBook</span>
               </button>
             </div>
           </div>

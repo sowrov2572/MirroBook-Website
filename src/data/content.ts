@@ -1,4 +1,60 @@
-import { ServiceItem, PackageItem, PluginItem, CourseItem, TutorialItem, Order, ProductItem, ShowcaseItem } from '../types';
+import { ServiceItem, PackageItem, PluginItem, CourseItem, TutorialItem, Order, ProductItem, ShowcaseItem, CourseLessonSlot } from '../types';
+import courseVideoEditingThumb from '../assets/images/course_video_editing_thumb_1794911435805.jpg';
+
+export const COURSE_VIDEO_EDITING_FUNDAMENTALS_ID = 'course-video-editing-fundamentals';
+export const SOFTWARE_MIRRORPOS_ID = 'software-mirrorpos';
+
+export const VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN: string[] = [
+  'Video Editing Fundamentals',
+  'Understanding the Editing Workflow',
+  'Adobe Premiere Pro Basics',
+  'Adobe After Effects Basics',
+  'Timeline and Layer Management',
+  'Basic Motion Graphics',
+  'Video Exporting',
+];
+
+export const VIDEO_EDITING_FUNDAMENTALS_PUBLIC_SLOTS: CourseLessonSlot[] = [
+  { lessonNumber: 1, title: 'Lesson 01', status: 'Available' },
+  { lessonNumber: 2, title: 'Lesson 02', status: 'Available' },
+  { lessonNumber: 3, title: 'Lesson 03', status: 'Available' },
+  { lessonNumber: 4, title: 'Lesson 04', status: 'Coming Soon' },
+];
+
+export const CANONICAL_FEATURED_PRODUCTS: ProductItem[] = [
+  {
+    id: SOFTWARE_MIRRORPOS_ID,
+    type: 'Software',
+    category: 'PC & Mac',
+    title: 'MirrorPOS',
+    description: 'Smart POS software with offline-first billing, online sync, inventory, sales, expenses, and analytics.',
+    price: 0,
+    isFree: true,
+    priceDisplay: 'Free',
+    iconUrl: '/mirror-pos-icon.png',
+    thumbnailUrl: 'https://i.ibb.co/XfQDsJGq/Screenshot-2026-11-16-153436.png',
+    launchUrl: 'https://mirror-pos.vercel.app/',
+    status: 'active',
+    featured: true,
+    createdAt: '2026-11-15',
+  },
+  {
+    id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
+    type: 'Course',
+    category: 'After Effects & Premiere Pro',
+    title: 'Video Editing Fundamentals',
+    description: 'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.',
+    price: 499,
+    isFree: false,
+    priceDisplay: '৳499',
+    thumbnailUrl: courseVideoEditingThumb,
+    features: VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN,
+    instructor: 'MirrorBook',
+    status: 'active',
+    featured: true,
+    createdAt: '2026-11-17',
+  },
+];
 
 export const SERVICES: ServiceItem[] = [
   {
@@ -85,7 +141,23 @@ export const SHOWCASES: ShowcaseItem[] = [
 ];
 
 export const INITIAL_PRODUCTS: ProductItem[] = [
-  // Courses (paid download/access URLs stored exclusively in server-only /productSecrets)
+  // Courses (paid download/access URLs & paid lesson YouTube IDs stored exclusively server-side)
+  {
+    id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
+    type: 'Course',
+    category: 'After Effects & Premiere Pro',
+    title: 'Video Editing Fundamentals',
+    description: 'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.',
+    price: 499,
+    isFree: false,
+    priceDisplay: '৳499',
+    thumbnailUrl: courseVideoEditingThumb,
+    features: VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN,
+    instructor: 'MirrorBook',
+    status: 'active',
+    featured: true,
+    createdAt: '2026-11-17'
+  },
   {
     id: 'course-video-reels',
     type: 'Course',
@@ -119,16 +191,16 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
 
   // PC & Phone Software (download/access URLs stored exclusively in server-only /productSecrets)
   {
-    id: 'software-mirrorpos',
+    id: SOFTWARE_MIRRORPOS_ID,
     type: 'Software',
     category: 'PC & Mac',
     title: 'MirrorPOS',
-    description: 'Smart POS Software',
+    description: 'Smart POS software with offline-first billing, online sync, inventory, sales, expenses, and analytics.',
     price: 0,
     isFree: true,
     priceDisplay: 'Free',
     iconUrl: '/mirror-pos-icon.png',
-    thumbnailUrl: '/mirror-pos-icon.png',
+    thumbnailUrl: 'https://i.ibb.co/XfQDsJGq/Screenshot-2026-11-16-153436.png',
     launchUrl: 'https://mirror-pos.vercel.app/',
     status: 'active',
     featured: true,
@@ -286,6 +358,14 @@ export const PACKAGES: PackageItem[] = [
 export const PLUGINS: PluginItem[] = [];
 
 export const COURSES: CourseItem[] = [
+  {
+    id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
+    title: 'Video Editing Fundamentals',
+    price: 499,
+    priceDisplay: '৳499',
+    thumbnailUrl: courseVideoEditingThumb,
+    description: 'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.'
+  },
   {
     id: 'course-video-reels',
     title: 'Video & Reels Editing Course',

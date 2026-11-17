@@ -83,7 +83,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <a href="#plugins" onClick={(e) => handleNav(e, '#plugins')} className="hover:text-[#B7F34A] transition-colors">
-                  Plugin Store
+                  Plugin Library
                 </a>
               </li>
               <li>

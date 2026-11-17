@@ -7,6 +7,7 @@ import {
   isFirebaseAdminConfigured,
 } from '../_lib/firebaseAdmin';
 import { checkRateLimitBucket } from '../_lib/security';
+import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../_lib/courseCatalog';
 
 const recentDeliveries = new Map<string, number>();
 const inFlightRequests = new Set<string>();
@@ -73,6 +74,7 @@ export interface FreeSoftwareAccessDeps {
 
 export function buildFreeSoftwareEmailHtml(params: {
   recipientName: string;
+  productId?: string;
   productTitle: string;
   productDescription: string;
   iconUrl: string;
@@ -85,38 +87,65 @@ export function buildFreeSoftwareEmailHtml(params: {
   const safeDesc = sanitizeHtml(params.productDescription);
   const safeIconUrl = sanitizeHtml(resolvePublicAssetUrl(params.iconUrl));
   const safeDownloadUrl = sanitizeHtml(params.downloadUrl);
-  const safeLaunchUrl = params.launchUrl ? sanitizeHtml(params.launchUrl) : '';
+  const safeLaunchUrl = params.launchUrl ? sanitizeHtml(params.launchUrl) : safeDownloadUrl;
   const safeRef = sanitizeHtml(params.referenceId);
 
-  const subject = `Your ${params.productTitle} Download Link - MirrorBook`;
+  const isMirrorPOS =
+    params.productId === SOFTWARE_MIRRORPOS_ID ||
+    params.productTitle.toLowerCase().includes('mirrorpos');
+  const userGuideUrl = 'https://mirrorbook.site/mirrorpos#user-guide';
+  const supportEmail = 'khansaheb2572@gmail.com';
 
-  const textLines = [
-    `Hello ${params.recipientName},`,
-    '',
-    `Thank you for choosing ${params.productTitle} by MirrorBook!`,
-    '',
-    `Product: ${params.productTitle} (Free Software)`,
-    params.productDescription ? `Overview: ${params.productDescription}` : '',
-    `Reference ID: ${params.referenceId}`,
-    '',
-    `Direct Download / Access Link:`,
-    params.downloadUrl,
-    params.launchUrl && params.launchUrl !== params.downloadUrl
-      ? `\nLaunch Web Application:\n${params.launchUrl}`
-      : '',
-    '',
-    `Quick Installation Instructions:`,
-    `1. Click the download / access link above to open ${params.productTitle}.`,
-    `2. If opening on Windows 10/11 in Google Chrome or Microsoft Edge, click the Install App icon in your address bar (or follow the installer instructions if downloading a package).`,
-    `3. Sign in or begin using ${params.productTitle} immediately with no payment required.`,
-    '',
-    `Need help? Reply to this email or visit https://mirrorbook.site/`,
-    '',
-    `Best regards,`,
-    `MirrorBook Team`,
-    `Reflecting Creativity`,
-    `https://mirrorbook.site/`,
-  ].filter(Boolean);
+  const subject = isMirrorPOS
+    ? 'Your MirrorPOS Access is Ready | MirrorBook'
+    : `Your ${params.productTitle} Download Link - MirrorBook`;
+
+  const textLines = isMirrorPOS
+    ? [
+        `Hello ${params.recipientName},`,
+        '',
+        `Thank you for registering for MirrorPOS by MirrorBook. Your Lifetime Access is ready.`,
+        '',
+        `Product: MirrorPOS`,
+        `Developer: MirrorBook`,
+        `Access Type: Lifetime Access`,
+        `Reference ID: ${params.referenceId}`,
+        '',
+        `Launch MirrorPOS:`,
+        safeLaunchUrl,
+        '',
+        `Complete User Guide:`,
+        userGuideUrl,
+        '',
+        `Need Help? MirrorBook Support:`,
+        `Email: ${supportEmail}`,
+        `Website: https://mirrorbook.site/`,
+        '',
+        `Regards,`,
+        `Team MirrorBook`,
+        `Reflecting Creativity.`,
+      ]
+    : [
+        `Hello ${params.recipientName},`,
+        '',
+        `Thank you for choosing ${params.productTitle} by MirrorBook!`,
+        '',
+        `Product: ${params.productTitle} (Free Software)`,
+        params.productDescription ? `Overview: ${params.productDescription}` : '',
+        `Reference ID: ${params.referenceId}`,
+        '',
+        `Direct Download / Access Link:`,
+        params.downloadUrl,
+        params.launchUrl && params.launchUrl !== params.downloadUrl
+          ? `\nLaunch Web Application:\n${params.launchUrl}`
+          : '',
+        '',
+        `Need help? Reply to this email or visit https://mirrorbook.site/`,
+        '',
+        `Regards,`,
+        `Team MirrorBook`,
+        `Reflecting Creativity.`,
+      ].filter(Boolean);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -143,13 +172,13 @@ export function buildFreeSoftwareEmailHtml(params: {
                         </td>
                         <td valign="middle">
                           <span style="font-size: 18px; font-weight: 800; color: #F5F7F2; letter-spacing: -0.3px; display: block;">MirrorBook</span>
-                          <span style="font-size: 11px; color: #B7F34A; font-weight: 600; letter-spacing: 0.4px;">Reflecting Creativity</span>
+                          <span style="font-size: 11px; color: #B7F34A; font-weight: 600; letter-spacing: 0.4px;">Reflecting Creativity.</span>
                         </td>
                       </tr>
                     </table>
                   </td>
                   <td align="right" valign="middle">
-                    <span style="display: inline-block; padding: 4px 10px; background-color: rgba(183, 243, 74, 0.14); border: 1px solid rgba(183, 243, 74, 0.35); border-radius: 6px; font-size: 11px; font-weight: 700; color: #B7F34A; text-transform: uppercase;">Free Access</span>
+                    <span style="display: inline-block; padding: 4px 10px; background-color: rgba(183, 243, 74, 0.14); border: 1px solid rgba(183, 243, 74, 0.35); border-radius: 6px; font-size: 11px; font-weight: 700; color: #B7F34A; text-transform: uppercase;">Lifetime Access</span>
                   </td>
                 </tr>
               </table>
@@ -161,10 +190,10 @@ export function buildFreeSoftwareEmailHtml(params: {
             <td style="padding: 30px 28px;">
               <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: 600; color: #F5F7F2;">Hello ${safeName},</p>
               <p style="margin: 0 0 22px 0; font-size: 14px; line-height: 1.6; color: #A1AAA2;">
-                Thank you for choosing <strong style="color: #F5F7F2;">${safeTitle}</strong> by MirrorBook. Your direct download link and setup details are ready below.
+                Thank you for registering for <strong style="color: #F5F7F2;">${safeTitle}</strong> by MirrorBook. Your access details and official guide links are ready below.
               </p>
 
-              <!-- Product Summary Card -->
+              <!-- Product Details Card -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0B0D0C; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; margin-bottom: 24px;">
                 <tr>
                   <td style="padding: 18px 20px;">
@@ -174,9 +203,14 @@ export function buildFreeSoftwareEmailHtml(params: {
                           <img src="${safeIconUrl}" alt="${safeTitle}" width="48" height="48" style="display: block; width: 48px; height: 48px; border-radius: 10px; background-color: #171C19; border: 1px solid rgba(255,255,255,0.09); object-fit: contain; padding: 4px;" />
                         </td>
                         <td valign="middle">
-                          <div style="font-size: 16px; font-weight: 700; color: #F5F7F2; margin-bottom: 3px;">${safeTitle}</div>
-                          ${safeDesc ? `<div style="font-size: 12px; color: #A1AAA2; line-height: 1.45; margin-bottom: 6px;">${safeDesc}</div>` : ''}
-                          <div style="font-size: 11px; color: #B7F34A; font-family: monospace;">FREE • Ref: ${safeRef}</div>
+                          <div style="font-size: 16px; font-weight: 700; color: #F5F7F2; margin-bottom: 4px;">${safeTitle}</div>
+                          ${safeDesc ? `<div style="font-size: 12px; color: #A1AAA2; line-height: 1.45; margin-bottom: 8px;">${safeDesc}</div>` : ''}
+                          <div style="font-size: 12px; color: #D4DBD5; line-height: 1.6;">
+                            <div><strong style="color: #F5F7F2;">Product:</strong> ${safeTitle}</div>
+                            <div><strong style="color: #F5F7F2;">Developer:</strong> MirrorBook</div>
+                            <div><strong style="color: #F5F7F2;">Access Type:</strong> Lifetime Access</div>
+                            <div style="font-family: monospace; color: #B7F34A; margin-top: 2px;">Ref: ${safeRef}</div>
+                          </div>
                         </td>
                       </tr>
                     </table>
@@ -184,21 +218,21 @@ export function buildFreeSoftwareEmailHtml(params: {
                 </tr>
               </table>
 
-              <!-- Primary CTA -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 20px;">
+              <!-- Primary & Secondary CTAs -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 22px;">
                 <tr>
                   <td align="center" style="padding-bottom: 10px;">
-                    <a href="${safeDownloadUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 13px 28px; background-color: #B7F34A; color: #0B0D0C; font-size: 13px; font-weight: 700; border-radius: 10px; text-decoration: none;">
-                      Download ${safeTitle}
+                    <a href="${safeLaunchUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 13px 28px; background-color: #B7F34A; color: #0B0D0C; font-size: 13px; font-weight: 700; border-radius: 10px; text-decoration: none;">
+                      Launch ${safeTitle}
                     </a>
                   </td>
                 </tr>
                 ${
-                  safeLaunchUrl && safeLaunchUrl !== safeDownloadUrl
+                  isMirrorPOS
                     ? `<tr>
                   <td align="center">
-                    <a href="${safeLaunchUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 10px 22px; background-color: #171C19; border: 1px solid rgba(255, 255, 255, 0.14); color: #F5F7F2; font-size: 12px; font-weight: 600; border-radius: 10px; text-decoration: none;">
-                      Launch Web App
+                    <a href="${userGuideUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 10px 22px; background-color: #171C19; border: 1px solid rgba(255, 255, 255, 0.14); color: #F5F7F2; font-size: 12px; font-weight: 600; border-radius: 10px; text-decoration: none;">
+                      Complete User Guide
                     </a>
                   </td>
                 </tr>`
@@ -206,27 +240,31 @@ export function buildFreeSoftwareEmailHtml(params: {
                 }
               </table>
 
-              <!-- Fallback Direct Link -->
-              <div style="background-color: #0B0D0C; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px 14px; margin-bottom: 22px;">
-                <div style="font-size: 11px; color: #A1AAA2; margin-bottom: 4px;">Direct Download / Access Link:</div>
-                <a href="${safeDownloadUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #B7F34A; word-break: break-all; text-decoration: none; font-family: monospace;">${safeDownloadUrl}</a>
+              <!-- Links Box -->
+              <div style="background-color: #0B0D0C; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px; margin-bottom: 22px;">
+                <div style="font-size: 11px; color: #A1AAA2; margin-bottom: 4px;">Launch Link:</div>
+                <a href="${safeLaunchUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #B7F34A; word-break: break-all; text-decoration: none; font-family: monospace; display: block; margin-bottom: 10px;">${safeLaunchUrl}</a>
+                ${
+                  isMirrorPOS
+                    ? `<div style="font-size: 11px; color: #A1AAA2; margin-bottom: 4px;">User Guide:</div>
+                <a href="${userGuideUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #B7F34A; word-break: break-all; text-decoration: none; font-family: monospace; display: block;">${userGuideUrl}</a>`
+                    : ''
+                }
               </div>
 
-              <!-- Download & Install Instructions -->
-              <div style="background-color: #171C19; border-left: 3px solid #B7F34A; border-radius: 8px; padding: 16px 18px; margin-bottom: 24px;">
-                <div style="font-size: 12px; font-weight: 700; color: #F5F7F2; margin-bottom: 8px;">Download &amp; Setup Instructions</div>
-                <ol style="margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.65; color: #A1AAA2;">
-                  <li>Click <strong style="color: #F5F7F2;">Download ${safeTitle}</strong> above to access the official software release.</li>
-                  <li>For desktop app installation in Chrome or Edge on Windows 10/11, click the <strong style="color: #F5F7F2;">Install App</strong> icon in the browser address bar (or run the downloaded installer).</li>
-                  <li>For full setup guides and thermal printer / barcode tips, visit <a href="https://mirrorbook.site/mirrorpos" style="color: #B7F34A; text-decoration: none;">mirrorbook.site/mirrorpos</a>.</li>
-                </ol>
+              <!-- Support Information -->
+              <div style="background-color: #171C19; border-left: 3px solid #B7F34A; border-radius: 8px; padding: 14px 16px; margin-bottom: 24px;">
+                <div style="font-size: 12px; font-weight: 700; color: #F5F7F2; margin-bottom: 6px;">MirrorBook Support</div>
+                <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #A1AAA2;">
+                  Need help with setup, billing counter workflow, or Google account sync? Contact MirrorBook Support at <a href="mailto:${supportEmail}" style="color: #B7F34A; text-decoration: none;">${supportEmail}</a> or visit <a href="https://mirrorbook.site/mirrorpos#user-guide" style="color: #B7F34A; text-decoration: none;">mirrorbook.site/mirrorpos</a>.
+                </p>
               </div>
 
               <!-- Sign-off -->
               <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 18px;">
-                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #F5F7F2;">Best regards,</p>
-                <p style="margin: 3px 0 0 0; font-size: 13px; font-weight: 700; color: #B7F34A;">MirrorBook Team</p>
-                <p style="margin: 2px 0 0 0; font-size: 11px; color: #A1AAA2;">Reflecting Creativity • <a href="https://mirrorbook.site/" style="color: #B7F34A; text-decoration: none;">https://mirrorbook.site/</a></p>
+                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #F5F7F2;">Regards,</p>
+                <p style="margin: 3px 0 0 0; font-size: 13px; font-weight: 700; color: #B7F34A;">Team MirrorBook</p>
+                <p style="margin: 2px 0 0 0; font-size: 11px; color: #A1AAA2;">Reflecting Creativity. • <a href="https://mirrorbook.site/" style="color: #B7F34A; text-decoration: none;">https://mirrorbook.site/</a></p>
               </div>
             </td>
           </tr>
@@ -234,7 +272,7 @@ export function buildFreeSoftwareEmailHtml(params: {
           <!-- Footer -->
           <tr>
             <td style="background-color: #0B0D0C; padding: 16px 28px; border-top: 1px solid rgba(255, 255, 255, 0.07); text-align: center; font-size: 11px; color: #707A72;">
-              © ${new Date().getFullYear()} MirrorBook Creative Agency • Dhaka, Bangladesh
+              © ${new Date().getFullYear()} MirrorBook • Reflecting Creativity. • Dhaka, Bangladesh
             </td>
           </tr>
         </table>
@@ -395,7 +433,10 @@ export async function processFreeSoftwareAccess(
       };
     }
 
-    const productDoc = await store.getDoc('products', productId);
+    const canonicalFallback = getServerProductFallback(productId);
+    const productDoc =
+      (await store.getDoc('products', productId)) ||
+      (canonicalFallback && canonicalFallback.type === 'Software' ? canonicalFallback : null);
     if (!productDoc) {
       return {
         status: 404,
@@ -457,11 +498,12 @@ export async function processFreeSoftwareAccess(
 
     const emailContent = buildFreeSoftwareEmailHtml({
       recipientName,
+      productId,
       productTitle,
       productDescription,
       iconUrl,
       downloadUrl: primaryDownloadUrl,
-      launchUrl: publicLaunchUrl || undefined,
+      launchUrl: publicLaunchUrl || primaryDownloadUrl,
       referenceId,
     });
 
@@ -487,7 +529,23 @@ export async function processFreeSoftwareAccess(
 
     recentDeliveries.set(dedupKey, Date.now());
 
-    // Best-effort server-side delivery log (never blocks customer confirmation)
+    const sentAtIso = new Date().toISOString();
+
+    // Best-effort server-side registration & delivery log (never fakes delivery)
+    store
+      .setDoc('softwareAccessRequests', referenceId, {
+        id: referenceId,
+        productId,
+        productTitle,
+        accessType: 'Lifetime Access',
+        fullName: recipientName,
+        email: targetEmail,
+        uid: verifiedUser?.uid || null,
+        emailDelivered: true,
+        registeredAt: sentAtIso,
+      })
+      .catch(() => {});
+
     store
       .setDoc('softwareDeliveryLogs', referenceId, {
         id: referenceId,
@@ -496,7 +554,7 @@ export async function processFreeSoftwareAccess(
         email: targetEmail,
         name: recipientName,
         uid: verifiedUser?.uid || null,
-        sentAt: new Date().toISOString(),
+        sentAt: sentAtIso,
       })
       .catch(() => {});
 
@@ -507,7 +565,8 @@ export async function processFreeSoftwareAccess(
         referenceId,
         email: targetEmail,
         productTitle,
-        message: `${productTitle} download link has been sent to ${targetEmail}. Please check your inbox.`,
+        launchUrl: publicLaunchUrl || primaryDownloadUrl,
+        message: `${productTitle} access details have been sent to ${targetEmail}.`,
       },
     };
   } finally {

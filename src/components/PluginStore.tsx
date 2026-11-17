@@ -6,73 +6,96 @@ interface PluginStoreProps {
   onBuyItem: (item: CheckoutItem) => void;
   plugins?: ProductItem[];
   loading?: boolean;
+  embedded?: boolean;
 }
+
+const DEFAULT_PLUGIN_CATEGORIES = [
+  'All',
+  'After Effects',
+  'Premiere Pro',
+  'Video Editing Extensions',
+  'Motion Graphics Tools',
+  'Other Creative Plugins',
+];
 
 export const PluginStore: React.FC<PluginStoreProps> = ({
   onBuyItem,
   plugins = [],
   loading = false,
+  embedded = false,
 }) => {
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
-  const sourcePlugins = plugins.map((p) => ({
-    id: p.id,
-    title: p.title,
-    software: p.category,
-    price: p.price,
-    priceDisplay: p.priceDisplay || `৳${p.price.toLocaleString()}`,
-    thumbnailUrl: p.thumbnailUrl,
-    description: p.description,
-  }));
+  const sourcePlugins = plugins
+    .filter((p) => p.type === 'Plugin' && p.status !== 'draft' && p.status !== 'archived')
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      software: p.category || 'Creative Plugin',
+      price: p.price,
+      priceDisplay: p.priceDisplay || `৳${p.price.toLocaleString()}`,
+      thumbnailUrl: p.thumbnailUrl,
+      description: p.description,
+    }));
 
-  const categories = Array.from(new Set(sourcePlugins.map((p) => p.software)));
-  const filterOptions = ['All', ...categories];
+  const dynamicCategories = Array.from(new Set(sourcePlugins.map((p) => p.software)));
+  const filterOptions =
+    dynamicCategories.length > 0
+      ? ['All', ...dynamicCategories]
+      : DEFAULT_PLUGIN_CATEGORIES;
 
   const filteredPlugins = sourcePlugins.filter((plugin) => {
     if (selectedFilter === 'All') return true;
     return plugin.software.toLowerCase().includes(selectedFilter.toLowerCase());
   });
 
+  const WrapperTag = embedded ? 'div' : 'section';
+
   return (
-    <section
+    <WrapperTag
       id="plugins"
-      className="scroll-mt-20 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-[#0B0D0C] text-[#F5F7F2] bg-grid-subtle border-b border-white/[0.09] relative overflow-x-clip"
+      className={
+        embedded
+          ? 'scroll-mt-24 text-[#F5F7F2] relative'
+          : 'scroll-mt-20 py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-[#0B0D0C] text-[#F5F7F2] bg-grid-subtle border-b border-white/[0.09] relative overflow-x-clip'
+      }
     >
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Aligned Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-10 pb-5 border-b border-white/[0.09]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pb-5 border-b border-white/[0.09]">
           <div className="min-w-0">
             <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
               Creator Extensions
             </span>
-            <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
-              Plugin Store
-            </h2>
+            <h3 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
+              Plugin Library
+            </h3>
+            <p className="text-xs sm:text-sm text-[#A1AAA2] mt-1.5 max-w-xl leading-relaxed">
+              Discover premium plugins, extensions and creative tools.
+            </p>
           </div>
 
           {/* Segmented Glass Filter Tabs */}
-          {sourcePlugins.length > 0 && (
-            <div className="glass-tab-bar flex items-center gap-1 self-start md:self-auto max-w-full overflow-x-auto no-scrollbar">
-              {filterOptions.map((filter) => {
-                const isActive = selectedFilter === filter;
-                return (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setSelectedFilter(filter)}
-                    className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                      isActive
-                        ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold shadow-sm'
-                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
-                    }`}
-                  >
-                    {filter}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="glass-tab-bar flex items-center gap-1 self-start md:self-auto max-w-full overflow-x-auto no-scrollbar">
+            {filterOptions.map((filter) => {
+              const isActive = selectedFilter === filter;
+              return (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setSelectedFilter(filter)}
+                  className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                    isActive
+                      ? 'bg-[#B7F34A] text-[#0B0D0C] font-bold shadow-sm'
+                      : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
+                  }`}
+                >
+                  {filter}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Loading State */}
@@ -91,15 +114,17 @@ export const PluginStore: React.FC<PluginStoreProps> = ({
             ))}
           </div>
         ) : filteredPlugins.length === 0 ? (
-          <div className="glossy-card p-8 sm:p-14 text-center max-w-2xl mx-auto">
+          <div className="glossy-card p-8 sm:p-12 text-center max-w-2xl mx-auto">
             <div className="w-12 h-12 rounded-xl bg-white/[0.05] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] mx-auto mb-4">
               <Layers size={22} />
             </div>
-            <h3 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] mb-2">
-              No Plugins Available Right Now
-            </h3>
+            <h4 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] mb-2">
+              {selectedFilter === 'All'
+                ? 'No Plugins Available Right Now'
+                : `No ${selectedFilter} Listed Yet`}
+            </h4>
             <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
-              New Adobe Premiere Pro, After Effects, and Photoshop plugins uploaded to the store will appear here automatically.
+              After Effects plugins, Premiere Pro plugins, Video Editing Extensions, Motion Graphics Tools, and Other Creative Plugins published to the Plugin Library will appear here automatically.
             </p>
           </div>
         ) : (
@@ -154,9 +179,9 @@ export const PluginStore: React.FC<PluginStoreProps> = ({
                     </div>
 
                     {/* Title */}
-                    <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors mb-1.5 leading-snug break-words">
+                    <h4 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors mb-1.5 leading-snug break-words">
                       {plugin.title}
-                    </h3>
+                    </h4>
 
                     {/* Subtitle */}
                     {plugin.description && (
@@ -198,6 +223,6 @@ export const PluginStore: React.FC<PluginStoreProps> = ({
           </div>
         )}
       </div>
-    </section>
+    </WrapperTag>
   );
 };

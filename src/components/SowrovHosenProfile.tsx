@@ -282,18 +282,18 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2]">
-      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-12 md:py-16">
+    <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2] overflow-x-clip">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
         {/* Navigation Breadcrumb & Back Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-6 border-b border-white/[0.09]">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-[#707A72]">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-8 sm:mb-10 pb-5 sm:pb-6 border-b border-white/[0.09]">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs text-[#707A72]">
             <a
               href="/"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigateHome();
               }}
-              className="hover:text-[#B7F34A] transition-colors flex items-center gap-1.5"
+              className="hover:text-[#B7F34A] transition-colors flex items-center gap-1.5 min-h-[36px]"
             >
               <ArrowLeft size={14} />
               <span>MirrorBook Home</span>
@@ -308,7 +308,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             <button
               type="button"
               onClick={handleShare}
-              className="glossy-btn-secondary inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium text-[#F5F7F2] cursor-pointer"
+              className="glossy-btn-secondary min-h-[40px] inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium text-[#F5F7F2] cursor-pointer"
               title="Share profile"
             >
               {copiedProfileLink ? (
@@ -330,7 +330,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start mb-16">
           {/* Column 1: Profile Photo Area */}
           <div className="lg:col-span-5 flex flex-col items-center">
-            <div className="w-full max-w-[340px] glossy-card rounded-2xl p-6 text-center">
+            <div className="w-full max-w-[340px] glossy-card rounded-2xl p-5 sm:p-6 text-center">
               {/* Professional Portrait HTML img Element */}
               <figure className="w-full flex flex-col items-center mb-4">
                 <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden border border-white/[0.12]">
@@ -409,21 +409,21 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             </div>
 
             {/* Main H1 for SEO */}
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F7F2] leading-tight">
+            <h1 className="font-display text-3xl min-[375px]:text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F7F2] leading-tight">
               Sowrov Hosen
             </h1>
 
-            <p className="text-lg sm:text-xl text-[#A1AAA2] font-normal leading-relaxed">
+            <p className="text-base sm:text-xl text-[#A1AAA2] font-normal leading-relaxed">
               Founder &amp; Creative Director of <span className="text-[#F5F7F2] font-semibold">MirrorBook</span>. A multi-disciplinary visual artist and post-production specialist based in Bangladesh, dedicated to elevating brands and creators through cinematic video editing, brand identity systems, and motion design.
             </p>
 
             {/* Action CTA Buttons */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 pt-2">
               <a
                 href="https://sowrovhosenstudio.netlify.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="glossy-btn px-6 py-3 rounded-xl text-xs font-bold tracking-wide flex items-center gap-2 cursor-pointer"
+                className="glossy-btn min-h-[44px] px-6 py-3 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Visit Portfolio Studio</span>
                 <ExternalLink size={14} />
@@ -433,7 +433,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 <button
                   type="button"
                   onClick={onStartProject}
-                  className="glossy-btn-secondary px-6 py-3 rounded-xl text-xs font-semibold tracking-wide flex items-center gap-2 cursor-pointer"
+                  className="glossy-btn-secondary min-h-[44px] px-6 py-3 rounded-xl text-xs font-semibold tracking-wide flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Mail size={14} className="text-[#B7F34A]" />
                   <span>Start A Project</span>
@@ -442,7 +442,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
 
               <a
                 href="https://mirrorbook.site/#services"
-                className="px-6 py-3 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer"
+                className="min-h-[44px] px-6 py-3 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Explore Agency Services →</span>
               </a>
@@ -464,7 +464,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         </section>
 
         {/* Section 2: Founder of MirrorBook Agency */}
-        <section className="mb-16 glossy-card rounded-2xl p-8 md:p-10 relative overflow-hidden">
+        <section className="mb-16 glossy-card rounded-2xl p-6 sm:p-8 md:p-10 relative overflow-hidden">
           <div className="max-w-3xl space-y-4 relative z-10">
             <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A]">
               <Briefcase size={14} />
@@ -477,7 +477,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
 
             <p className="text-sm sm:text-base text-[#A1AAA2] leading-relaxed">
               Sowrov Hosen founded <a href="https://mirrorbook.site/" className="text-[#B7F34A] hover:underline font-medium">MirrorBook Agency</a> (
-              <a href="https://mirrorbook.site/" className="text-[#F5F7F2] hover:text-[#B7F34A] underline font-medium">https://mirrorbook.site/</a>
+              <a href="https://mirrorbook.site/" className="text-[#F5F7F2] hover:text-[#B7F34A] underline font-medium break-all">https://mirrorbook.site/</a>
               ) to establish a benchmark for high-caliber digital creative production in Bangladesh. The agency delivers comprehensive video editing, graphic branding, motion graphics, and tailored software tools for content creators and modern businesses worldwide.
             </p>
 
@@ -530,7 +530,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                       <IconComponent size={20} />
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                       <h3 className="text-base font-bold text-[#F5F7F2]">{skill.title}</h3>
                       <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-[#121614] border border-white/[0.09] text-[#A1AAA2]">
                         {skill.level}
@@ -587,25 +587,25 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`p-4 rounded-xl border transition-all flex items-center justify-between group ${
+                  className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-2 group min-w-0 ${
                     item.isPrimary
                       ? 'bg-[#B7F34A]/10 border-[#B7F34A]/35 hover:bg-[#B7F34A]/15'
                       : 'bg-[#171C19] border-white/[0.09] hover:border-white/20'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#121614] border border-white/[0.09] flex items-center justify-center text-[#B7F34A]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-[#121614] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] shrink-0">
                       <IconComp size={18} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="text-xs font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors">
                         {item.name}
                       </h4>
-                      <p className="text-[11px] text-[#707A72] font-mono">{item.handle}</p>
+                      <p className="text-[11px] text-[#707A72] font-mono truncate">{item.handle}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[10px] text-[#A1AAA2] font-medium hidden sm:inline">
                       {item.status}
                     </span>
@@ -621,7 +621,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         </section>
 
         {/* Section 5: Direct Contact / Work With Sowrov CTA */}
-        <section className="glossy-card rounded-2xl p-8 text-center relative overflow-hidden">
+        <section className="glossy-card rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden">
           <div className="max-w-xl mx-auto space-y-4">
             <h3 className="font-display text-2xl font-bold text-[#F5F7F2]">
               Ready to collaborate with Sowrov Hosen?
@@ -629,18 +629,18 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
               Whether you need high-end commercial video editing, a complete brand identity revamp, or custom motion graphics for your upcoming campaign, reach out directly.
             </p>
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <div className="pt-2 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
               <a
                 href="mailto:miirorbook.tech@gmail.com"
-                className="glossy-btn px-6 py-3 rounded-xl text-xs font-bold tracking-wide flex items-center gap-2 cursor-pointer"
+                className="glossy-btn w-full sm:w-auto min-h-[44px] px-6 py-3 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer break-all"
               >
-                <Mail size={14} />
+                <Mail size={14} className="shrink-0" />
                 <span>Email: miirorbook.tech@gmail.com</span>
               </a>
               <button
                 type="button"
                 onClick={onNavigateHome}
-                className="glossy-btn-secondary px-6 py-3 rounded-xl text-xs font-semibold tracking-wide cursor-pointer"
+                className="glossy-btn-secondary w-full sm:w-auto min-h-[44px] px-6 py-3 rounded-xl text-xs font-semibold tracking-wide cursor-pointer"
               >
                 <span>Back To MirrorBook</span>
               </button>

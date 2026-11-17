@@ -12,6 +12,7 @@ import {
   isFirebaseAdminConfigured,
 } from '../_lib/firebaseAdmin';
 import { checkRateLimitBucket } from '../_lib/security';
+import { getServerProductFallback } from '../_lib/courseCatalog';
 
 const ALLOWED_METHODS = new Set(['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer']);
 
@@ -192,6 +193,12 @@ export async function processSubmitAndVerifyOrder(
     }
   }
 
+  const canonicalFallback = getServerProductFallback(resolvedProductId, rawItemName);
+  if (!productDoc && canonicalFallback) {
+    productDoc = canonicalFallback;
+    resolvedProductId = canonicalFallback.id;
+  }
+
   if (!productDoc || !resolvedProductId) {
     return {
       status: 404,
@@ -252,7 +259,9 @@ export async function processSubmitAndVerifyOrder(
 
     const secretDoc = await tx.get('productSecrets', resolvedProductId);
     const secretProtectedUrl =
-      secretDoc && typeof secretDoc.protectedUrl === 'string' ? secretDoc.protectedUrl.trim() : '';
+      (secretDoc && typeof secretDoc.protectedUrl === 'string' && secretDoc.protectedUrl.trim()) ||
+      canonicalFallback?.protectedUrl ||
+      '';
 
     const basePendingOrder: Record<string, any> = {
       id: orderId,
