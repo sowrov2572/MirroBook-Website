@@ -116,6 +116,7 @@ Sent via https://mirrorbook.site/`;
           name: cleanName,
           email: cleanEmail,
           service: projectType,
+          inquiryType: 'general_inquiry',
           message: formattedMessage,
           phone: cleanPhone,
           packageName: projectType,
