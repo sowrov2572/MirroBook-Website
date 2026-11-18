@@ -302,6 +302,9 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
   }
 
   const appsScriptPayload = {
+    // Apps Script doPost(e) routes requests by type. Without this field,
+    // package inquiries fall through to the wrong/default handler.
+    type: 'package_inquiry',
     name: plainName,
     email: plainEmail,
     service: plainService,
