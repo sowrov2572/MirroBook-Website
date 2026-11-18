@@ -303,6 +303,7 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
   }
 
   const inquiryType = body.inquiryType === 'general_inquiry' ? 'general_inquiry' : 'package_inquiry';
+  const isGeneralInquiry = inquiryType === 'general_inquiry';
 
   const appsScriptPayload = {
     // Route each inquiry to the matching Apps Script customer confirmation handler.
@@ -359,7 +360,7 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
   });
 
   // 8. Admin Notification Email
-  const adminSubject = 'New Package Order Received - MirrorBook';
+  const adminSubject = isGeneralInquiry ? 'New General Inquiry Received - MirrorBook' : 'New Package Order Received - MirrorBook';
   const adminHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -487,19 +488,17 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
 `;
 
   // 9. Customer Confirmation Email
-  const customerSubject = 'Your Package Request Has Been Received - MirrorBook';
+  const customerSubject = isGeneralInquiry ? 'Thank You for Contacting MirrorBook' : 'Your Package Request Has Been Received - MirrorBook';
   const customerPlainText = `Hello ${name},
 
-Thank you for choosing MirrorBook!
+Thank you for contacting MirrorBook!
 
-We have successfully received your package request.
+${isGeneralInquiry ? 'We have successfully received your inquiry.' : 'We have successfully received your package request.'}
 
-Your order details:
+Reference: ${orderRef}
+${isGeneralInquiry ? 'Inquiry Type: ' : 'Selected Package: '}${packageName}
 
-Order Reference: ${orderRef}
-Selected Package: ${packageName}
-
-Our team has received your request and will contact you shortly to discuss the next steps, payment details, and project requirements.
+Our team has received your message and will contact you shortly to discuss the next steps and any details needed.
 
 If you have any questions, simply reply to this email.
 
@@ -533,19 +532,19 @@ https://mirrorbook.site/`;
             <td style="padding: 32px 30px;">
               <p style="margin: 0 0 16px 0; font-size: 15px; color: #FFFFFF; font-weight: 600;">Hello ${name},</p>
               
-              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">Thank you for choosing <strong>MirrorBook</strong>!</p>
+              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">Thank you for contacting <strong>MirrorBook</strong>!</p>
               
-              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">We have successfully received your package request.</p>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">${isGeneralInquiry ? 'We have successfully received your inquiry.' : 'We have successfully received your package request.'}</p>
 
               <!-- Order Details Box -->
               <div style="background-color: #161616; border: 1px solid rgba(255, 255, 255, 0.08); border-left: 3px solid #71B913; border-radius: 8px; padding: 18px 20px; margin-bottom: 24px;">
-                <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #71B913;">Your Order Details</p>
+                <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #71B913;">${isGeneralInquiry ? 'Your Inquiry Details' : 'Your Order Details'}</p>
                 <p style="margin: 0 0 6px 0; font-size: 13px; color: #AAAAAA;">Order Reference: <strong style="color: #FFFFFF; font-family: monospace;">${orderRef}</strong></p>
-                <p style="margin: 0; font-size: 13px; color: #AAAAAA;">Selected Package: <strong style="color: #FFFFFF;">${packageName}</strong></p>
+                <p style="margin: 0; font-size: 13px; color: #AAAAAA;">${isGeneralInquiry ? 'Inquiry Type' : 'Selected Package'}: <strong style="color: #FFFFFF;">${packageName}</strong></p>
               </div>
 
               <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">
-                Our team has received your request and will contact you shortly to discuss the next steps, payment details, and project requirements.
+                Our team has received your message and will contact you shortly to discuss the next steps and any details needed.
               </p>
 
               <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #888888;">
