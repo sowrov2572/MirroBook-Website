@@ -119,6 +119,7 @@ Sent via https://mirrorbook.site/`;
           name: cleanName,
           email: cleanEmail,
           service: requiredService,
+          inquiryType: 'package_inquiry',
           message: structuredMessage,
           brandName: cleanBrand,
           whatsAppNumber: cleanPhone,
