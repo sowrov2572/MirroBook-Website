@@ -708,6 +708,11 @@ export async function processFreeSoftwareAccess(
     } catch (mailErr: unknown) {
       const msg =
         mailErr instanceof Error ? mailErr.message : 'Unable to send software access email.';
+      console.error('[MirrorPOS free-access] Email dispatch failed:', {
+        message: msg,
+        hasSmtp: Boolean(process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim()),
+        hasAppsScriptUrl: Boolean(process.env.APPS_SCRIPT_INQUIRY_URL?.trim()),
+      });
       return {
         status: 502,
         data: {
