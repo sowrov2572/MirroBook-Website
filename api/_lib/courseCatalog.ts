@@ -40,6 +40,7 @@ export interface ServerProductFallback {
 
 export const COURSE_VIDEO_EDITING_FUNDAMENTALS_ID = 'course-video-editing-fundamentals';
 export const SOFTWARE_MIRRORPOS_ID = 'software-mirrorpos';
+export const SOFTWARE_MIRRORPOS_PREMIUM_ID = 'software-mirrorpos-premium';
 
 function buildYouTubeThumbnail(youtubeId: string): string {
   return `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
@@ -61,12 +62,12 @@ export function extractYouTubeVideoId(input?: string | null): string | null {
 
 export const VIDEO_EDITING_FUNDAMENTALS_COURSE: ServerCourseDefinition = {
   id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
-  title: 'Video Editing Fundamentals',
-  software: 'Adobe After Effects & Adobe Premiere Pro',
+  title: 'Video Editing Fundamental by Sowrov Hosen',
+  software: 'Adobe After Effects, Adobe Premiere Pro & VFX',
   price: 499,
   priceDisplay: '৳499',
   description:
-    'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.',
+    'Learn the fundamentals of professional video editing with After Effects, Premiere Pro, and VFX workflows.',
   whatYouLearn: [
     'Video Editing Fundamentals',
     'Understanding the Editing Workflow',
@@ -74,6 +75,9 @@ export const VIDEO_EDITING_FUNDAMENTALS_COURSE: ServerCourseDefinition = {
     'Adobe After Effects Basics',
     'Timeline and Layer Management',
     'Basic Motion Graphics',
+    'VFX & Compositing',
+    'Modern Motion Graphics',
+    'SaaS Animation',
     'Video Exporting',
   ],
   protectedUrl: 'https://mirrorbook.site/#course-video-editing-fundamentals',
@@ -117,10 +121,10 @@ export const SERVER_CANONICAL_PRODUCTS: Record<string, ServerProductFallback> = 
   [COURSE_VIDEO_EDITING_FUNDAMENTALS_ID]: {
     id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
     type: 'Course',
-    category: 'After Effects & Premiere Pro',
-    title: 'Video Editing Fundamentals',
+    category: 'After Effects, Premiere Pro & VFX',
+    title: 'Video Editing Fundamental by Sowrov Hosen',
     description:
-      'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.',
+      'Learn the fundamentals of professional video editing with After Effects, Premiere Pro, and VFX workflows.',
     price: 499,
     isFree: false,
     priceDisplay: '৳499',
@@ -136,6 +140,21 @@ export const SERVER_CANONICAL_PRODUCTS: Record<string, ServerProductFallback> = 
     price: 0,
     isFree: true,
     priceDisplay: 'Free',
+    iconUrl: '/mirror-pos-icon.png',
+    thumbnailUrl: '/mirror-pos-icon.png',
+    launchUrl: 'https://mirror-pos.vercel.app/',
+    protectedUrl: 'https://mirror-pos.vercel.app/',
+    status: 'active',
+  },
+  [SOFTWARE_MIRRORPOS_PREMIUM_ID]: {
+    id: SOFTWARE_MIRRORPOS_PREMIUM_ID,
+    type: 'Software',
+    category: 'PC & Mac',
+    title: 'MirrorPOS Desktop (Lifetime License)',
+    description: 'Smart POS Software for Modern Businesses — Direct Premium Lifetime License.',
+    price: 9999,
+    isFree: false,
+    priceDisplay: '৳9,999',
     iconUrl: '/mirror-pos-icon.png',
     thumbnailUrl: '/mirror-pos-icon.png',
     launchUrl: 'https://mirror-pos.vercel.app/',

@@ -4,9 +4,9 @@ import { Hero } from './components/Hero';
 import { Services } from './components/Services';
 import { ShowcasesVault } from './components/ShowcasesVault';
 import { Packages } from './components/Packages';
-import { PluginStore } from './components/PluginStore';
+import { PluginsAndSoftware } from './components/PluginsAndSoftware';
 import { CoursesAndTutorials } from './components/CoursesAndTutorials';
-import { SoftwareStore } from './components/SoftwareStore';
+import { CourseDetailsModal } from './components/CourseDetailsModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { VideoPlayerModal, PlayableVideo } from './components/VideoPlayerModal';
 import { StartProjectModal } from './components/StartProjectModal';
@@ -22,6 +22,11 @@ import { CustomerAuthPage } from './components/CustomerAuthPage';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { AdminAuthPortal } from './components/AdminAuthPortal';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import {
+  CANONICAL_FEATURED_PRODUCTS,
+  COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
+  SOFTWARE_MIRRORPOS_PREMIUM_ID,
+} from './data/content';
 import {
   CheckoutItem,
   TutorialItem,
@@ -115,6 +120,7 @@ export default function App() {
   const [isPackageInquiryOpen, setIsPackageInquiryOpen] = useState(false);
   const [packageInquiryData, setPackageInquiryData] = useState<PackageInquiryData | null>(null);
   const [secureDownloadTarget, setSecureDownloadTarget] = useState<SecureDownloadTarget | null>(null);
+  const [activeCourseModal, setActiveCourseModal] = useState<ProductItem | null>(null);
 
   // Scoped Orders, Secrets & Customers state (strictly populated for verified owner)
   const [adminOrders, setAdminOrders] = useState<Order[]>([]);
@@ -422,22 +428,30 @@ export default function App() {
     };
   }, [navigateTo]);
 
+  // Ensure canonical featured products (MirrorPOS, Video Editing Fundamentals) are always available
+  // if not yet seeded in Firestore, while preserving any Firestore edits or status changes
+  const catalogWithFeatured = useMemo(() => {
+    const existingIds = new Set(products.map((p) => p.id));
+    const missingCanonical = CANONICAL_FEATURED_PRODUCTS.filter((p) => !existingIds.has(p.id));
+    return [...products, ...missingCanonical];
+  }, [products]);
+
   // Public Catalog Security Sanitization:
   // Paid items NEVER have their protectedUrl exposed in public React tree; draft/archived items never show publicly
   const publicProducts = useMemo(() => {
     return sanitizeProductsForPublic(
-      products.filter((p) => p.status !== 'draft' && p.status !== 'archived')
+      catalogWithFeatured.filter((p) => p.status !== 'draft' && p.status !== 'archived')
     );
-  }, [products]);
+  }, [catalogWithFeatured]);
 
   // Admin-only catalog view includes all statuses & merges protectedUrl from /productSecrets
   const adminProducts = useMemo(() => {
     if (!isAdminVerified) return publicProducts;
-    return products.map((p) => {
+    return catalogWithFeatured.map((p) => {
       const secretUrl = productSecrets[p.id];
       return secretUrl ? { ...p, protectedUrl: secretUrl } : p;
     });
-  }, [products, productSecrets, isAdminVerified, publicProducts]);
+  }, [catalogWithFeatured, productSecrets, isAdminVerified, publicProducts]);
 
   const publicPlugins = useMemo(
     () => publicProducts.filter((p) => p.type === 'Plugin'),
@@ -455,6 +469,29 @@ export default function App() {
     () => publicProducts.filter((p) => p.type === 'Free Tutorial'),
     [publicProducts]
   );
+
+  const isMirrorPOSPurchased = useMemo(() => {
+    if (isAdminVerified) return true;
+    return userPurchases.some(
+      (p) =>
+        p.productId === SOFTWARE_MIRRORPOS_PREMIUM_ID ||
+        p.title?.toLowerCase().includes('mirrorpos desktop')
+    );
+  }, [userPurchases, isAdminVerified]);
+
+  const enrolledCourseIds = useMemo(() => {
+    const ids = new Set<string>();
+    userPurchases.forEach((p) => {
+      if (p.productId) ids.add(p.productId);
+      if (p.title?.toLowerCase().includes('video editing fundamentals')) {
+        ids.add(COURSE_VIDEO_EDITING_FUNDAMENTALS_ID);
+      }
+    });
+    if (isAdminVerified) {
+      ids.add(COURSE_VIDEO_EDITING_FUNDAMENTALS_ID);
+    }
+    return Array.from(ids);
+  }, [userPurchases, isAdminVerified]);
 
   // Auth Handlers (Real Firebase Auth + Backend Session Verification)
   const syncAfterCustomerAuth = async (
@@ -874,7 +911,15 @@ export default function App() {
             onUpdateProfile={handleUpdateCustomerProfile}
             onSendResetPassword={handleSendResetPassword}
             onResendVerification={handleResendVerification}
-            onBrowseStore={() => scrollToSection('plugins')}
+            onBrowseStore={() => scrollToSection('plugins-software')}
+            onOpenCourse={(courseId) => {
+              const found =
+                publicCourses.find((c) => c.id === courseId) ||
+                CANONICAL_FEATURED_PRODUCTS.find((c) => c.id === courseId);
+              if (found) {
+                setActiveCourseModal(found);
+              }
+            }}
           />
         ) : currentPath === '/admin/login' || currentPath === '/admin' ? (
           <AdminAuthPortal
@@ -924,13 +969,23 @@ export default function App() {
           <MirrorPOSPage
             onNavigateHome={() => navigateTo('/')}
             onStartProject={() => setIsStartProjectOpen(true)}
+            isPremiumPurchased={isMirrorPOSPurchased}
+            onBuyPremium={() =>
+              setCheckoutItem({
+                id: SOFTWARE_MIRRORPOS_PREMIUM_ID,
+                name: 'MirrorPOS Desktop (Lifetime License)',
+                price: '৳9,999',
+                category: 'Software License',
+              })
+            }
+            user={user}
           />
         ) : (
           <>
             {/* 2. Hero with Interactive Agency Showreel Video Player */}
             <Hero
               onViewPackages={() => scrollToSection('packages')}
-              onBrowseStore={() => scrollToSection('plugins')}
+              onBrowseStore={() => scrollToSection('plugins-software')}
               onPlayShowreel={() =>
                 setActiveVideo({
                   title: 'MirrorBook Agency Showreel // 2026 Edition',
@@ -958,15 +1013,9 @@ export default function App() {
               }}
             />
 
-            {/* 6. Plugin Store */}
-            <PluginStore
+            {/* 6. Unified Plugins & Software Hub (Separated Plugin Library & Software Library) */}
+            <PluginsAndSoftware
               plugins={publicPlugins}
-              loading={productsLoading}
-              onBuyItem={(item) => setCheckoutItem(item)}
-            />
-
-            {/* 6.5 PC & Phone Software Library (Includes MirrorPOS) */}
-            <SoftwareStore
               softwareList={publicSoftware}
               loading={productsLoading}
               onBuyItem={(item) => setCheckoutItem(item)}
@@ -980,8 +1029,10 @@ export default function App() {
             <CoursesAndTutorials
               courses={publicCourses}
               tutorials={publicTutorials}
+              enrolledCourseIds={enrolledCourseIds}
               loading={productsLoading}
               onEnrollCourse={(item) => setCheckoutItem(item)}
+              onOpenCourseDetails={(course) => setActiveCourseModal(course)}
               onSelectTutorial={(tut: TutorialItem) =>
                 setActiveVideo({
                   title: tut.title,
@@ -1031,7 +1082,7 @@ export default function App() {
         user={user}
         purchases={userPurchases}
         onSignOut={handleSignOut}
-        onBrowseStore={() => scrollToSection('plugins')}
+        onBrowseStore={() => scrollToSection('plugins-software')}
         onOpenAdmin={() => navigateTo('/admin')}
         onOpenDashboard={() => navigateTo('/account')}
         onSelectDownload={(purchase) =>
@@ -1082,6 +1133,17 @@ export default function App() {
         onSuccessToast={(msg) => showToast(msg, 'success')}
       />
 
+      {/* Course Details & Protected Video Lessons Modal */}
+      <CourseDetailsModal
+        course={activeCourseModal}
+        isOpen={Boolean(activeCourseModal)}
+        onClose={() => setActiveCourseModal(null)}
+        user={user}
+        isEnrolled={Boolean(activeCourseModal && enrolledCourseIds.includes(activeCourseModal.id))}
+        onEnrollCourse={(item) => setCheckoutItem(item)}
+        onSignIn={() => setIsAuthModalOpen(true)}
+      />
+
       {/* Modern Web App Mobile Floating Dock Navigation with Cart */}
       <MobileBottomNav
         activeTab={currentPath === '/account' || isVaultOpen ? 'vault' : 'home'}
@@ -1093,7 +1155,7 @@ export default function App() {
         onSignIn={() => navigateTo('/login')}
         onOpenCartOrStore={() => {
           if (!checkoutItem) {
-            scrollToSection('plugins');
+            scrollToSection('plugins-software');
           }
         }}
       />

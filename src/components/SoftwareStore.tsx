@@ -124,98 +124,64 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({
                 sw.title.toLowerCase().includes('mirrorpos');
 
               if (isMirrorPOS) {
-                const previewSrc = mirrorPosShotFailed
-                  ? '/mirrorpos-shot-1.png'
-                  : 'https://i.ibb.co/XfQDsJGq/Screenshot-2026-11-16-153436.png';
-                const launchHref = sw.launchUrl || 'https://mirror-pos.vercel.app/';
-
                 return (
                   <div
                     key={sw.id}
-                    className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col justify-between h-full group md:col-span-2 lg:col-span-2 border-[#B7F34A]/25"
+                    className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col justify-between h-full group border-[#B7F34A]/25"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-                      {/* Software Preview Screenshot */}
-                      <div className="md:col-span-6 min-w-0">
-                        <div className="aspect-video w-full rounded-xl bg-[#0B0D0C] border border-white/[0.1] overflow-hidden relative group-hover:border-[#B7F34A]/45 transition-colors">
-                          <img
-                            src={previewSrc}
-                            alt="MirrorPOS Smart POS Software Interface Preview"
-                            loading="lazy"
-                            decoding="async"
-                            referrerPolicy="no-referrer"
-                            onError={() => {
-                              if (!mirrorPosShotFailed) setMirrorPosShotFailed(true);
-                            }}
-                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0D0C]/75 via-transparent to-transparent pointer-events-none" />
-                          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#0B0D0C]/90 border border-[#B7F34A]/40 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
-                            Desktop POS Software
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Identity & Details */}
-                      <div className="md:col-span-6 min-w-0 flex flex-col justify-between space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-[#0B0D0C] border border-white/[0.12] p-2 flex items-center justify-center shrink-0 overflow-hidden">
-                              <img
-                                src={sw.iconUrl || '/mirror-pos-icon.png'}
-                                alt="MirrorPOS Logo"
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="text-[11px] font-semibold text-[#B7F34A] block">
-                                Developed by MirrorBook
-                              </span>
-                              <h4 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight">
-                                {sw.title}
-                              </h4>
-                            </div>
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-12 h-12 rounded-xl bg-[#0B0D0C] border border-white/[0.12] p-2 flex items-center justify-center shrink-0 overflow-hidden">
+                            <img
+                              src={sw.iconUrl || '/mirror-pos-icon.png'}
+                              alt="MirrorPOS Logo"
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain"
+                            />
                           </div>
-
-                          <p className="text-sm font-semibold text-[#F5F7F2] leading-snug">
-                            Smart POS Software for Modern Businesses.
-                          </p>
-
-                          <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
-                            {sw.description ||
-                              'Offline-first billing, inventory management, customer & supplier ledgers, expense tracking, and analytics synced online.'}
-                          </p>
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-semibold text-[#B7F34A] block">
+                              MirrorBook
+                            </span>
+                            <h4 className="font-display text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight truncate">
+                              {sw.title}
+                            </h4>
+                          </div>
                         </div>
 
-                        <div className="pt-3 border-t border-white/[0.09] flex flex-wrap items-center gap-2.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (onOpenMirrorPOS) {
-                                onOpenMirrorPOS();
-                              } else {
-                                window.location.href = '/mirrorpos';
-                              }
-                            }}
-                            className="flex-1 min-w-[140px] min-h-[44px] py-2.5 px-5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-                          >
-                            <span>Get Access</span>
-                            <ArrowRight size={14} />
-                          </button>
-
-                          <a
-                            href={launchHref}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="min-h-[44px] py-2.5 px-4 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 whitespace-nowrap"
-                          >
-                            <span>Launch App</span>
-                            <ExternalLink size={12} />
-                          </a>
-                        </div>
+                        <span className="px-2 py-0.5 rounded-md bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[10px] font-bold text-[#B7F34A] whitespace-nowrap shrink-0">
+                          Free / ৳9,999
+                        </span>
                       </div>
+
+                      <p className="text-sm font-medium text-[#D4DBD5] leading-relaxed">
+                        Smart POS Software for Modern Businesses.
+                      </p>
+                    </div>
+
+                    <div className="pt-4 mt-5 border-t border-white/[0.09]">
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-[#A1AAA2] mb-3">
+                        <span>Free via Email</span>
+                        <span className="font-semibold text-[#F5F7F2] tabular-nums">
+                          Premium: ৳9,999
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onOpenMirrorPOS) {
+                            onOpenMirrorPOS();
+                          } else {
+                            window.location.href = '/mirrorpos';
+                          }
+                        }}
+                        className="w-full min-h-[44px] py-2.5 px-5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>Get Access</span>
+                        <ArrowRight size={14} />
+                      </button>
                     </div>
                   </div>
                 );

@@ -195,10 +195,69 @@ export async function processGetCourseLessons(
   };
 }
 
+export async function processGetCourseLessonThumbnail(input: {
+  courseId?: string;
+  lessonNumber?: number;
+}): Promise<{ status: number; contentType?: string; body?: Buffer; error?: string }> {
+  const courseId = cleanCourseId(input.courseId) || COURSE_VIDEO_EDITING_FUNDAMENTALS_ID;
+  const lessonNum = Number(input.lessonNumber);
+  if (!Number.isInteger(lessonNum) || lessonNum < 1 || lessonNum > 20) {
+    return { status: 400, error: 'Invalid lesson number.' };
+  }
+
+  let secretDoc: Record<string, any> | null = null;
+  if (isFirebaseAdminConfigured()) {
+    try {
+      const store = createFirebaseAdminStore();
+      secretDoc = await store.getDoc('productSecrets', courseId);
+    } catch {
+      secretDoc = null;
+    }
+  }
+
+  const lessons = resolveCourseLessons(courseId, secretDoc);
+  const target = lessons.find((l) => l.lessonNumber === lessonNum);
+  if (!target || target.status !== 'Available' || !target.thumbnailUrl) {
+    return { status: 404, error: 'Lesson preview thumbnail not available.' };
+  }
+
+  try {
+    const imgRes = await fetch(target.thumbnailUrl);
+    if (!imgRes.ok) {
+      return { status: 502, error: 'Could not load lesson preview thumbnail.' };
+    }
+    const arrayBuf = await imgRes.arrayBuffer();
+    return {
+      status: 200,
+      contentType: imgRes.headers.get('content-type') || 'image/jpeg',
+      body: Buffer.from(arrayBuf),
+    };
+  } catch {
+    return { status: 502, error: 'Network error fetching lesson preview thumbnail.' };
+  }
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ enrolled: false, success: false, error: 'Method not allowed. Use GET.' });
+  }
+
+  const courseId =
+    typeof req.query?.courseId === 'string' ? req.query.courseId : undefined;
+
+  // Non-sensitive preview thumbnail proxy (streams JPEG bytes without exposing video IDs)
+  if (req.query?.thumb !== undefined) {
+    const thumbResult = await processGetCourseLessonThumbnail({
+      courseId,
+      lessonNumber: Number(req.query.thumb),
+    });
+    if (thumbResult.status === 200 && thumbResult.body) {
+      res.setHeader('Content-Type', thumbResult.contentType || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      return res.status(200).send(thumbResult.body);
+    }
+    return res.status(thumbResult.status).json({ success: false, error: thumbResult.error });
   }
 
   if (!isFirebaseAdminConfigured()) {
@@ -216,9 +275,6 @@ export default async function handler(req: any, res: any) {
 
   const authHeader =
     typeof req.headers?.authorization === 'string' ? req.headers.authorization : undefined;
-
-  const courseId =
-    typeof req.query?.courseId === 'string' ? req.query.courseId : undefined;
 
   const result = await processGetCourseLessons({
     authorizationHeader: authHeader,

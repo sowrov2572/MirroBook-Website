@@ -3,6 +3,10 @@ import courseVideoEditingThumb from '../assets/images/course_video_editing_thumb
 
 export const COURSE_VIDEO_EDITING_FUNDAMENTALS_ID = 'course-video-editing-fundamentals';
 export const SOFTWARE_MIRRORPOS_ID = 'software-mirrorpos';
+export const SOFTWARE_MIRRORPOS_PREMIUM_ID = 'software-mirrorpos-premium';
+
+export const VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_URL = 'https://i.ibb.co/gbt45xMr/Video-Editing.jpg';
+export const VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_FALLBACK = courseVideoEditingThumb;
 
 export const VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN: string[] = [
   'Video Editing Fundamentals',
@@ -11,13 +15,31 @@ export const VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN: string[] = [
   'Adobe After Effects Basics',
   'Timeline and Layer Management',
   'Basic Motion Graphics',
+  'VFX & Compositing',
+  'Modern Motion Graphics',
+  'SaaS Animation',
   'Video Exporting',
 ];
 
 export const VIDEO_EDITING_FUNDAMENTALS_PUBLIC_SLOTS: CourseLessonSlot[] = [
-  { lessonNumber: 1, title: 'Lesson 01', status: 'Available' },
-  { lessonNumber: 2, title: 'Lesson 02', status: 'Available' },
-  { lessonNumber: 3, title: 'Lesson 03', status: 'Available' },
+  {
+    lessonNumber: 1,
+    title: 'Lesson 01',
+    status: 'Available',
+    thumbnailUrl: `/api/courses/lessons?courseId=${COURSE_VIDEO_EDITING_FUNDAMENTALS_ID}&thumb=1`,
+  },
+  {
+    lessonNumber: 2,
+    title: 'Lesson 02',
+    status: 'Available',
+    thumbnailUrl: `/api/courses/lessons?courseId=${COURSE_VIDEO_EDITING_FUNDAMENTALS_ID}&thumb=2`,
+  },
+  {
+    lessonNumber: 3,
+    title: 'Lesson 03',
+    status: 'Available',
+    thumbnailUrl: `/api/courses/lessons?courseId=${COURSE_VIDEO_EDITING_FUNDAMENTALS_ID}&thumb=3`,
+  },
   { lessonNumber: 4, title: 'Lesson 04', status: 'Coming Soon' },
 ];
 
@@ -27,12 +49,12 @@ export const CANONICAL_FEATURED_PRODUCTS: ProductItem[] = [
     type: 'Software',
     category: 'PC & Mac',
     title: 'MirrorPOS',
-    description: 'Smart POS software with offline-first billing, online sync, inventory, sales, expenses, and analytics.',
+    description: 'Smart POS Software for Modern Businesses.',
     price: 0,
     isFree: true,
-    priceDisplay: 'Free',
+    priceDisplay: 'Free / ৳9,999',
     iconUrl: '/mirror-pos-icon.png',
-    thumbnailUrl: 'https://i.ibb.co/XfQDsJGq/Screenshot-2026-11-16-153436.png',
+    thumbnailUrl: '/mirrorpos-shot-1.png',
     launchUrl: 'https://mirror-pos.vercel.app/',
     status: 'active',
     featured: true,
@@ -41,15 +63,16 @@ export const CANONICAL_FEATURED_PRODUCTS: ProductItem[] = [
   {
     id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
     type: 'Course',
-    category: 'After Effects & Premiere Pro',
-    title: 'Video Editing Fundamentals',
-    description: 'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.',
+    category: 'After Effects, Premiere Pro & VFX',
+    title: 'Video Editing Fundamental by Sowrov Hosen',
+    description:
+      'Learn the fundamentals of professional video editing with After Effects, Premiere Pro, and VFX workflows.',
     price: 499,
     isFree: false,
     priceDisplay: '৳499',
-    thumbnailUrl: courseVideoEditingThumb,
+    thumbnailUrl: VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_URL,
     features: VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN,
-    instructor: 'MirrorBook',
+    instructor: 'Sowrov Hosen',
     status: 'active',
     featured: true,
     createdAt: '2026-11-17',
@@ -145,15 +168,16 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
   {
     id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
     type: 'Course',
-    category: 'After Effects & Premiere Pro',
-    title: 'Video Editing Fundamentals',
-    description: 'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.',
+    category: 'After Effects, Premiere Pro & VFX',
+    title: 'Video Editing Fundamental by Sowrov Hosen',
+    description:
+      'Learn the fundamentals of professional video editing with After Effects, Premiere Pro, and VFX workflows.',
     price: 499,
     isFree: false,
     priceDisplay: '৳499',
-    thumbnailUrl: courseVideoEditingThumb,
+    thumbnailUrl: VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_URL,
     features: VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN,
-    instructor: 'MirrorBook',
+    instructor: 'Sowrov Hosen',
     status: 'active',
     featured: true,
     createdAt: '2026-11-17'
@@ -200,7 +224,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     isFree: true,
     priceDisplay: 'Free',
     iconUrl: '/mirror-pos-icon.png',
-    thumbnailUrl: 'https://i.ibb.co/XfQDsJGq/Screenshot-2026-11-16-153436.png',
+    thumbnailUrl: '/mirrorpos-shot-1.png',
     launchUrl: 'https://mirror-pos.vercel.app/',
     status: 'active',
     featured: true,

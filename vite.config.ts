@@ -11,7 +11,10 @@ import { processSubmitAndVerifyOrder } from './api/orders/submit-and-verify';
 import { processAdminApproveOrder } from './api/orders/admin-approve';
 import { processFreeSoftwareAccess } from './api/software/free-access';
 import { processSoftwareAccess } from './api/software/access';
-import { processGetCourseLessons } from './api/courses/lessons';
+import {
+  processGetCourseLessons,
+  processGetCourseLessonThumbnail,
+} from './api/courses/lessons';
 
 dotenv.config();
 
@@ -230,6 +233,23 @@ function apiDevServerPlugin(): Plugin {
           try {
             const params = new URLSearchParams(queryStr || '');
             const courseId = params.get('courseId') || undefined;
+            const thumbParam = params.get('thumb');
+            if (thumbParam !== null) {
+              const thumbRes = await processGetCourseLessonThumbnail({
+                courseId,
+                lessonNumber: Number(thumbParam),
+              });
+              if (thumbRes.status === 200 && thumbRes.body) {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', thumbRes.contentType || 'image/jpeg');
+                res.setHeader('Cache-Control', 'public, max-age=3600');
+                res.end(thumbRes.body);
+              } else {
+                sendJson(res, thumbRes.status, { success: false, error: thumbRes.error });
+              }
+              return;
+            }
+
             const result = await processGetCourseLessons({
               authorizationHeader: authHeader,
               courseId,

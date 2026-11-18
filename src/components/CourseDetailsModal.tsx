@@ -17,6 +17,7 @@ import { AppUser, CheckoutItem, CourseLessonSlot, ProductItem } from '../types';
 import {
   COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
   VIDEO_EDITING_FUNDAMENTALS_PUBLIC_SLOTS,
+  VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_FALLBACK,
   VIDEO_EDITING_FUNDAMENTALS_WHAT_YOU_LEARN,
 } from '../data/content';
 import { auth } from '../utils/firebase';
@@ -180,7 +181,7 @@ export const CourseDetailsModal: React.FC<CourseDetailsModalProps> = ({
                   {unlocked ? 'Enrolled · Lifetime Access' : 'Premium Course'}
                 </span>
                 <span className="text-[11px] text-[#A1AAA2] truncate">
-                  Adobe After Effects &amp; Adobe Premiere Pro
+                  Adobe After Effects, Adobe Premiere Pro &amp; VFX
                 </span>
               </div>
               <h2
@@ -208,10 +209,10 @@ export const CourseDetailsModal: React.FC<CourseDetailsModalProps> = ({
               <div className="space-y-1.5 min-w-0">
                 <p className="text-xs sm:text-sm text-[#F5F7F2] leading-relaxed">
                   {course.description ||
-                    'Learn the fundamentals of professional video editing with After Effects and Premiere Pro.'}
+                    'Learn the fundamentals of professional video editing with After Effects, Premiere Pro, and VFX workflows.'}
                 </p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#A1AAA2]">
-                  <span>Software: Adobe After Effects &amp; Adobe Premiere Pro</span>
+                  <span>Software: Adobe After Effects, Premiere Pro &amp; VFX</span>
                   <span>•</span>
                   <span>4 Lessons (3 Available + 1 Coming Soon)</span>
                 </div>
@@ -370,6 +371,30 @@ export const CourseDetailsModal: React.FC<CourseDetailsModalProps> = ({
                               <div className="w-8 h-8 rounded-lg bg-[#B7F34A] text-[#0B0D0C] flex items-center justify-center shadow">
                                 <Play size={13} className="fill-[#0B0D0C] ml-0.5" />
                               </div>
+                            </div>
+                          </>
+                        ) : lesson.thumbnailUrl ? (
+                          <>
+                            <img
+                              src={lesson.thumbnailUrl}
+                              alt={`${lesson.title} locked preview thumbnail`}
+                              loading="lazy"
+                              decoding="async"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (target.dataset.fallbackApplied) return;
+                                target.dataset.fallbackApplied = '1';
+                                target.src = VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_FALLBACK;
+                              }}
+                              className="w-full h-full object-cover opacity-70 group-hover:opacity-85 transition-opacity"
+                            />
+                            <div className="absolute inset-0 bg-[#0B0D0C]/45 flex flex-col items-center justify-center px-1.5">
+                              <div className="w-7 h-7 rounded-lg bg-[#0B0D0C]/90 border border-[#B7F34A]/50 flex items-center justify-center mb-1 shadow">
+                                <Lock size={13} className="text-[#B7F34A]" />
+                              </div>
+                              <span className="px-1.5 py-0.5 rounded bg-[#0B0D0C]/85 text-[9px] font-semibold text-[#F5F7F2] leading-none">
+                                Locked Preview
+                              </span>
                             </div>
                           </>
                         ) : (

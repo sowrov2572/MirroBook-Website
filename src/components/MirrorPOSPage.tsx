@@ -36,6 +36,8 @@ import { auth } from '../utils/firebase';
 interface MirrorPOSPageProps {
   onNavigateHome: () => void;
   onStartProject?: () => void;
+  onBuyPremium?: () => void;
+  isPremiumPurchased?: boolean;
   user?: AppUser | null;
   desktopDownloadUrl?: string;
 }
@@ -53,6 +55,8 @@ interface UserGuideCategory {
 export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
   onNavigateHome,
   onStartProject,
+  onBuyPremium,
+  isPremiumPurchased = false,
   user = null,
   desktopDownloadUrl,
 }) => {
@@ -376,24 +380,24 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
       id: 'pos',
       label: '01. POS Terminal & Dashboard',
       caption: 'Business Dashboard, Quick Actions, Today’s Sales, Cash, Net Profit & Cloud Sync.',
-      image: 'https://i.ibb.co/XfQDsJGq/Screenshot-2026-11-16-153436.png',
-      fallback: '/mirrorpos-shot-1.png',
+      image: '/mirrorpos-shot-1.png',
+      fallback: '/mirror-pos-icon.png',
       alt: 'MirrorPOS Business Dashboard and Quick POS Billing Terminal',
     },
     {
       id: 'inventory',
       label: '02. Inventory & Barcode',
       caption: 'Product Catalog, Barcodes, Stock Quantities & Variant Management.',
-      image: 'https://i.ibb.co/4ng8NJ7R/Screenshot-2026-11-16-153459.png',
-      fallback: '/mirrorpos-shot-2.png',
+      image: '/mirrorpos-shot-2.png',
+      fallback: '/mirrorpos-shot-1.png',
       alt: 'MirrorPOS Inventory and Barcode Stock Management Screen',
     },
     {
       id: 'analytics',
       label: '03. Reports & Ledgers',
       caption: 'Sales Reports, Expense Tracking, Customer Receivables & Supplier Payables.',
-      image: 'https://i.ibb.co/v4s6khWt/Screenshot-2026-11-16-153530.png',
-      fallback: '/mirrorpos-shot-3.png',
+      image: '/mirrorpos-shot-3.png',
+      fallback: '/mirrorpos-shot-1.png',
       alt: 'MirrorPOS Sales Reports, Expenses, and Due Ledgers',
     },
   ];
@@ -891,15 +895,37 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
 
             <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-              <a
-                href={MIRRORPOS_APP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="min-h-[44px] px-7 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
-              >
-                <span>Launch MirrorPOS</span>
-                <ExternalLink size={15} />
-              </a>
+              {accessConfirmed || isPremiumPurchased ? (
+                <a
+                  href={MIRRORPOS_APP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-h-[44px] px-7 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <span>Launch MirrorPOS</span>
+                  <ExternalLink size={15} />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => scrollToLocalSection('get-access')}
+                  className="min-h-[44px] px-7 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <Mail size={15} />
+                  <span>Get Free Access via Email</span>
+                </button>
+              )}
+
+              {onBuyPremium && !isPremiumPurchased && (
+                <button
+                  type="button"
+                  onClick={onBuyPremium}
+                  className="min-h-[44px] px-6 py-3.5 rounded-xl glossy-btn-secondary border-[#B7F34A]/40 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <Download size={14} className="text-[#B7F34A]" />
+                  <span>Buy Desktop License – ৳9,999</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -915,24 +941,26 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 onClick={() => scrollToLocalSection('install-mirrorpos')}
                 className="min-h-[44px] px-5 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Download size={14} className="text-[#B7F34A]" />
+                <Laptop size={14} className="text-[#B7F34A]" />
                 <span>Install Guide</span>
               </button>
             </div>
           </div>
 
-          {/* Right: Free Access Registration Form (No Checkout / Real Email Confirmation) */}
+          {/* Right: Free Email Access OR ৳9,999 Premium Direct Purchase */}
           <div id="get-access" className="lg:col-span-5 scroll-mt-24">
             <div className="glossy-card p-6 sm:p-7 rounded-2xl border border-[#B7F34A]/30 space-y-5">
               <div className="space-y-1.5 border-b border-white/[0.09] pb-4">
-                <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
-                  Free Lifetime Access
-                </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
+                    Free via Email · Premium ৳9,999
+                  </span>
+                </div>
                 <h2 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">
                   Get MirrorPOS Access
                 </h2>
                 <p className="text-xs text-[#A1AAA2] leading-relaxed">
-                  No payment or checkout required. Enter your details to register for Lifetime Access and receive official MirrorPOS launch and User Guide links by email.
+                  For free access, register with your email below to receive your MirrorPOS access link directly in Gmail. Or purchase the full ৳9,999 desktop license for instant direct unlock.
                 </p>
               </div>
 
@@ -943,20 +971,26 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 </div>
               )}
 
-              {accessConfirmed ? (
+              {accessConfirmed || isPremiumPurchased ? (
                 <div className="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 size={20} className="text-[#B7F34A] shrink-0 mt-0.5" />
                     <div className="space-y-1 min-w-0">
                       <h3 className="text-sm font-bold text-[#F5F7F2]">
-                        Access Confirmed &amp; Email Sent
+                        {isPremiumPurchased
+                          ? 'Premium License Verified & Ready'
+                          : 'Access Confirmed & Email Sent'}
                       </h3>
                       <p className="text-xs text-[#D4DBD5] leading-relaxed break-words">
-                        {accessConfirmed.message}
+                        {isPremiumPurchased
+                          ? 'Your MirrorPOS Desktop Lifetime License (৳9,999) is active. Launch MirrorPOS below anytime.'
+                          : accessConfirmed?.message}
                       </p>
-                      <p className="text-[11px] font-mono text-[#B7F34A]">
-                        Reference ID: {accessConfirmed.referenceId}
-                      </p>
+                      {accessConfirmed?.referenceId && (
+                        <p className="text-[11px] font-mono text-[#B7F34A]">
+                          Reference ID: {accessConfirmed.referenceId}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1038,6 +1072,24 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   </button>
                 </form>
               )}
+
+              {/* Direct Paid Option (৳9,999) */}
+              {onBuyPremium && !isPremiumPurchased && (
+                <div className="pt-4 border-t border-white/[0.09] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-[#A1AAA2]">Direct Desktop Purchase (Instant Launch)</span>
+                    <span className="font-display font-bold text-[#F5F7F2] tabular-nums">৳9,999</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onBuyPremium}
+                    className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold glossy-btn-secondary border-[#B7F34A]/35 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Download size={14} className="text-[#B7F34A]" />
+                    <span>Purchase &amp; Launch MirrorPOS – ৳9,999</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -1081,15 +1133,15 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </div>
         </section>
 
-        {/* 3. Software Screenshots */}
-        <section id="screenshots" className="mb-16 pt-12 border-t border-white/[0.09]">
+        {/* 3. Software Preview */}
+        <section id="software-preview" className="mb-16 pt-12 border-t border-white/[0.09]">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-[#B7F34A] block mb-1.5">
-                Software Preview
+                MirrorPOS Interface
               </span>
               <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-                Screenshots
+                Software Preview
               </h2>
             </div>
 

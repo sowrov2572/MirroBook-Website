@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CheckoutItem, TutorialItem, ProductItem } from '../types';
-import { COURSE_VIDEO_EDITING_FUNDAMENTALS_ID } from '../data/content';
+import {
+  COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
+  VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_FALLBACK,
+} from '../data/content';
 import { Play, Clock, ArrowRight, Video, ExternalLink, Maximize2, X, GraduationCap } from 'lucide-react';
 
 interface CoursesAndTutorialsProps {
@@ -204,14 +207,22 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                               <div className="aspect-video w-full rounded-xl bg-[#121614] border border-white/[0.09] mb-4 overflow-hidden relative">
                                 <img
                                   src={course.thumbnailUrl}
-                                  alt={`${course.title} – MirrorBook Premium Course`}
+                                  alt={`${course.title} – MirrorBook Course`}
                                   loading="lazy"
                                   decoding="async"
                                   referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (target.dataset.fallbackApplied) return;
+                                    target.dataset.fallbackApplied = '1';
+                                    target.src = VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_FALLBACK;
+                                  }}
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-[#0B0D0C]/90 border border-[#B7F34A]/40 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
-                                  Premium Course
+                                  {course.id === COURSE_VIDEO_EDITING_FUNDAMENTALS_ID
+                                    ? 'Video Editing Fundamental'
+                                    : 'Premium Course'}
                                 </span>
                               </div>
                             ) : (
