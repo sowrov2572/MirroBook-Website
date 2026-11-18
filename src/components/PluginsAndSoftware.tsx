@@ -52,11 +52,8 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
         {/* Unified Top Header + Easy Library Switcher */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 sm:mb-12 pb-6 border-b border-white/[0.09]">
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
-              MirrorBook Product Ecosystem
-            </span>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
-              Plugins &amp; Software
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight uppercase">
+              PLUGINS &amp; SOFTWARE
             </h2>
             <p className="text-xs sm:text-sm text-[#A1AAA2] mt-2 max-w-2xl leading-relaxed">
               Dedicated libraries for creative editing extensions and standalone MirrorBook business &amp; creator software.

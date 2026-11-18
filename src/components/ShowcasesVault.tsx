@@ -17,10 +17,7 @@ export const ShowcasesVault: React.FC<ShowcasesVaultProps> = () => {
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="glossy-card p-5 sm:p-8 lg:p-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl space-y-2.5 min-w-0">
-            <span className="text-xs font-semibold text-[#B7F34A] block">
-              Selected Client Work
-            </span>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight">
               Portfolio
             </h2>
             <p className="text-sm sm:text-base text-[#A1AAA2] font-normal leading-relaxed">

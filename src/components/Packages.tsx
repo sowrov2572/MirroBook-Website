@@ -4,7 +4,6 @@ import {
   Film,
   CheckCircle2,
   ArrowRight,
-  Sliders,
   Sparkles,
   ChevronDown,
   ChevronUp,
@@ -76,11 +75,8 @@ export const Packages: React.FC<PackagesProps> = ({
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-10 pb-5 border-b border-white/[0.09]">
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
-              Reflecting Creativity · MirrorBook
-            </span>
-            <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight break-words">
-              Monthly Service Packages
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight break-words uppercase">
+              MONTHLY SERVICES
             </h2>
           </div>
 
@@ -94,35 +90,37 @@ export const Packages: React.FC<PackagesProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-stretch">
           {/* Package 01: Monthly Graphic Design */}
           <div className="glossy-card glossy-card-hover p-5 sm:p-7 lg:p-8 min-w-0 flex flex-col justify-between h-full">
-            <div className="min-w-0">
-              {/* Quiet Inline Metadata Row (No Badge Sandwich) */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-xs">
+            <div className="min-w-0 flex flex-col">
+              {/* Quiet Inline Metadata Row */}
+              <div className="flex items-center gap-2 mb-4 text-xs">
                 <span className="inline-flex items-center gap-2 font-semibold text-[#F5F7F2]">
                   <Palette size={15} className="text-[#B7F34A] shrink-0" />
                   <span>Package 01</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[#B7F34A] font-medium">
-                  <Sliders size={12} className="shrink-0" />
-                  <span>Customizable</span>
-                </span>
               </div>
 
-              <h3 className="font-display text-xl min-[375px]:text-2xl sm:text-3xl font-bold text-[#F5F7F2] mb-2 break-words">
-                Monthly Graphic Design
-              </h3>
+              <div className="lg:min-h-[116px] flex flex-col justify-start">
+                <h3 className="font-display text-xl min-[375px]:text-2xl sm:text-3xl font-bold text-[#F5F7F2] mb-2 break-words">
+                  Monthly Graphic Design
+                </h3>
 
-              <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-5 sm:mb-6">
-                4 custom designs/day (~120 designs/month) tailored to your brand identity and social media growth.
-              </p>
+                <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-5 sm:mb-6">
+                  4 custom designs/day (~120 designs/month) tailored to your brand identity and social media growth.
+                </p>
+              </div>
 
-              {/* Price Lockup */}
-              <div className="p-4 sm:p-5 rounded-xl bg-[#0B0D0C]/75 border border-white/[0.09] mb-5 sm:mb-6">
-                <span className="text-xs text-[#A1AAA2] block mb-1 font-medium">
-                  Monthly Subscription
-                </span>
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-xs text-[#A1AAA2] font-medium">Starting From</span>
-                  <span className="font-display text-2xl min-[360px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight tabular-nums">
+              {/* Aligned Price Lockup */}
+              <div className="p-4 sm:p-5 rounded-xl bg-[#0B0D0C]/80 border border-white/[0.09] mb-5 sm:mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#B7F34A] block">
+                    Monthly Subscription
+                  </span>
+                  <span className="text-xs text-[#A1AAA2] font-medium block mt-0.5">
+                    Starting From
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1.5 shrink-0">
+                  <span className="font-display text-2xl min-[360px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight tabular-nums leading-none">
                     ৳25,000
                   </span>
                   <span className="text-xs text-[#B7F34A] font-semibold">/ month</span>
@@ -177,63 +175,50 @@ export const Packages: React.FC<PackagesProps> = ({
                 <ArrowRight size={14} />
               </button>
 
-              <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setExpandedDesign((prev) => !prev)}
-                  className="w-full min-h-[44px] py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>{expandedDesign ? 'Hide Details' : 'More'}</span>
-                  {expandedDesign ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onOpenCustomizer) {
-                      onOpenCustomizer('Monthly Graphic Design');
-                    }
-                  }}
-                  className="w-full min-h-[44px] py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Sliders size={13} className="text-[#B7F34A]" />
-                  <span>Customize</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setExpandedDesign((prev) => !prev)}
+                className="w-full min-h-[44px] py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>{expandedDesign ? 'Hide Details' : 'More'}</span>
+                {expandedDesign ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
             </div>
           </div>
 
           {/* Package 02: Monthly Video Editing & Reels */}
           <div className="glossy-card glossy-card-hover p-5 sm:p-7 lg:p-8 min-w-0 flex flex-col justify-between h-full">
-            <div className="min-w-0">
+            <div className="min-w-0 flex flex-col">
               {/* Quiet Inline Metadata Row */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-xs">
+              <div className="flex items-center gap-2 mb-4 text-xs">
                 <span className="inline-flex items-center gap-2 font-semibold text-[#F5F7F2]">
                   <Film size={15} className="text-[#B7F34A] shrink-0" />
                   <span>Package 02</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[#B7F34A] font-medium">
-                  <Sliders size={12} className="shrink-0" />
-                  <span>Customizable</span>
-                </span>
               </div>
 
-              <h3 className="font-display text-xl min-[375px]:text-2xl sm:text-3xl font-bold text-[#F5F7F2] mb-2 break-words">
-                Monthly Video Editing &amp; Reels
-              </h3>
+              <div className="lg:min-h-[116px] flex flex-col justify-start">
+                <h3 className="font-display text-xl min-[375px]:text-2xl sm:text-3xl font-bold text-[#F5F7F2] mb-2 break-words">
+                  Monthly Video Editing &amp; Reels
+                </h3>
 
-              <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-5 sm:mb-6">
-                2 edited reels/day (~60 reels/month) with motion graphics, captions, sound design, and color grading.
-              </p>
+                <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-5 sm:mb-6">
+                  2 edited reels/day (~60 reels/month) with motion graphics, captions, sound design, and color grading.
+                </p>
+              </div>
 
-              {/* Price Lockup */}
-              <div className="p-4 sm:p-5 rounded-xl bg-[#0B0D0C]/75 border border-white/[0.09] mb-5 sm:mb-6">
-                <span className="text-xs text-[#A1AAA2] block mb-1 font-medium">
-                  Monthly Subscription
-                </span>
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-xs text-[#A1AAA2] font-medium">Starting From</span>
-                  <span className="font-display text-2xl min-[360px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight tabular-nums">
+              {/* Aligned Price Lockup */}
+              <div className="p-4 sm:p-5 rounded-xl bg-[#0B0D0C]/80 border border-white/[0.09] mb-5 sm:mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#B7F34A] block">
+                    Monthly Subscription
+                  </span>
+                  <span className="text-xs text-[#A1AAA2] font-medium block mt-0.5">
+                    Starting From
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1.5 shrink-0">
+                  <span className="font-display text-2xl min-[360px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight tabular-nums leading-none">
                     ৳25,000
                   </span>
                   <span className="text-xs text-[#B7F34A] font-semibold">/ month</span>
@@ -288,29 +273,14 @@ export const Packages: React.FC<PackagesProps> = ({
                 <ArrowRight size={14} />
               </button>
 
-              <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setExpandedVideo((prev) => !prev)}
-                  className="w-full min-h-[44px] py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>{expandedVideo ? 'Hide Details' : 'More'}</span>
-                  {expandedVideo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onOpenCustomizer) {
-                      onOpenCustomizer('Monthly Video Editing & Reels');
-                    }
-                  }}
-                  className="w-full min-h-[44px] py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Sliders size={13} className="text-[#B7F34A]" />
-                  <span>Customize</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setExpandedVideo((prev) => !prev)}
+                className="w-full min-h-[44px] py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>{expandedVideo ? 'Hide Details' : 'More'}</span>
+                {expandedVideo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
             </div>
           </div>
         </div>

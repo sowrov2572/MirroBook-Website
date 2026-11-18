@@ -16,11 +16,8 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
         {/* Aligned Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-5 border-b border-white/[0.09]">
           <div>
-            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
-              Studio Capabilities
-            </span>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
-              Services
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight uppercase">
+              SERVICES
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-[#A1AAA2] max-w-xl leading-relaxed">

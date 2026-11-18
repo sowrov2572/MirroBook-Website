@@ -230,6 +230,17 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
+      if (id === 'get-access') {
+        setTimeout(() => {
+          const nameInput = document.getElementById('mirrorpos-full-name') as HTMLInputElement | null;
+          const emailInput = document.getElementById('mirrorpos-email') as HTMLInputElement | null;
+          if (nameInput && !nameInput.value.trim()) {
+            nameInput.focus({ preventScroll: true });
+          } else if (emailInput) {
+            emailInput.focus({ preventScroll: true });
+          }
+        }, 300);
+      }
     }
   };
 
@@ -894,13 +905,13 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               </dl>
             </div>
 
-            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {accessConfirmed || isPremiumPurchased ? (
                 <a
                   href={MIRRORPOS_APP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-[44px] px-7 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
+                  className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
                   <span>Launch MirrorPOS</span>
                   <ExternalLink size={15} />
@@ -909,41 +920,28 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 <button
                   type="button"
                   onClick={() => scrollToLocalSection('get-access')}
-                  className="min-h-[44px] px-7 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0"
+                  className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
                   <Mail size={15} />
-                  <span>Get Free Access via Email</span>
+                  <span>Get Access via Email</span>
                 </button>
               )}
 
-              {onBuyPremium && !isPremiumPurchased && (
+              {onBuyPremium && !isPremiumPurchased ? (
                 <button
                   type="button"
                   onClick={onBuyPremium}
-                  className="min-h-[44px] px-6 py-3.5 rounded-xl glossy-btn-secondary border-[#B7F34A]/40 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                  className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn-secondary border-[#B7F34A]/45 hover:border-[#B7F34A] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
-                  <Download size={14} className="text-[#B7F34A]" />
-                  <span>Buy Desktop License – ৳9,999</span>
+                  <Download size={15} className="text-[#B7F34A]" />
+                  <span>Desktop License - ৳9,999</span>
                 </button>
+              ) : (
+                <div className="w-full min-h-[46px] px-6 py-3.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/35 text-[#B7F34A] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap">
+                  <ShieldCheck size={15} />
+                  <span>Desktop License Active</span>
+                </div>
               )}
-
-              <button
-                type="button"
-                onClick={() => scrollToLocalSection('user-guide')}
-                className="min-h-[44px] px-6 py-3.5 rounded-xl glossy-btn-secondary text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
-              >
-                <BookOpen size={14} className="text-[#B7F34A]" />
-                <span>Complete User Guide</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => scrollToLocalSection('install-mirrorpos')}
-                className="min-h-[44px] px-5 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
-              >
-                <Laptop size={14} className="text-[#B7F34A]" />
-                <span>Install Guide</span>
-              </button>
             </div>
           </div>
 
@@ -1029,7 +1027,10 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                       required
                       minLength={2}
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => {
+                        setFullName(e.target.value);
+                        if (accessError) setAccessError('');
+                      }}
                       placeholder="Enter your full name"
                       className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
                     />
@@ -1047,7 +1048,10 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                       type="email"
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (accessError) setAccessError('');
+                      }}
                       placeholder="you@business.com"
                       className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
                     />
@@ -1066,7 +1070,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                     ) : (
                       <>
                         <Mail size={14} />
-                        <span>Get Free Access via Email</span>
+                        <span>Get Access via Email</span>
                       </>
                     )}
                   </button>
@@ -1090,6 +1094,43 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </section>
+
+        {/* Secondary Resources: Complete User Guide & Install Guide */}
+        <section
+          aria-label="MirrorPOS Documentation Resources"
+          className="mb-14 -mt-4"
+        >
+          <div className="glossy-card p-4 sm:p-5 rounded-2xl border border-white/[0.09] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-0.5 min-w-0">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[#B7F34A]">
+                Guides &amp; Setup Resources
+              </h2>
+              <p className="text-xs text-[#A1AAA2]">
+                Explore step-by-step operating manuals and Windows desktop installation instructions.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => scrollToLocalSection('user-guide')}
+                className="min-h-[42px] px-5 py-2.5 rounded-xl glossy-btn-secondary text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+              >
+                <BookOpen size={14} className="text-[#B7F34A]" />
+                <span>Complete User Guide</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollToLocalSection('install-mirrorpos')}
+                className="min-h-[42px] px-5 py-2.5 rounded-xl glossy-btn-secondary text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+              >
+                <Laptop size={14} className="text-[#B7F34A]" />
+                <span>Install Guide</span>
+              </button>
             </div>
           </div>
         </section>

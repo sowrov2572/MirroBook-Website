@@ -56,11 +56,8 @@ export const SoftwareStore: React.FC<SoftwareStoreProps> = ({
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pb-5 border-b border-white/[0.09]">
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
-              MirrorBook Software Products
-            </span>
-            <h3 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-              Software Library
+            <h3 className="font-display text-2xl sm:text-3xl font-bold text-[#B7F34A] tracking-tight uppercase">
+              SOFTWARE LIBRARY
             </h3>
             <p className="text-xs sm:text-sm text-[#A1AAA2] mt-1.5 max-w-xl leading-relaxed">
               Explore powerful software solutions developed by MirrorBook.

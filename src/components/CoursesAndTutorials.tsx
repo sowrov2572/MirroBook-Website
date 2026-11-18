@@ -89,11 +89,8 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-10 pb-5 border-b border-white/[0.09]">
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
-              Free Tutorials &amp; Masterclasses
-            </span>
-            <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F5F7F2] tracking-tight">
-              Courses &amp; Tutorials
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight uppercase">
+              COURSES &amp; TUTORIALS
             </h2>
           </div>
 

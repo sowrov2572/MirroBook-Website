@@ -289,13 +289,24 @@ export function buildFreeSoftwareEmailHtml(params: {
   };
 }
 
+const DEFAULT_APPS_SCRIPT_INQUIRY_URL =
+  'https://script.google.com/macros/s/AKfycbySGdTFlRdWFg2VM0AeO-Jw1AiPvAPF0v8d7y82KpKIJBYrXJ8OCWHIqk5Snawqo1Xl4A/exec';
+
+interface FreeSoftwareMailPayload extends EmailDispatchPayload {
+  recipientName: string;
+  productId: string;
+  productTitle: string;
+  launchUrl: string;
+  referenceId: string;
+}
+
 async function sendViaGmailSmtp(payload: EmailDispatchPayload): Promise<void> {
   const gmailUser = process.env.GMAIL_USER?.trim();
   const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.trim();
 
   if (!gmailUser || !gmailAppPassword) {
     throw new Error(
-      'Email delivery service is not configured on the server (missing GMAIL_USER or GMAIL_APP_PASSWORD).'
+      'SMTP credentials are not configured (missing GMAIL_USER or GMAIL_APP_PASSWORD).'
     );
   }
 
@@ -316,6 +327,109 @@ async function sendViaGmailSmtp(payload: EmailDispatchPayload): Promise<void> {
     text: payload.text,
     html: payload.html,
   });
+}
+
+async function sendViaAppsScriptAutomation(payload: FreeSoftwareMailPayload): Promise<void> {
+  const targetUrl =
+    process.env.APPS_SCRIPT_INQUIRY_URL?.trim() || DEFAULT_APPS_SCRIPT_INQUIRY_URL;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const resp = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'software-access',
+        name: payload.recipientName,
+        email: payload.to,
+        service: `${payload.productTitle} (Lifetime Access)`,
+        subject: payload.subject,
+        message: payload.text,
+        html: payload.html,
+        htmlBody: payload.html,
+        productId: payload.productId,
+        productTitle: payload.productTitle,
+        launchUrl: payload.launchUrl,
+        userGuideUrl: 'https://mirrorbook.site/mirrorpos#user-guide',
+        referenceId: payload.referenceId,
+      }),
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const rawText = await resp.text();
+    let parsed: Record<string, any> | null = null;
+    try {
+      parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      parsed = null;
+    }
+
+    if (!resp.ok) {
+      throw new Error(
+        parsed?.error ||
+          parsed?.message ||
+          `Email automation endpoint returned HTTP ${resp.status}.`
+      );
+    }
+
+    if (parsed && (parsed.success === false || parsed.status === 'error' || parsed.result === 'error')) {
+      throw new Error(
+        parsed.error ||
+          parsed.message ||
+          'The email automation service could not send your access confirmation email.'
+      );
+    }
+
+    const lowerText = rawText.toLowerCase();
+    if (
+      !parsed &&
+      (lowerText.includes('script function not found') ||
+        lowerText.includes('authorization is required') ||
+        lowerText.includes('typeerror:') ||
+        lowerText.includes('referenceerror:') ||
+        lowerText.includes('exception:'))
+    ) {
+      throw new Error('The email automation service reported a script execution error.');
+    }
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === 'AbortError') {
+      throw new Error('The email automation service timed out. Please try again.');
+    }
+    throw err instanceof Error
+      ? err
+      : new Error('Unable to connect to the email automation endpoint.');
+  }
+}
+
+async function dispatchFreeSoftwareEmail(payload: FreeSoftwareMailPayload): Promise<void> {
+  const hasSmtp = Boolean(process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim());
+
+  if (hasSmtp) {
+    try {
+      await sendViaGmailSmtp(payload);
+      return;
+    } catch (smtpErr: unknown) {
+      // Fallback to MirrorBook Apps Script Gmail automation if SMTP transiently fails
+      try {
+        await sendViaAppsScriptAutomation(payload);
+        return;
+      } catch (scriptErr: unknown) {
+        const smtpMsg = smtpErr instanceof Error ? smtpErr.message : 'SMTP dispatch failed';
+        const scriptMsg = scriptErr instanceof Error ? scriptErr.message : 'Automation dispatch failed';
+        throw new Error(`Unable to send confirmation email (${smtpMsg}; ${scriptMsg}).`);
+      }
+    }
+  }
+
+  await sendViaAppsScriptAutomation(payload);
 }
 
 export async function processFreeSoftwareAccess(
@@ -346,7 +460,7 @@ export async function processFreeSoftwareAccess(
     return { status: 400, data: { success: false, error: 'Invalid request body.' } };
   }
 
-  // Optional cryptographic Firebase ID Token check
+  // Optional cryptographic Firebase ID Token check (non-blocking if user submits email directly)
   let verifiedUser: VerifiedFirebaseToken | null = null;
   if (input.authorizationHeader && input.authorizationHeader.startsWith('Bearer ')) {
     const token = input.authorizationHeader.slice(7).trim();
@@ -374,7 +488,8 @@ export async function processFreeSoftwareAccess(
     };
   }
 
-  const rawEmail = verifiedUser?.email || cleanPlainText(payload.email, 254);
+  const submittedEmail = cleanPlainText(payload.email, 254);
+  const rawEmail = submittedEmail || verifiedUser?.email || '';
   const targetEmail = rawEmail.toLowerCase().trim();
   if (!targetEmail || !isValidEmail(targetEmail)) {
     return {
@@ -384,7 +499,7 @@ export async function processFreeSoftwareAccess(
   }
 
   const recipientName =
-    cleanPlainText(payload.name, 120) ||
+    cleanPlainText(payload.name || payload.fullName, 120) ||
     cleanPlainText(verifiedUser?.name || '', 120) ||
     targetEmail.split('@')[0] ||
     'Creator';
@@ -398,7 +513,7 @@ export async function processFreeSoftwareAccess(
       data: {
         success: false,
         duplicate: true,
-        error: `Download link was already sent to ${targetEmail} just now. Please check your inbox or wait a minute before requesting again.`,
+        error: `Access confirmation was already sent to ${targetEmail} just now. Please check your inbox or wait a minute before requesting again.`,
       },
     };
   }
@@ -409,7 +524,7 @@ export async function processFreeSoftwareAccess(
       data: {
         success: false,
         inFlight: true,
-        error: 'A download request for this email is already being processed.',
+        error: 'An access request for this email is already being processed.',
       },
     };
   }
@@ -417,26 +532,25 @@ export async function processFreeSoftwareAccess(
   inFlightRequests.add(dedupKey);
 
   try {
-    let store: AdminStore;
-    try {
-      store = deps.store || createFirebaseAdminStore();
-    } catch (err: unknown) {
-      return {
-        status: 503,
-        data: {
-          success: false,
-          error:
-            err instanceof Error
-              ? err.message
-              : 'Server database configuration is not initialized.',
-        },
-      };
+    let store: AdminStore | null = deps.store || null;
+    if (!store && isFirebaseAdminConfigured()) {
+      try {
+        store = createFirebaseAdminStore();
+      } catch {
+        store = null;
+      }
     }
 
     const canonicalFallback = getServerProductFallback(productId);
+    let firestoreProduct: Record<string, any> | null = null;
+    if (store) {
+      firestoreProduct = await store.getDoc('products', productId).catch(() => null);
+    }
+
     const productDoc =
-      (await store.getDoc('products', productId)) ||
+      firestoreProduct ||
       (canonicalFallback && canonicalFallback.type === 'Software' ? canonicalFallback : null);
+
     if (!productDoc) {
       return {
         status: 404,
@@ -466,7 +580,9 @@ export async function processFreeSoftwareAccess(
       };
     }
 
-    const secretDoc = await store.getDoc('productSecrets', productId);
+    const secretDoc = store
+      ? await store.getDoc('productSecrets', productId).catch(() => null)
+      : null;
     const secretDownloadUrl =
       secretDoc && typeof secretDoc.protectedUrl === 'string' && isSafeHttpUrl(secretDoc.protectedUrl)
         ? secretDoc.protectedUrl.trim()
@@ -474,6 +590,8 @@ export async function processFreeSoftwareAccess(
     const publicLaunchUrl =
       typeof productDoc.launchUrl === 'string' && isSafeHttpUrl(productDoc.launchUrl)
         ? productDoc.launchUrl.trim()
+        : canonicalFallback?.launchUrl && isSafeHttpUrl(canonicalFallback.launchUrl)
+        ? canonicalFallback.launchUrl.trim()
         : '';
 
     const primaryDownloadUrl = secretDownloadUrl || publicLaunchUrl;
@@ -496,6 +614,7 @@ export async function processFreeSoftwareAccess(
       .toString('hex')
       .toUpperCase()}`;
 
+    const resolvedLaunchUrl = publicLaunchUrl || primaryDownloadUrl;
     const emailContent = buildFreeSoftwareEmailHtml({
       recipientName,
       productId,
@@ -503,18 +622,31 @@ export async function processFreeSoftwareAccess(
       productDescription,
       iconUrl,
       downloadUrl: primaryDownloadUrl,
-      launchUrl: publicLaunchUrl || primaryDownloadUrl,
+      launchUrl: resolvedLaunchUrl,
       referenceId,
     });
 
-    const mailer = deps.sendMailFn || sendViaGmailSmtp;
     try {
-      await mailer({
-        to: targetEmail,
-        subject: emailContent.subject,
-        text: emailContent.text,
-        html: emailContent.html,
-      });
+      if (deps.sendMailFn) {
+        await deps.sendMailFn({
+          to: targetEmail,
+          subject: emailContent.subject,
+          text: emailContent.text,
+          html: emailContent.html,
+        });
+      } else {
+        await dispatchFreeSoftwareEmail({
+          to: targetEmail,
+          subject: emailContent.subject,
+          text: emailContent.text,
+          html: emailContent.html,
+          recipientName,
+          productId,
+          productTitle,
+          launchUrl: resolvedLaunchUrl,
+          referenceId,
+        });
+      }
     } catch (mailErr: unknown) {
       const msg =
         mailErr instanceof Error ? mailErr.message : 'Unable to send software access email.';
@@ -531,32 +663,34 @@ export async function processFreeSoftwareAccess(
 
     const sentAtIso = new Date().toISOString();
 
-    // Best-effort server-side registration & delivery log (never fakes delivery)
-    store
-      .setDoc('softwareAccessRequests', referenceId, {
-        id: referenceId,
-        productId,
-        productTitle,
-        accessType: 'Lifetime Access',
-        fullName: recipientName,
-        email: targetEmail,
-        uid: verifiedUser?.uid || null,
-        emailDelivered: true,
-        registeredAt: sentAtIso,
-      })
-      .catch(() => {});
+    // Best-effort server-side registration & delivery log when Admin SDK is available
+    if (store) {
+      store
+        .setDoc('softwareAccessRequests', referenceId, {
+          id: referenceId,
+          productId,
+          productTitle,
+          accessType: 'Lifetime Access',
+          fullName: recipientName,
+          email: targetEmail,
+          uid: verifiedUser?.uid || null,
+          emailDelivered: true,
+          registeredAt: sentAtIso,
+        })
+        .catch(() => {});
 
-    store
-      .setDoc('softwareDeliveryLogs', referenceId, {
-        id: referenceId,
-        productId,
-        productTitle,
-        email: targetEmail,
-        name: recipientName,
-        uid: verifiedUser?.uid || null,
-        sentAt: sentAtIso,
-      })
-      .catch(() => {});
+      store
+        .setDoc('softwareDeliveryLogs', referenceId, {
+          id: referenceId,
+          productId,
+          productTitle,
+          email: targetEmail,
+          name: recipientName,
+          uid: verifiedUser?.uid || null,
+          sentAt: sentAtIso,
+        })
+        .catch(() => {});
+    }
 
     return {
       status: 200,
@@ -565,7 +699,7 @@ export async function processFreeSoftwareAccess(
         referenceId,
         email: targetEmail,
         productTitle,
-        launchUrl: publicLaunchUrl || primaryDownloadUrl,
+        launchUrl: resolvedLaunchUrl,
         message: `${productTitle} access details have been sent to ${targetEmail}.`,
       },
     };
@@ -578,13 +712,6 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ success: false, error: 'Method not allowed. Use POST.' });
-  }
-
-  if (!isFirebaseAdminConfigured()) {
-    return res.status(503).json({
-      success: false,
-      error: 'Firebase Admin SDK credentials are not configured on server.',
-    });
   }
 
   const clientIp =

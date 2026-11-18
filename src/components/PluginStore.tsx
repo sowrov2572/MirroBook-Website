@@ -65,11 +65,8 @@ export const PluginStore: React.FC<PluginStoreProps> = ({
         {/* Aligned Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pb-5 border-b border-white/[0.09]">
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-[#B7F34A] block mb-2">
-              Creator Extensions
-            </span>
-            <h3 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-              Plugin Library
+            <h3 className="font-display text-2xl sm:text-3xl font-bold text-[#B7F34A] tracking-tight uppercase">
+              PLUGIN LIBRARY
             </h3>
             <p className="text-xs sm:text-sm text-[#A1AAA2] mt-1.5 max-w-xl leading-relaxed">
               Discover premium plugins, extensions and creative tools.
