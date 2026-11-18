@@ -3,26 +3,35 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://mirrorbook.site/</loc>
+    <lastmod>2026-11-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
     <image:image>
       <image:loc>https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png</image:loc>
       <image:title>MirrorBook Official Logo</image:title>
-      <image:caption>Official logo of MirrorBook Creative Agency</image:caption>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://mirrorbook.site/sowrov-hosen</loc>
-    <image:image>
-      <image:loc>https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg</image:loc>
-      <image:title>Sowrov Hosen, Founder of MirrorBook</image:title>
-      <image:caption>Sowrov Hosen, Founder of MirrorBook</image:caption>
+      <image:caption>Official logo of MirrorBook Creative Agency and Digital Solutions Brand</image:caption>
     </image:image>
   </url>
   <url>
     <loc>https://mirrorbook.site/mirrorpos</loc>
+    <lastmod>2026-11-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
     <image:image>
       <image:loc>https://mirrorbook.site/mirror-pos-icon.png</image:loc>
       <image:title>MirrorPOS Official App Icon</image:title>
-      <image:caption>MirrorPOS Point of Sale software by MirrorBook</image:caption>
+      <image:caption>MirrorPOS Smart POS Software for Modern Businesses by MirrorBook</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://mirrorbook.site/sowrov-hosen</loc>
+    <lastmod>2026-11-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg</image:loc>
+      <image:title>Sowrov Hosen, Founder of MirrorBook</image:title>
+      <image:caption>Sowrov Hosen, Founder of MirrorBook in Bangladesh</image:caption>
     </image:image>
   </url>
 </urlset>

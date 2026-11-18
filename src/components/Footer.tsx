@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Reflecting Creativity
             </p>
             <p className="text-sm text-[#A1AAA2] max-w-sm leading-relaxed pt-1 font-normal">
-              Full-service digital studio combining high-impact video production, bespoke brand identity systems, and custom AI software design.
+              MirrorBook is a creative agency in Bangladesh offering graphic design, video editing, motion graphics, digital marketing, web development, and modern software solutions.
             </p>
           </div>
 
@@ -126,19 +126,54 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <a
-                  href="https://twitter.com"
+                  href="https://www.facebook.com/profile.php?id=61557704393608"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="MirrorBook Official Facebook Page"
                   className="hover:text-[#B7F34A] transition-colors"
                 >
-                  X (Twitter)
+                  Facebook
                 </a>
               </li>
               <li>
                 <a
-                  href="https://youtube.com"
+                  href="https://www.instagram.com/mirror.book/"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="MirrorBook Official Instagram Profile"
+                  className="hover:text-[#B7F34A] transition-colors"
+                >
+                  Instagram
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.tiktok.com/@mirror__book"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="MirrorBook Official TikTok Profile"
+                  className="hover:text-[#B7F34A] transition-colors"
+                >
+                  TikTok
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.linkedin.com/company/mirrorbook/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="MirrorBook Official LinkedIn Page"
+                  className="hover:text-[#B7F34A] transition-colors"
+                >
+                  LinkedIn
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.youtube.com/@MirrorBook_Offical"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="MirrorBook Official YouTube Channel"
                   className="hover:text-[#B7F34A] transition-colors"
                 >
                   YouTube
@@ -146,22 +181,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <a
-                  href="https://discord.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-[#B7F34A] transition-colors"
+                  href="mailto:mirrorbook.site@gmail.com"
+                  className="hover:text-[#B7F34A] transition-colors break-all"
                 >
-                  Discord
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-[#B7F34A] transition-colors"
-                >
-                  LinkedIn
+                  mirrorbook.site@gmail.com
                 </a>
               </li>
             </ul>

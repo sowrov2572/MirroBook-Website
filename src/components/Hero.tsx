@@ -14,8 +14,11 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
       <div className="absolute inset-0 z-0">
         <img
           src="https://i.ibb.co/dsxmjMSP/mirrorbook.jpg"
-          alt="MirrorBook – Creative Agency in Bangladesh Hero Banner"
+          alt="MirrorBook – Creative Agency and Digital Solutions Brand in Bangladesh"
+          width={1920}
+          height={1080}
           loading="eager"
+          fetchPriority="high"
           decoding="async"
           referrerPolicy="no-referrer"
           onError={(e) => {
@@ -48,7 +51,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
 
           {/* 3. Description */}
           <p className="text-sm sm:text-lg text-[#A1AAA2] font-normal leading-relaxed max-w-2xl mx-auto">
-            MirrorBook is a creative agency in Bangladesh providing graphic design, video editing, motion graphics, digital marketing, and modern web development.
+            MirrorBook is a creative agency in Bangladesh offering graphic design, video editing, motion graphics, digital marketing, web development, and modern software solutions.
           </p>
 
           {/* 4. Three Existing Action Buttons */}
@@ -87,7 +90,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
         {/* 5. Four Existing Metric Cards (Unchanged Data) */}
         <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 items-stretch">
           <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 flex flex-col justify-between h-full">
-            <h3 className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Projects Delivered</h3>
+            <p className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Projects Delivered</p>
             <div>
               <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tabular-nums">480+</div>
               <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">High retention commercial cuts</p>
@@ -95,7 +98,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
           </div>
 
           <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 flex flex-col justify-between h-full">
-            <h3 className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Audience Reach</h3>
+            <p className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Audience Reach</p>
             <div>
               <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tabular-nums">4.2M+</div>
               <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">Organic video viewership</p>
@@ -103,7 +106,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
           </div>
 
           <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 flex flex-col justify-between h-full">
-            <h3 className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Turnaround Time</h3>
+            <p className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Turnaround Time</p>
             <div>
               <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tabular-nums">48h</div>
               <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">Sprint delivery standard</p>
@@ -111,7 +114,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
           </div>
 
           <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 border-[#B7F34A]/30 flex flex-col justify-between h-full">
-            <h3 className="text-[11px] sm:text-xs font-semibold text-[#B7F34A] mb-2">Communication</h3>
+            <p className="text-[11px] sm:text-xs font-semibold text-[#B7F34A] mb-2">Communication</p>
             <div>
               <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#B7F34A] tabular-nums">100%</div>
               <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">Direct founder &amp; engineer access</p>

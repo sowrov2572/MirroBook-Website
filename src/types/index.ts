@@ -218,6 +218,72 @@ export interface SheetPaymentLog {
   usedByOrderId?: string;
 }
 
+export type MirrorPOSPaymentStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type MirrorPOSLicenseStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE';
+
+export interface MirrorPOSLicenseRequest {
+  id: string;
+  userId: string;
+  customerName: string;
+  gmail: string;
+  senderNumber: string;
+  transactionId: string;
+  amount: number;
+  accessType: 'DESKTOP_LICENSE';
+  licenseType: 'LIFETIME';
+  paymentStatus: MirrorPOSPaymentStatus;
+  licenseStatus: MirrorPOSLicenseStatus;
+  submittedAt: string;
+  updatedAt: string;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
+  adminNote?: string | null;
+}
+
+export interface MirrorPOSUserLicense {
+  uid: string;
+  email: string;
+  customerName?: string;
+  productId: 'software-mirrorpos';
+  accessType: 'DESKTOP_LICENSE';
+  licenseType: 'LIFETIME';
+  licenseStatus: MirrorPOSLicenseStatus;
+  requestId?: string;
+  transactionId?: string;
+  amount?: number;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  updatedAt: string;
+}
+
+export interface MirrorPOSFreeAccessRecord {
+  id: string;
+  userId?: string | null;
+  customerName: string;
+  gmail: string;
+  accessType: 'FREE_EMAIL';
+  tokenId: string;
+  tokenExpiresAt: string;
+  used: boolean;
+  requestedAt: string;
+  usedAt?: string | null;
+}
+
+export interface AdminActivityLog {
+  id: string;
+  action: string;
+  adminUid: string;
+  adminEmail: string;
+  targetRequestId: string;
+  targetUserId?: string;
+  targetEmail?: string;
+  transactionId?: string;
+  previousStatus?: string;
+  newStatus: string;
+  details?: string;
+  timestamp: string;
+}
+
 // Strict Studio Owner identity — verified server-side via Firebase ID token & Firestore rules
 export const OWNER_EMAILS: string[] = [
   'khansaheb2572@gmail.com',

@@ -6,6 +6,11 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /account
+Disallow: /login
+Disallow: /signup
+Disallow: /api/
 
 Sitemap: https://mirrorbook.site/sitemap.xml
-

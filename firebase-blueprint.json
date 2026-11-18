@@ -209,6 +209,115 @@
         "grantedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
+    },
+    "MirrorPOSLicenseRequest": {
+      "title": "MirrorPOSLicenseRequest",
+      "description": "Manual bKash Desktop License (৳9,999) payment verification request submitted by a customer and reviewed by admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "gmail": { "type": "string" },
+        "senderNumber": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "amount": { "type": "number" },
+        "accessType": { "type": "string", "enum": ["DESKTOP_LICENSE"] },
+        "licenseType": { "type": "string", "enum": ["LIFETIME"] },
+        "paymentStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "licenseStatus": { "type": "string", "enum": ["PENDING", "ACTIVE", "INACTIVE"] },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "approvedBy": { "type": "string" },
+        "adminNote": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "userId",
+        "customerName",
+        "gmail",
+        "senderNumber",
+        "transactionId",
+        "amount",
+        "accessType",
+        "licenseType",
+        "paymentStatus",
+        "licenseStatus",
+        "submittedAt",
+        "updatedAt"
+      ]
+    },
+    "MirrorPOSTrxLock": {
+      "title": "MirrorPOSTrxLock",
+      "description": "Zero-PII atomic lock preventing duplicate bKash transaction ID reuse across MirrorPOS license requests",
+      "type": "object",
+      "properties": {
+        "trxId": { "type": "string" },
+        "requestId": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["trxId", "requestId", "userId", "createdAt"]
+    },
+    "MirrorPOSUserLicense": {
+      "title": "MirrorPOSUserLicense",
+      "description": "Authenticated customer MirrorPOS Desktop License status activated strictly by verified administrator",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "customerName": { "type": "string" },
+        "productId": { "type": "string" },
+        "accessType": { "type": "string", "enum": ["DESKTOP_LICENSE"] },
+        "licenseType": { "type": "string", "enum": ["LIFETIME"] },
+        "licenseStatus": { "type": "string", "enum": ["PENDING", "ACTIVE", "INACTIVE"] },
+        "requestId": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "amount": { "type": "number" },
+        "approvedBy": { "type": "string" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "productId", "accessType", "licenseType", "licenseStatus", "updatedAt"]
+    },
+    "MirrorPOSFreeAccess": {
+      "title": "MirrorPOSFreeAccess",
+      "description": "Tokenized Gmail-only MirrorPOS free access requests and single-use verification tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "gmail": { "type": "string" },
+        "accessType": { "type": "string", "enum": ["FREE_EMAIL"] },
+        "tokenId": { "type": "string" },
+        "tokenExpiresAt": { "type": "string", "format": "date-time" },
+        "used": { "type": "boolean" },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "usedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "customerName", "gmail", "accessType", "tokenId", "tokenExpiresAt", "used", "requestedAt"]
+    },
+    "AdminActivityLog": {
+      "title": "AdminActivityLog",
+      "description": "Immutable administrator audit log recording MirrorPOS license approvals, rejections, and status updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "adminUid": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "targetRequestId": { "type": "string" },
+        "targetUserId": { "type": "string" },
+        "targetEmail": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "previousStatus": { "type": "string" },
+        "newStatus": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "action", "adminUid", "adminEmail", "targetRequestId", "newStatus", "timestamp"]
     }
   },
   "firestore": {
@@ -255,6 +364,26 @@
     "/users/{userId}/downloads/{downloadId}": {
       "schema": "DownloadLog",
       "description": "Per-user download history audit records"
+    },
+    "/mirrorpos_license_requests/{requestId}": {
+      "schema": "MirrorPOSLicenseRequest",
+      "description": "Manual bKash payment submissions for MirrorPOS Desktop License (৳9,999); clients may only create PENDING requests"
+    },
+    "/mirrorpos_trx_locks/{trxId}": {
+      "schema": "MirrorPOSTrxLock",
+      "description": "Duplicate Transaction ID prevention locks written atomically alongside MirrorPOS license requests"
+    },
+    "/mirrorpos_user_licenses/{userId}": {
+      "schema": "MirrorPOSUserLicense",
+      "description": "MirrorPOS Desktop Lifetime License status strictly read-only for the owner user and writeable only by verified Admin"
+    },
+    "/mirrorpos_free_access/{accessId}": {
+      "schema": "MirrorPOSFreeAccess",
+      "description": "MirrorPOS tokenized Gmail free access tracking records"
+    },
+    "/admin_activity_logs/{logId}": {
+      "schema": "AdminActivityLog",
+      "description": "Immutable audit trail of admin actions on MirrorPOS license requests"
     }
   }
 }

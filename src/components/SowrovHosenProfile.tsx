@@ -13,7 +13,7 @@ import {
   Linkedin,
   Facebook,
   Instagram,
-  Twitter,
+  Video,
   Globe,
   Award,
   CheckCircle2,
@@ -35,54 +35,11 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
 }) => {
   const [copiedProfileLink, setCopiedProfileLink] = useState(false);
 
-  // Update document title and SEO metadata on mount
+  // Inject Schema.org ProfilePage Structured Data
   useEffect(() => {
-    const originalTitle = document.title;
-    document.title = 'Sowrov Hosen | Founder of MirrorBook';
-
-    // Update Meta Description
-    let metaDesc = document.querySelector('meta[name="description"]');
-    const originalDesc = metaDesc?.getAttribute('content') || '';
     const newDesc =
-      'Sowrov Hosen is the Founder of MirrorBook, a creative agency in Bangladesh providing graphic design, video editing, motion graphics, and digital content creation.';
-    if (metaDesc) {
-      metaDesc.setAttribute('content', newDesc);
-    } else {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      metaDesc.setAttribute('content', newDesc);
-      document.head.appendChild(metaDesc);
-    }
+      'Sowrov Hosen is the Founder of MirrorBook, a creative agency in Bangladesh providing graphic design, video editing, motion graphics, web development, and modern software solutions.';
 
-    // Update Canonical URL
-    let canonical = document.querySelector('link[rel="canonical"]');
-    const originalCanonical = canonical?.getAttribute('href') || 'https://mirrorbook.site/';
-    if (canonical) {
-      canonical.setAttribute('href', 'https://mirrorbook.site/sowrov-hosen');
-    } else {
-      canonical = document.createElement('link');
-      canonical.setAttribute('rel', 'canonical');
-      canonical.setAttribute('href', 'https://mirrorbook.site/sowrov-hosen');
-      document.head.appendChild(canonical);
-    }
-
-    // Update OpenGraph Title, Description, Image, and URL
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.setAttribute('content', 'Sowrov Hosen | Founder of MirrorBook');
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute('content', newDesc);
-    const ogUrl = document.querySelector('meta[property="og:url"]');
-    if (ogUrl) ogUrl.setAttribute('content', 'https://mirrorbook.site/sowrov-hosen');
-    const ogImage = document.querySelector('meta[property="og:image"]');
-    if (ogImage) ogImage.setAttribute('content', 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg');
-    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
-    if (twitterTitle) twitterTitle.setAttribute('content', 'Sowrov Hosen | Founder of MirrorBook');
-    const twitterDesc = document.querySelector('meta[name="twitter:description"]');
-    if (twitterDesc) twitterDesc.setAttribute('content', newDesc);
-    const twitterImage = document.querySelector('meta[name="twitter:image"]');
-    if (twitterImage) twitterImage.setAttribute('content', 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg');
-
-    // Inject Schema.org ProfilePage Structured Data
     const profileSchema = {
       '@context': 'https://schema.org',
       '@type': 'ProfilePage',
@@ -118,7 +75,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           '@type': 'Organization',
           '@id': 'https://mirrorbook.site/#organization',
           name: 'MirrorBook',
-          alternateName: 'MirrorBook Creative Agency',
+          alternateName: 'Mirror Book',
           url: 'https://mirrorbook.site/',
           logo: 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png',
           slogan: 'Reflecting Creativity',
@@ -127,14 +84,18 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           'Video Editing',
           'Graphic Design',
           'Motion Graphics',
-          'Script Writing',
+          'Web Development',
           'Creative Direction',
-          'Post Production',
-          'Cinematic Visuals',
+          'Software Solutions',
           'Digital Marketing Agency Bangladesh',
         ],
         sameAs: [
           'https://sowrovhosenstudio.netlify.app',
+          'https://www.facebook.com/profile.php?id=61557704393608',
+          'https://www.youtube.com/@MirrorBook_Offical',
+          'https://www.linkedin.com/company/mirrorbook/',
+          'https://www.instagram.com/mirror.book/',
+          'https://www.tiktok.com/@mirror__book',
         ],
       },
     };
@@ -151,9 +112,6 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
     window.scrollTo({ top: 0, behavior: 'instant' });
 
     return () => {
-      document.title = originalTitle;
-      if (metaDesc) metaDesc.setAttribute('content', originalDesc);
-      if (canonical) canonical.setAttribute('href', originalCanonical);
       const scriptToRemove = document.getElementById('sowrov-hosen-schema');
       if (scriptToRemove) scriptToRemove.remove();
     };
@@ -241,42 +199,42 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
     },
     {
       name: 'YouTube',
-      handle: '@MirrorBookStudio',
-      url: 'https://youtube.com',
+      handle: '@MirrorBook_Offical',
+      url: 'https://www.youtube.com/@MirrorBook_Offical',
       icon: Youtube,
-      status: 'Creator Channel',
+      status: 'Official Channel',
       isPrimary: false,
     },
     {
       name: 'Facebook',
-      handle: 'MirrorBook Agency',
-      url: 'https://facebook.com',
+      handle: 'MirrorBook Official',
+      url: 'https://www.facebook.com/profile.php?id=61557704393608',
       icon: Facebook,
       status: 'Official Page',
       isPrimary: false,
     },
     {
-      name: 'LinkedIn',
-      handle: 'Sowrov Hosen',
-      url: 'https://linkedin.com',
-      icon: Linkedin,
-      status: 'Professional Network',
-      isPrimary: false,
-    },
-    {
       name: 'Instagram',
-      handle: '@sowrovhosen',
-      url: 'https://instagram.com',
+      handle: '@mirror.book',
+      url: 'https://www.instagram.com/mirror.book/',
       icon: Instagram,
-      status: 'Visual Journal',
+      status: 'Official Instagram',
       isPrimary: false,
     },
     {
-      name: 'X (Twitter)',
-      handle: '@MirrorBookTech',
-      url: 'https://twitter.com',
-      icon: Twitter,
-      status: 'Updates & Tech',
+      name: 'TikTok',
+      handle: '@mirror__book',
+      url: 'https://www.tiktok.com/@mirror__book',
+      icon: Video,
+      status: 'Short-Form Reels',
+      isPrimary: false,
+    },
+    {
+      name: 'LinkedIn',
+      handle: 'company/mirrorbook',
+      url: 'https://www.linkedin.com/company/mirrorbook/',
+      icon: Linkedin,
+      status: 'Company Profile',
       isPrimary: false,
     },
   ];
@@ -359,7 +317,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
 
                 {/* Founder Name & Identity Lockup */}
                 <div className="relative z-10 space-y-1">
-                  <h2 className="text-xl font-bold text-[#F5F7F2] tracking-tight">Sowrov Hosen</h2>
+                  <p className="text-xl font-bold text-[#F5F7F2] tracking-tight">Sowrov Hosen</p>
                   <p className="text-xs font-semibold text-[#B7F34A]">Founder of MirrorBook</p>
                   <p className="text-[11px] text-[#707A72] flex items-center justify-center gap-1 pt-1">
                     <MapPin size={11} className="text-[#B7F34A]" />
@@ -598,9 +556,9 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                       <IconComp size={18} />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors">
+                      <h3 className="text-xs font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors">
                         {item.name}
-                      </h4>
+                      </h3>
                       <p className="text-[11px] text-[#707A72] font-mono truncate">{item.handle}</p>
                     </div>
                   </div>
@@ -623,19 +581,19 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         {/* Section 5: Direct Contact / Work With Sowrov CTA */}
         <section className="glossy-card rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden">
           <div className="max-w-xl mx-auto space-y-4">
-            <h3 className="font-display text-2xl font-bold text-[#F5F7F2]">
+            <h2 className="font-display text-2xl font-bold text-[#F5F7F2]">
               Ready to collaborate with Sowrov Hosen?
-            </h3>
+            </h2>
             <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
               Whether you need high-end commercial video editing, a complete brand identity revamp, or custom motion graphics for your upcoming campaign, reach out directly.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
               <a
-                href="mailto:miirorbook.tech@gmail.com"
+                href="mailto:mirrorbook.site@gmail.com"
                 className="glossy-btn w-full sm:w-auto min-h-[44px] px-6 py-3 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer break-all"
               >
                 <Mail size={14} className="shrink-0" />
-                <span>Email: miirorbook.tech@gmail.com</span>
+                <span>Email: mirrorbook.site@gmail.com</span>
               </a>
               <button
                 type="button"

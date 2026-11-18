@@ -22,6 +22,7 @@ import { CustomerAuthPage } from './components/CustomerAuthPage';
 import { CustomerDashboard } from './components/CustomerDashboard';
 import { AdminAuthPortal } from './components/AdminAuthPortal';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { applyRouteSeoMetadata } from './utils/seo';
 import {
   CANONICAL_FEATURED_PRODUCTS,
   COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
@@ -37,6 +38,9 @@ import {
   AppUser,
   CustomerProfile,
   DownloadHistoryItem,
+  MirrorPOSUserLicense,
+  MirrorPOSLicenseRequest,
+  AdminActivityLog,
   isVerifiedAdminUser,
   generateDeterministicLicenseKey,
 } from './types';
@@ -80,6 +84,11 @@ import {
   subscribeToUserPurchases,
   recordDownloadHistory,
   subscribeToDownloadHistory,
+  subscribeToUserMirrorPOSLicense,
+  subscribeToUserMirrorPOSRequests,
+  subscribeToAllMirrorPOSRequests,
+  subscribeToAdminActivityLogs,
+  updateMirrorPOSLicenseRequestStatus,
   formatFirebaseAuthError,
 } from './utils/firebase';
 
@@ -126,6 +135,8 @@ export default function App() {
   const [adminOrders, setAdminOrders] = useState<Order[]>([]);
   const [allCustomers, setAllCustomers] = useState<CustomerProfile[]>([]);
   const [productSecrets, setProductSecrets] = useState<Record<string, string>>({});
+  const [adminMirrorPOSRequests, setAdminMirrorPOSRequests] = useState<MirrorPOSLicenseRequest[]>([]);
+  const [adminActivityLogs, setAdminActivityLogs] = useState<AdminActivityLog[]>([]);
 
   // Verified User Auth & Customer Profile state
   const [user, setUser] = useState<AppUser | null>(null);
@@ -135,6 +146,8 @@ export default function App() {
   const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [firestorePurchases, setFirestorePurchases] = useState<UserPurchase[]>([]);
   const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
+  const [mirrorPOSLicense, setMirrorPOSLicense] = useState<MirrorPOSUserLicense | null>(null);
+  const [userMirrorPOSRequests, setUserMirrorPOSRequests] = useState<MirrorPOSLicenseRequest[]>([]);
 
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(loadPaymentConfig);
@@ -171,13 +184,15 @@ export default function App() {
       window.history.pushState({}, '', normalized);
     }
     setCurrentPath(normalized);
-    if (normalized === '/') {
-      document.title = 'MirrorBook | Creative Agency in Bangladesh';
-    }
+    applyRouteSeoMetadata(normalized);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, []);
+
+  useEffect(() => {
+    applyRouteSeoMetadata(currentPath);
+  }, [currentPath]);
 
   // 1. Firebase Auth state listener with Backend Session Verification & Role Resolution
   useEffect(() => {
@@ -197,9 +212,13 @@ export default function App() {
         setUserOrders([]);
         setFirestorePurchases([]);
         setDownloadHistory([]);
+        setMirrorPOSLicense(null);
+        setUserMirrorPOSRequests([]);
         setAdminOrders([]);
         setAllCustomers([]);
         setProductSecrets({});
+        setAdminMirrorPOSRequests([]);
+        setAdminActivityLogs([]);
         setAuthReady(true);
         return;
       }
@@ -256,12 +275,14 @@ export default function App() {
     }
   }, [authReady, user, currentPath, navigateTo]);
 
-  // 2. Customer-scoped Firestore Subscriptions (Purchases, Orders, Downloads)
+  // 2. Customer-scoped Firestore Subscriptions (Purchases, Orders, Downloads, MirrorPOS License)
   useEffect(() => {
     if (!user) {
       setUserOrders([]);
       setFirestorePurchases([]);
       setDownloadHistory([]);
+      setMirrorPOSLicense(null);
+      setUserMirrorPOSRequests([]);
       return;
     }
 
@@ -279,11 +300,19 @@ export default function App() {
     const unsubDownloads = subscribeToDownloadHistory(user.uid, (logs) => {
       setDownloadHistory(logs);
     });
+    const unsubMirrorPOSLicense = subscribeToUserMirrorPOSLicense(user.uid, (lic) => {
+      setMirrorPOSLicense(lic);
+    });
+    const unsubMirrorPOSRequests = subscribeToUserMirrorPOSRequests(user.uid, (reqs) => {
+      setUserMirrorPOSRequests(reqs);
+    });
 
     return () => {
       unsubPurchases();
       unsubUserOrders();
       unsubDownloads();
+      unsubMirrorPOSLicense();
+      unsubMirrorPOSRequests();
     };
   }, [user?.uid, user?.email, user?.emailVerified]);
 
@@ -359,6 +388,8 @@ export default function App() {
       setAdminOrders([]);
       setAllCustomers([]);
       setProductSecrets({});
+      setAdminMirrorPOSRequests([]);
+      setAdminActivityLogs([]);
       return;
     }
 
@@ -370,6 +401,12 @@ export default function App() {
     });
     const unsubSecrets = subscribeToProductSecrets((secretsMap) => {
       setProductSecrets(secretsMap);
+    });
+    const unsubMirrorPOSReqs = subscribeToAllMirrorPOSRequests((reqs) => {
+      setAdminMirrorPOSRequests(reqs);
+    });
+    const unsubAdminAuditLogs = subscribeToAdminActivityLogs((logs) => {
+      setAdminActivityLogs(logs);
     });
     const unsubAdminCfg = subscribeToAdminConfig((adminPart) => {
       setPaymentConfig((prev) => {
@@ -389,6 +426,8 @@ export default function App() {
       unsubOrders();
       unsubUsers();
       unsubSecrets();
+      unsubMirrorPOSReqs();
+      unsubAdminAuditLogs();
       unsubAdminCfg();
     };
   }, [isAdminVerified]);
@@ -398,9 +437,7 @@ export default function App() {
     const handlePopState = () => {
       const next = resolveRouteFromLocation();
       setCurrentPath(next);
-      if (next === '/') {
-        document.title = 'MirrorBook | Creative Agency in Bangladesh';
-      }
+      applyRouteSeoMetadata(next);
     };
 
     const handleHash = () => {
@@ -472,18 +509,21 @@ export default function App() {
 
   const isMirrorPOSPurchased = useMemo(() => {
     if (isAdminVerified) return true;
+    if (mirrorPOSLicense?.licenseStatus === 'ACTIVE' && mirrorPOSLicense?.accessType === 'DESKTOP_LICENSE') {
+      return true;
+    }
     return userPurchases.some(
       (p) =>
         p.productId === SOFTWARE_MIRRORPOS_PREMIUM_ID ||
         p.title?.toLowerCase().includes('mirrorpos desktop')
     );
-  }, [userPurchases, isAdminVerified]);
+  }, [userPurchases, isAdminVerified, mirrorPOSLicense]);
 
   const enrolledCourseIds = useMemo(() => {
     const ids = new Set<string>();
     userPurchases.forEach((p) => {
       if (p.productId) ids.add(p.productId);
-      if (p.title?.toLowerCase().includes('video editing fundamentals')) {
+      if (p.title?.toLowerCase().includes('video editing fundamental')) {
         ids.add(COURSE_VIDEO_EDITING_FUNDAMENTALS_ID);
       }
     });
@@ -541,6 +581,15 @@ export default function App() {
     try {
       const firebaseUser = await signInWithGoogle();
       await syncAfterCustomerAuth(firebaseUser, 'Google Auth');
+    } catch (err) {
+      throw new Error(formatFirebaseAuthError(err));
+    }
+  };
+
+  const handleMirrorPOSGoogleSignIn = async () => {
+    try {
+      const firebaseUser = await signInWithGoogle();
+      await syncAfterCustomerAuth(firebaseUser, 'Google Auth', false);
     } catch (err) {
       throw new Error(formatFirebaseAuthError(err));
     }
@@ -662,9 +711,13 @@ export default function App() {
     setUserOrders([]);
     setFirestorePurchases([]);
     setDownloadHistory([]);
+    setMirrorPOSLicense(null);
+    setUserMirrorPOSRequests([]);
     setAdminOrders([]);
     setAllCustomers([]);
     setProductSecrets({});
+    setAdminMirrorPOSRequests([]);
+    setAdminActivityLogs([]);
     showToast('Signed out of account.', 'info');
   };
 
@@ -842,6 +895,29 @@ export default function App() {
     }
   };
 
+  const handleUpdateMirrorPOSStatus = async (
+    requestId: string,
+    action: 'APPROVE' | 'REJECT' | 'PENDING',
+    adminNote?: string
+  ) => {
+    if (!auth.currentUser || !isAdminVerified) {
+      throw new Error('Verified Admin authentication required.');
+    }
+    const res = await updateMirrorPOSLicenseRequestStatus({
+      requestId,
+      action,
+      adminNote,
+    });
+    showToast(
+      action === 'APPROVE'
+        ? `✓ MirrorPOS Desktop License activated (${requestId}).`
+        : action === 'REJECT'
+        ? `MirrorPOS request ${requestId} rejected.`
+        : `MirrorPOS request ${requestId} reset to ${res.paymentStatus}.`,
+      action === 'REJECT' ? 'info' : 'success'
+    );
+  };
+
   const handleDeleteOrder = (id: string) => {
     setAdminOrders((prev) => prev.filter((o) => o.id !== id));
     deleteOrderFromFirestore(id).catch(() => {});
@@ -959,6 +1035,9 @@ export default function App() {
                 return Array.from(map.values());
               });
             }}
+            mirrorPOSRequests={adminMirrorPOSRequests}
+            adminActivityLogs={adminActivityLogs}
+            onUpdateMirrorPOSStatus={handleUpdateMirrorPOSStatus}
           />
         ) : currentPath === '/sowrov-hosen' ? (
           <SowrovHosenProfile
@@ -979,6 +1058,11 @@ export default function App() {
               })
             }
             user={user}
+            paymentConfig={paymentConfig}
+            userLicense={mirrorPOSLicense}
+            userRequests={userMirrorPOSRequests}
+            isAdminVerified={isAdminVerified}
+            onGoogleSignIn={handleMirrorPOSGoogleSignIn}
           />
         ) : (
           <>

@@ -27,6 +27,7 @@ import {
   getDocFromServer,
   serverTimestamp,
   deleteField,
+  runTransaction,
   Timestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -38,6 +39,11 @@ import {
   UserRole,
   CustomerProfile,
   DownloadHistoryItem,
+  MirrorPOSLicenseRequest,
+  MirrorPOSUserLicense,
+  MirrorPOSPaymentStatus,
+  MirrorPOSLicenseStatus,
+  AdminActivityLog,
   generateDeterministicLicenseKey,
 } from '../types';
 import { DEFAULT_PAYMENT_CONFIG } from './paymentService';
@@ -129,6 +135,11 @@ const ORDERS_COLLECTION = 'orders';
 const USERS_COLLECTION = 'users';
 const PAYMENT_CONFIG_DOC = 'paymentConfig';
 const ADMIN_CONFIG_DOC = 'adminConfig';
+const MIRRORPOS_LICENSE_REQUESTS_COLLECTION = 'mirrorpos_license_requests';
+const MIRRORPOS_TRX_LOCKS_COLLECTION = 'mirrorpos_trx_locks';
+const MIRRORPOS_USER_LICENSES_COLLECTION = 'mirrorpos_user_licenses';
+const MIRRORPOS_FREE_ACCESS_COLLECTION = 'mirrorpos_free_access';
+const ADMIN_ACTIVITY_LOGS_COLLECTION = 'admin_activity_logs';
 
 function stripPublicSecretUrl(product: ProductItem): ProductItem {
   if ((Number(product.price) > 0 || product.type !== 'Free Tutorial') && 'protectedUrl' in product) {
@@ -294,9 +305,27 @@ export function subscribeToProducts(
         }
         const rawData = docSnap.data() as Record<string, any>;
         const priceNum = Number(rawData.price) || 0;
+        const rawTypeStr = String(rawData.type || '').trim().toLowerCase();
+        const rawCatStr = String(rawData.category || '').trim().toLowerCase();
+        let resolvedType: ProductItem['type'] = 'Plugin';
+        if (rawTypeStr === 'software' || (!rawTypeStr && rawCatStr.includes('software'))) {
+          resolvedType = 'Software';
+        } else if (rawTypeStr === 'course' || (!rawTypeStr && rawCatStr.includes('course'))) {
+          resolvedType = 'Course';
+        } else if (
+          rawTypeStr === 'free tutorial' ||
+          rawTypeStr === 'tutorial' ||
+          (!rawTypeStr && rawCatStr.includes('tutorial'))
+        ) {
+          resolvedType = 'Free Tutorial';
+        } else if (rawTypeStr === 'agency package' || rawTypeStr === 'package') {
+          resolvedType = 'Agency Package';
+        } else if (rawTypeStr === 'plugin') {
+          resolvedType = 'Plugin';
+        }
         const normalized: ProductItem = {
           id: docSnap.id,
-          type: (rawData.type as ProductItem['type']) || 'Plugin',
+          type: resolvedType,
           category: String(rawData.category || 'General'),
           title: String(rawData.title || ''),
           description: String(rawData.description || ''),
@@ -1175,3 +1204,413 @@ export function subscribeToDownloadHistory(
     }
   );
 }
+
+// ==================== MIRRORPOS MANUAL BKASH LICENSING SYSTEM ====================
+
+export function normalizeMirrorPOSTransactionId(raw: string): string {
+  return String(raw || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '');
+}
+
+/**
+ * Atomically locks Transaction ID and creates a strictly PENDING MirrorPOS Desktop License request.
+ * Never activates a license automatically; requires explicit Admin verification.
+ */
+export async function submitMirrorPOSLicenseRequest(params: {
+  customerName: string;
+  gmail: string;
+  senderNumber: string;
+  transactionId: string;
+  amount: number;
+}): Promise<MirrorPOSLicenseRequest> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('Please sign in with Google or a verified email account before submitting payment details.');
+  }
+  if (!currentUser.emailVerified) {
+    throw new Error('Please verify your email address (or sign in with Google) before submitting your bKash transaction.');
+  }
+
+  const customerName = params.customerName.trim().slice(0, 120);
+  const gmail = params.gmail.trim().toLowerCase().slice(0, 254);
+  const senderNumber = params.senderNumber.trim().replace(/\s+/g, '').slice(0, 30);
+  const normalizedTrxId = normalizeMirrorPOSTransactionId(params.transactionId);
+  const amount = Number(params.amount);
+
+  if (customerName.length < 2) {
+    throw new Error('Customer Name must be at least 2 characters.');
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(gmail)) {
+    throw new Error('Please enter a valid Gmail address.');
+  }
+  if (senderNumber.length < 6 || senderNumber.length > 30) {
+    throw new Error('Please enter a valid bKash sender phone number.');
+  }
+  if (!/^[A-Z0-9_-]{4,40}$/.test(normalizedTrxId)) {
+    throw new Error('Transaction ID must be 4–40 alphanumeric characters (letters, numbers, hyphens, underscores).');
+  }
+  if (amount !== 9999) {
+    throw new Error('MirrorPOS Desktop Lifetime License amount must be exactly ৳9,999.');
+  }
+
+  const requestId = `MPOS-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+  const reqRef = doc(db, MIRRORPOS_LICENSE_REQUESTS_COLLECTION, requestId);
+  const lockRef = doc(db, MIRRORPOS_TRX_LOCKS_COLLECTION, normalizedTrxId);
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const lockSnap = await tx.get(lockRef);
+      if (lockSnap.exists()) {
+        throw new Error(
+          `Transaction ID "${normalizedTrxId}" has already been submitted. Duplicate Transaction IDs cannot be reused.`
+        );
+      }
+
+      tx.set(lockRef, {
+        trxId: normalizedTrxId,
+        requestId,
+        userId: currentUser.uid,
+        createdAt: serverTimestamp(),
+      });
+
+      tx.set(reqRef, {
+        id: requestId,
+        userId: currentUser.uid,
+        customerName,
+        gmail,
+        senderNumber,
+        transactionId: normalizedTrxId,
+        amount: 9999,
+        accessType: 'DESKTOP_LICENSE',
+        licenseType: 'LIFETIME',
+        paymentStatus: 'PENDING',
+        licenseStatus: 'PENDING',
+        submittedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    const nowIso = new Date().toISOString();
+    return {
+      id: requestId,
+      userId: currentUser.uid,
+      customerName,
+      gmail,
+      senderNumber,
+      transactionId: normalizedTrxId,
+      amount: 9999,
+      accessType: 'DESKTOP_LICENSE',
+      licenseType: 'LIFETIME',
+      paymentStatus: 'PENDING',
+      licenseStatus: 'PENDING',
+      submittedAt: nowIso,
+      updatedAt: nowIso,
+    };
+  } catch (err) {
+    handleFirestoreError(err, OperationType.CREATE, `${MIRRORPOS_LICENSE_REQUESTS_COLLECTION}/${requestId}`);
+    throw err;
+  }
+}
+
+/**
+ * Real-time listener for authenticated customer's activated MirrorPOS user license.
+ */
+export function subscribeToUserMirrorPOSLicense(
+  uid: string,
+  onUpdate: (license: MirrorPOSUserLicense | null) => void
+): () => void {
+  const docRef = doc(db, MIRRORPOS_USER_LICENSES_COLLECTION, uid);
+  return onSnapshot(
+    docRef,
+    (snap) => {
+      if (!snap.exists()) {
+        onUpdate(null);
+        return;
+      }
+      const data = snap.data();
+      onUpdate({
+        uid: String(data.uid || uid),
+        email: String(data.email || ''),
+        customerName: data.customerName ? String(data.customerName) : undefined,
+        productId: 'software-mirrorpos',
+        accessType: 'DESKTOP_LICENSE',
+        licenseType: 'LIFETIME',
+        licenseStatus: (data.licenseStatus as MirrorPOSLicenseStatus) || 'INACTIVE',
+        requestId: data.requestId ? String(data.requestId) : undefined,
+        transactionId: data.transactionId ? String(data.transactionId) : undefined,
+        amount: typeof data.amount === 'number' ? data.amount : 9999,
+        approvedBy: data.approvedBy ? String(data.approvedBy) : null,
+        approvedAt: formatTimestampField(data.approvedAt) || null,
+        updatedAt: formatTimestampField(data.updatedAt),
+      });
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, `${MIRRORPOS_USER_LICENSES_COLLECTION}/${uid}`);
+    }
+  );
+}
+
+/**
+ * Real-time listener for authenticated customer's MirrorPOS manual bKash license requests.
+ */
+export function subscribeToUserMirrorPOSRequests(
+  uid: string,
+  onUpdate: (requests: MirrorPOSLicenseRequest[]) => void
+): () => void {
+  const q = query(collection(db, MIRRORPOS_LICENSE_REQUESTS_COLLECTION), where('userId', '==', uid));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list: MirrorPOSLicenseRequest[] = [];
+      snapshot.forEach((snap) => {
+        const data = snap.data();
+        list.push({
+          id: String(data.id || snap.id),
+          userId: String(data.userId || uid),
+          customerName: String(data.customerName || ''),
+          gmail: String(data.gmail || ''),
+          senderNumber: String(data.senderNumber || ''),
+          transactionId: String(data.transactionId || ''),
+          amount: Number(data.amount) || 9999,
+          accessType: 'DESKTOP_LICENSE',
+          licenseType: 'LIFETIME',
+          paymentStatus: (data.paymentStatus as MirrorPOSPaymentStatus) || 'PENDING',
+          licenseStatus: (data.licenseStatus as MirrorPOSLicenseStatus) || 'PENDING',
+          submittedAt: formatTimestampField(data.submittedAt),
+          updatedAt: formatTimestampField(data.updatedAt),
+          approvedAt: data.approvedAt ? formatTimestampField(data.approvedAt) : null,
+          approvedBy: data.approvedBy ? String(data.approvedBy) : null,
+          adminNote: data.adminNote ? String(data.adminNote) : null,
+        });
+      });
+      list.sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
+      onUpdate(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, `${MIRRORPOS_LICENSE_REQUESTS_COLLECTION} (userId=${uid})`);
+    }
+  );
+}
+
+/**
+ * Admin-only real-time listener for ALL MirrorPOS license requests.
+ */
+export function subscribeToAllMirrorPOSRequests(
+  onUpdate: (requests: MirrorPOSLicenseRequest[]) => void
+): () => void {
+  const q = query(collection(db, MIRRORPOS_LICENSE_REQUESTS_COLLECTION));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list: MirrorPOSLicenseRequest[] = [];
+      snapshot.forEach((snap) => {
+        const data = snap.data();
+        list.push({
+          id: String(data.id || snap.id),
+          userId: String(data.userId || ''),
+          customerName: String(data.customerName || ''),
+          gmail: String(data.gmail || ''),
+          senderNumber: String(data.senderNumber || ''),
+          transactionId: String(data.transactionId || ''),
+          amount: Number(data.amount) || 9999,
+          accessType: 'DESKTOP_LICENSE',
+          licenseType: 'LIFETIME',
+          paymentStatus: (data.paymentStatus as MirrorPOSPaymentStatus) || 'PENDING',
+          licenseStatus: (data.licenseStatus as MirrorPOSLicenseStatus) || 'PENDING',
+          submittedAt: formatTimestampField(data.submittedAt),
+          updatedAt: formatTimestampField(data.updatedAt),
+          approvedAt: data.approvedAt ? formatTimestampField(data.approvedAt) : null,
+          approvedBy: data.approvedBy ? String(data.approvedBy) : null,
+          adminNote: data.adminNote ? String(data.adminNote) : null,
+        });
+      });
+      list.sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
+      onUpdate(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, MIRRORPOS_LICENSE_REQUESTS_COLLECTION);
+    }
+  );
+}
+
+/**
+ * Admin-only real-time listener for Admin Activity Audit Logs.
+ */
+export function subscribeToAdminActivityLogs(
+  onUpdate: (logs: AdminActivityLog[]) => void
+): () => void {
+  const q = query(collection(db, ADMIN_ACTIVITY_LOGS_COLLECTION));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list: AdminActivityLog[] = [];
+      snapshot.forEach((snap) => {
+        const data = snap.data();
+        list.push({
+          id: String(data.id || snap.id),
+          action: String(data.action || ''),
+          adminUid: String(data.adminUid || ''),
+          adminEmail: String(data.adminEmail || ''),
+          targetRequestId: String(data.targetRequestId || ''),
+          targetUserId: data.targetUserId ? String(data.targetUserId) : undefined,
+          targetEmail: data.targetEmail ? String(data.targetEmail) : undefined,
+          transactionId: data.transactionId ? String(data.transactionId) : undefined,
+          previousStatus: data.previousStatus ? String(data.previousStatus) : undefined,
+          newStatus: String(data.newStatus || ''),
+          details: data.details ? String(data.details) : undefined,
+          timestamp: formatTimestampField(data.timestamp),
+        });
+      });
+      list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+      onUpdate(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, ADMIN_ACTIVITY_LOGS_COLLECTION);
+    }
+  );
+}
+
+/**
+ * Admin-only atomic transaction to APPROVE, REJECT, or reset a MirrorPOS manual bKash request to PENDING,
+ * synchronize /mirrorpos_user_licenses/{userId}, and write an immutable /admin_activity_logs entry.
+ */
+export async function updateMirrorPOSLicenseRequestStatus(params: {
+  requestId: string;
+  action: 'APPROVE' | 'REJECT' | 'PENDING';
+  adminNote?: string;
+}): Promise<{ paymentStatus: MirrorPOSPaymentStatus; licenseStatus: MirrorPOSLicenseStatus }> {
+  const adminUser = auth.currentUser;
+  if (!adminUser || !adminUser.email) {
+    throw new Error('Verified Admin authentication is required.');
+  }
+
+  const requestId = params.requestId.trim();
+  const reqRef = doc(db, MIRRORPOS_LICENSE_REQUESTS_COLLECTION, requestId);
+  const logId = `LOG-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const logRef = doc(db, ADMIN_ACTIVITY_LOGS_COLLECTION, logId);
+  const cleanNote = (params.adminNote || '').trim().slice(0, 500) || null;
+
+  const newPaymentStatus: MirrorPOSPaymentStatus =
+    params.action === 'APPROVE'
+      ? 'APPROVED'
+      : params.action === 'REJECT'
+      ? 'REJECTED'
+      : 'PENDING';
+  const newLicenseStatus: MirrorPOSLicenseStatus =
+    params.action === 'APPROVE'
+      ? 'ACTIVE'
+      : params.action === 'REJECT'
+      ? 'INACTIVE'
+      : 'PENDING';
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const reqSnap = await tx.get(reqRef);
+      if (!reqSnap.exists()) {
+        throw new Error('MirrorPOS license request record not found.');
+      }
+      const reqData = reqSnap.data();
+      const targetUserId = String(reqData.userId || '');
+      if (!targetUserId) {
+        throw new Error('License request is missing target customer userId.');
+      }
+
+      const licRef = doc(db, MIRRORPOS_USER_LICENSES_COLLECTION, targetUserId);
+      const licSnap = await tx.get(licRef);
+      const prevStatus = String(reqData.paymentStatus || 'PENDING');
+
+      tx.update(reqRef, {
+        paymentStatus: newPaymentStatus,
+        licenseStatus: newLicenseStatus,
+        approvedAt: params.action === 'APPROVE' ? serverTimestamp() : null,
+        approvedBy: params.action === 'APPROVE' ? adminUser.email : null,
+        adminNote: cleanNote,
+        updatedAt: serverTimestamp(),
+      });
+
+      const hasOtherActiveLicense =
+        licSnap.exists() &&
+        licSnap.data()?.licenseStatus === 'ACTIVE' &&
+        licSnap.data()?.requestId &&
+        licSnap.data()?.requestId !== requestId;
+
+      if (params.action === 'APPROVE' || !hasOtherActiveLicense) {
+        tx.set(
+          licRef,
+          {
+            uid: targetUserId,
+            email: String(reqData.gmail || ''),
+            customerName: String(reqData.customerName || 'Customer').slice(0, 120),
+            productId: 'software-mirrorpos',
+            accessType: 'DESKTOP_LICENSE',
+            licenseType: 'LIFETIME',
+            licenseStatus: newLicenseStatus,
+            requestId,
+            transactionId: String(reqData.transactionId || ''),
+            amount: Number(reqData.amount) || 9999,
+            approvedBy: params.action === 'APPROVE' ? adminUser.email : null,
+            approvedAt: params.action === 'APPROVE' ? serverTimestamp() : null,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: false }
+        );
+      }
+
+      tx.set(logRef, {
+        id: logId,
+        action: `MIRRORPOS_LICENSE_${params.action}`,
+        adminUid: adminUser.uid,
+        adminEmail: adminUser.email,
+        targetRequestId: requestId,
+        targetUserId,
+        targetEmail: String(reqData.gmail || ''),
+        transactionId: String(reqData.transactionId || ''),
+        previousStatus: prevStatus,
+        newStatus: newPaymentStatus,
+        details: cleanNote || `Changed MirrorPOS request status from ${prevStatus} to ${newPaymentStatus}`,
+        timestamp: serverTimestamp(),
+      });
+    });
+
+    return {
+      paymentStatus: newPaymentStatus,
+      licenseStatus: newLicenseStatus,
+    };
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `${MIRRORPOS_LICENSE_REQUESTS_COLLECTION}/${requestId}`);
+    throw err;
+  }
+}
+
+/**
+ * Best-effort client tracking for authenticated MirrorPOS Free Email requests.
+ */
+export async function recordMirrorPOSFreeAccessInFirestore(entry: {
+  tokenId: string;
+  customerName: string;
+  gmail: string;
+  tokenExpiresAt: string;
+}): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (!currentUser || !currentUser.emailVerified) return;
+  const docPath = `${MIRRORPOS_FREE_ACCESS_COLLECTION}/${entry.tokenId}`;
+  try {
+    await setDoc(doc(db, MIRRORPOS_FREE_ACCESS_COLLECTION, entry.tokenId), {
+      id: entry.tokenId,
+      userId: currentUser.uid,
+      customerName: entry.customerName.trim().slice(0, 120) || 'Creator',
+      gmail: entry.gmail.trim().toLowerCase().slice(0, 254),
+      accessType: 'FREE_EMAIL',
+      tokenId: entry.tokenId,
+      tokenExpiresAt: entry.tokenExpiresAt.slice(0, 64),
+      used: false,
+      requestedAt: serverTimestamp(),
+      usedAt: null,
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.CREATE, docPath);
+  }
+}
+

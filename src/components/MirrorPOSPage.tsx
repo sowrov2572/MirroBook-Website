@@ -29,9 +29,24 @@ import {
   Wallet,
   LayoutDashboard,
   LifeBuoy,
+  Copy,
+  Clock,
+  XCircle,
+  Smartphone,
+  KeyRound,
+  X,
 } from 'lucide-react';
-import { AppUser } from '../types';
-import { auth } from '../utils/firebase';
+import {
+  AppUser,
+  PaymentConfig,
+  MirrorPOSUserLicense,
+  MirrorPOSLicenseRequest,
+} from '../types';
+import {
+  auth,
+  submitMirrorPOSLicenseRequest,
+  recordMirrorPOSFreeAccessInFirestore,
+} from '../utils/firebase';
 
 interface MirrorPOSPageProps {
   onNavigateHome: () => void;
@@ -40,6 +55,11 @@ interface MirrorPOSPageProps {
   isPremiumPurchased?: boolean;
   user?: AppUser | null;
   desktopDownloadUrl?: string;
+  paymentConfig?: PaymentConfig;
+  userLicense?: MirrorPOSUserLicense | null;
+  userRequests?: MirrorPOSLicenseRequest[];
+  isAdminVerified?: boolean;
+  onGoogleSignIn?: () => Promise<void>;
 }
 
 type BrowserTab = 'chrome' | 'edge';
@@ -55,10 +75,14 @@ interface UserGuideCategory {
 export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
   onNavigateHome,
   onStartProject,
-  onBuyPremium,
   isPremiumPurchased = false,
   user = null,
   desktopDownloadUrl,
+  paymentConfig,
+  userLicense = null,
+  userRequests = [],
+  isAdminVerified = false,
+  onGoogleSignIn,
 }) => {
   const [activeScreenshot, setActiveScreenshot] = useState<number>(0);
   const [browserTab, setBrowserTab] = useState<BrowserTab>('chrome');
@@ -77,7 +101,38 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     message: string;
   } | null>(null);
 
+  // Single-use Email Verification Token Flow (?free_access_token=...)
+  const [tokenVerifyState, setTokenVerifyState] = useState<{
+    status: 'idle' | 'verifying' | 'success' | 'error';
+    message: string;
+  }>({ status: 'idle', message: '' });
+
+  // Dedicated Manual bKash Payment Modal State (Desktop License - ৳9,999)
+  const [isBkashModalOpen, setIsBkashModalOpen] = useState<boolean>(false);
+  const [bkashCustomerName, setBkashCustomerName] = useState<string>(user?.displayName || '');
+  const [bkashGmail, setBkashGmail] = useState<string>(user?.email || '');
+  const [bkashSenderNumber, setBkashSenderNumber] = useState<string>(user?.phone || '');
+  const [bkashTransactionId, setBkashTransactionId] = useState<string>('');
+  const [bkashAmount, setBkashAmount] = useState<string>('9999');
+  const [isSubmittingBkash, setIsSubmittingBkash] = useState<boolean>(false);
+  const [bkashError, setBkashError] = useState<string>('');
+  const [bkashSuccessMessage, setBkashSuccessMessage] = useState<string>('');
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState<boolean>(false);
+  const [copiedBkashNumber, setCopiedBkashNumber] = useState<boolean>(false);
+
   const MIRRORPOS_APP_URL = 'https://mirror-pos.vercel.app/';
+  const officialBkashNumber = (paymentConfig?.bKashNumber || '01767079837').trim();
+
+  // Strict Gating: ONLY Approved Paid users (or verified admin) ever see Launch MirrorPOS
+  const isApprovedPaidUser = Boolean(
+    isAdminVerified ||
+      isPremiumPurchased ||
+      (userLicense?.licenseStatus === 'ACTIVE' && userLicense?.accessType === 'DESKTOP_LICENSE')
+  );
+  const latestRequest = userRequests[0] || null;
+  const isPendingPaidUser = !isApprovedPaidUser && latestRequest?.paymentStatus === 'PENDING';
+  const isRejectedPaidUser = !isApprovedPaidUser && latestRequest?.paymentStatus === 'REJECTED';
+
   const verifiedDesktopUrl =
     desktopDownloadUrl && /^https?:\/\//i.test(desktopDownloadUrl.trim())
       ? desktopDownloadUrl.trim()
@@ -90,58 +145,60 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     if (user) {
       setFullName((prev) => prev || user.displayName || '');
       setEmail((prev) => prev || user.email || '');
+      setBkashCustomerName((prev) => prev || user.displayName || '');
+      setBkashGmail((prev) => prev || user.email || '');
+      setBkashSenderNumber((prev) => prev || user.phone || '');
     }
   }, [user]);
 
+  // Verify single-use ?free_access_token=... landed from Free Access email
   useEffect(() => {
-    const originalTitle = document.title;
-    const newTitle = 'MirrorPOS by MirrorBook | Smart POS Software';
-    document.title = newTitle;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('free_access_token');
+    if (!token) return;
 
-    let metaDesc = document.querySelector('meta[name="description"]');
-    const originalDesc = metaDesc?.getAttribute('content') || '';
+    let cancelled = false;
+    setTokenVerifyState({
+      status: 'verifying',
+      message: 'Verifying your single-use MirrorPOS email access link...',
+    });
+
+    fetch(`/api/software/verify-free-access?token=${encodeURIComponent(token)}`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (res.ok && data?.success && data?.redirectUrl) {
+          setTokenVerifyState({
+            status: 'success',
+            message: 'Email verified! Redirecting to MirrorPOS...',
+          });
+          window.location.href = data.redirectUrl;
+        } else {
+          setTokenVerifyState({
+            status: 'error',
+            message:
+              data?.error ||
+              'This verification link is invalid, expired, or has already been used. Request a new Free Email link below.',
+          });
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTokenVerifyState({
+          status: 'error',
+          message: 'Network error while verifying your email access link. Please try requesting a new link.',
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const newDesc =
       'MirrorPOS by MirrorBook is Smart POS Software for Modern Businesses with offline-first billing, online synchronization, inventory, sales, expenses, customer & supplier management, and analytics.';
-    if (metaDesc) {
-      metaDesc.setAttribute('content', newDesc);
-    } else {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      metaDesc.setAttribute('content', newDesc);
-      document.head.appendChild(metaDesc);
-    }
-
-    let canonical = document.querySelector('link[rel="canonical"]');
-    const originalCanonical = canonical?.getAttribute('href') || 'https://mirrorbook.site/';
-    if (canonical) {
-      canonical.setAttribute('href', 'https://mirrorbook.site/mirrorpos');
-    } else {
-      canonical = document.createElement('link');
-      canonical.setAttribute('rel', 'canonical');
-      canonical.setAttribute('href', 'https://mirrorbook.site/mirrorpos');
-      document.head.appendChild(canonical);
-    }
-
-    const updateMeta = (selector: string, attr: string, nextVal: string): string | null => {
-      const el = document.querySelector(selector);
-      if (!el) return null;
-      const prev = el.getAttribute(attr);
-      el.setAttribute(attr, nextVal);
-      return prev;
-    };
-
-    const prevOgTitle = updateMeta('meta[property="og:title"]', 'content', newTitle);
-    const prevOgDesc = updateMeta('meta[property="og:description"]', 'content', newDesc);
-    const prevOgUrl = updateMeta('meta[property="og:url"]', 'content', 'https://mirrorbook.site/mirrorpos');
-    const prevOgImg = updateMeta('meta[property="og:image"]', 'content', 'https://mirrorbook.site/mirror-pos-icon.png');
-    const prevOgImgSecure = updateMeta('meta[property="og:image:secure_url"]', 'content', 'https://mirrorbook.site/mirror-pos-icon.png');
-    const prevOgImgAlt = updateMeta('meta[property="og:image:alt"]', 'content', 'MirrorPOS Official App Icon — Developed by MirrorBook');
-
-    const prevTwTitle = updateMeta('meta[name="twitter:title"]', 'content', newTitle);
-    const prevTwDesc = updateMeta('meta[name="twitter:description"]', 'content', newDesc);
-    const prevTwUrl = updateMeta('meta[name="twitter:url"]', 'content', 'https://mirrorbook.site/mirrorpos');
-    const prevTwImg = updateMeta('meta[name="twitter:image"]', 'content', 'https://mirrorbook.site/mirror-pos-icon.png');
-    const prevTwImgAlt = updateMeta('meta[name="twitter:image:alt"]', 'content', 'MirrorPOS Official App Icon — Developed by MirrorBook');
 
     const softwareSchema = {
       '@context': 'https://schema.org',
@@ -153,11 +210,10 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Windows, macOS, Web',
       url: 'https://mirrorbook.site/mirrorpos',
-      installUrl: 'https://mirror-pos.vercel.app/',
       image: 'https://mirrorbook.site/mirror-pos-icon.png',
       description: newDesc,
       brand: { '@type': 'Brand', name: 'MirrorBook', url: 'https://mirrorbook.site/' },
-      author: { '@type': 'Organization', name: 'MirrorBook', url: 'https://mirrorbook.site/' },
+      author: { '@type': 'Organization', '@id': 'https://mirrorbook.site/#organization', name: 'MirrorBook', url: 'https://mirrorbook.site/' },
     };
 
     let scriptTag = document.getElementById('mirrorpos-schema') as HTMLScriptElement | null;
@@ -182,20 +238,6 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     }
 
     return () => {
-      document.title = originalTitle;
-      if (metaDesc) metaDesc.setAttribute('content', originalDesc);
-      if (canonical) canonical.setAttribute('href', originalCanonical);
-      if (prevOgTitle !== null) updateMeta('meta[property="og:title"]', 'content', prevOgTitle);
-      if (prevOgDesc !== null) updateMeta('meta[property="og:description"]', 'content', prevOgDesc);
-      if (prevOgUrl !== null) updateMeta('meta[property="og:url"]', 'content', prevOgUrl);
-      if (prevOgImg !== null) updateMeta('meta[property="og:image"]', 'content', prevOgImg);
-      if (prevOgImgSecure !== null) updateMeta('meta[property="og:image:secure_url"]', 'content', prevOgImgSecure);
-      if (prevOgImgAlt !== null) updateMeta('meta[property="og:image:alt"]', 'content', prevOgImgAlt);
-      if (prevTwTitle !== null) updateMeta('meta[name="twitter:title"]', 'content', prevTwTitle);
-      if (prevTwDesc !== null) updateMeta('meta[name="twitter:description"]', 'content', prevTwDesc);
-      if (prevTwUrl !== null) updateMeta('meta[name="twitter:url"]', 'content', prevTwUrl);
-      if (prevTwImg !== null) updateMeta('meta[name="twitter:image"]', 'content', prevTwImg);
-      if (prevTwImgAlt !== null) updateMeta('meta[name="twitter:image:alt"]', 'content', prevTwImgAlt);
       const scriptToRemove = document.getElementById('mirrorpos-schema');
       if (scriptToRemove) scriptToRemove.remove();
     };
@@ -297,14 +339,86 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         referenceId: data.referenceId || 'MB-SW-READY',
         message:
           data.message ||
-          `Your MirrorPOS access details and user guide links have been sent to ${cleanEmail}.`,
+          `A single-use verification link has been sent to ${cleanEmail}. Open the verification link in your Gmail to access MirrorPOS.`,
       });
+
+      if (data.tokenId && data.tokenExpiresAt && auth.currentUser?.emailVerified) {
+        recordMirrorPOSFreeAccessInFirestore({
+          tokenId: data.tokenId,
+          customerName: cleanName,
+          gmail: data.email || cleanEmail,
+          tokenExpiresAt: data.tokenExpiresAt,
+        }).catch(() => {});
+      }
     } catch {
       setAccessError(
         'Network error while sending access confirmation email. Please try again.'
       );
     } finally {
       setIsSubmittingAccess(false);
+    }
+  };
+
+  const handleOpenBkashModal = () => {
+    setBkashError('');
+    setBkashSuccessMessage('');
+    if (user) {
+      setBkashCustomerName((prev) => prev || user.displayName || '');
+      setBkashGmail((prev) => prev || user.email || '');
+      setBkashSenderNumber((prev) => prev || user.phone || '');
+    }
+    setIsBkashModalOpen(true);
+  };
+
+  const handleCopyBkashNumber = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(officialBkashNumber).catch(() => {});
+    }
+    setCopiedBkashNumber(true);
+    setTimeout(() => setCopiedBkashNumber(false), 2000);
+  };
+
+  const handleInlineGoogleSignIn = async () => {
+    if (!onGoogleSignIn || isGoogleSigningIn) return;
+    setIsGoogleSigningIn(true);
+    setBkashError('');
+    try {
+      await onGoogleSignIn();
+    } catch (err: unknown) {
+      setBkashError(err instanceof Error ? err.message : 'Google Sign-In failed. Please try again.');
+    } finally {
+      setIsGoogleSigningIn(false);
+    }
+  };
+
+  const handleBkashSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmittingBkash) return;
+
+    setBkashError('');
+    setIsSubmittingBkash(true);
+    try {
+      const parsedAmount = Number(bkashAmount.replace(/[^0-9.]/g, ''));
+      await submitMirrorPOSLicenseRequest({
+        customerName: bkashCustomerName,
+        gmail: bkashGmail,
+        senderNumber: bkashSenderNumber,
+        transactionId: bkashTransactionId,
+        amount: parsedAmount,
+      });
+
+      setBkashTransactionId('');
+      setBkashSuccessMessage(
+        'Your payment information has been submitted. Your license will be activated after admin verification.'
+      );
+    } catch (err: unknown) {
+      setBkashError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to submit payment information. Please verify your details and try again.'
+      );
+    } finally {
+      setIsSubmittingBkash(false);
     }
   };
 
@@ -420,7 +534,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         title: 'Getting Started',
         summary: 'Understand MirrorPOS system overview, browser/desktop launch, and main workspace layout.',
         steps: [
-          'Open https://mirror-pos.vercel.app/ in Google Chrome or Microsoft Edge on Windows 10/11 (or launch your installed desktop app shortcut).',
+          'Open the MirrorPOS app in Google Chrome or Microsoft Edge on Windows 10/11 via your verified email verification link or your approved Desktop License button.',
           'For dedicated desktop window mode without browser tabs, click the Install icon in the browser address bar to pin MirrorPOS to your taskbar.',
           'Review the left navigation sidebar covering Business Dashboard, POS Billing, Product & Inventory, Customers, Suppliers, Shop Expenses, Reports, and Backup.',
         ],
@@ -544,7 +658,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           'Thermal Printer Formatting: Ensure Chrome/Edge print settings match your 58mm/80mm paper size with Margins set to None.',
           'Barcode Scanner Not Entering Items: Verify the scanner is in USB HID keyboard mode and focus is inside the POS search field.',
           'Sync Delayed: Confirm stable internet connectivity and click the manual Cloud Sync button to push queued offline records.',
-          'Still need assistance? Contact MirrorBook Technical Support at khansaheb2572@gmail.com or via the Technical Support button below.',
+          'Still need assistance? Contact MirrorBook Technical Support at mirrorbook.site@gmail.com or via the Technical Support button below.',
         ],
       },
     ],
@@ -554,7 +668,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         title: 'Getting Started (শুরু করার নিয়ম)',
         summary: 'MirrorPOS সফটওয়্যার ওপেন করা, ডেস্কটপ অ্যাপ ইনস্টল ও মূল ড্যাশবোর্ড পরিচিতি।',
         steps: [
-          'আপনার Windows 10/11 পিসিতে Google Chrome বা Microsoft Edge দিয়ে https://mirror-pos.vercel.app/ ওপেন করুন।',
+          'আপনার Windows 10/11 পিসিতে ইমেইল ভেরিফিকেশন লিংক অথবা অ্যাপ্রুভড ডেস্কটপ লাইসেন্স বাটনের মাধ্যমে Google Chrome বা Microsoft Edge দিয়ে MirrorPOS ওপেন করুন।',
           'ব্রাউজার ট্যাব ছাড়া আলাদা ডেস্কটপ অ্যাপ উইন্ডোতে চালাতে অ্যাড্রেস বারের Install আইকনে ক্লিক করে টাস্কবারে পিন করুন।',
           'বাম দিকের সাইডবার থেকে বিজনেস ড্যাশবোর্ড, পজ (POS), প্রোডাক্ট ও স্টক, কাস্টমার, সাপ্লায়ার, খরচ ও রিপোর্ট মেনু দেখুন।',
         ],
@@ -678,7 +792,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           'থার্মাল প্রিন্ট সেটিংস: Chrome/Edge প্রিন্ট ডায়ালগে পেপার সাইজ 58mm/80mm এবং Margins: None রাখুন।',
           'বারকোড স্ক্যান না হলে: স্ক্যানার USB HID কিবোর্ড মোডে আছে কিনা দেখুন এবং POS সার্চ বক্সে ক্লিক করে স্ক্যান করুন।',
           'সিঙ্ক সমস্যা হলে: ইন্টারনেট কানেকশন নিশ্চিত করে Cloud Sync বাটনে ক্লিক করুন।',
-          'অতিরিক্ত সহায়তার জন্য khansaheb2572@gmail.com ইমেইলে বা নিচের Technical Support বাটনে যোগাযোগ করুন।',
+          'অতিরিক্ত সহায়তার জন্য mirrorbook.site@gmail.com ইমেইলে বা নিচের Technical Support বাটনে যোগাযোগ করুন।',
         ],
       },
     ],
@@ -697,7 +811,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'Step 01',
           title: 'Open MirrorPOS in Google Chrome',
           detail:
-            'Launch Google Chrome on your Windows 10 or Windows 11 PC and visit https://mirror-pos.vercel.app/.',
+            'Open MirrorPOS in Google Chrome on Windows 10/11 via the single-use verification link in your Gmail or your approved Desktop License launch button.',
         },
         {
           step: 'Step 02',
@@ -723,7 +837,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'Step 01',
           title: 'Open MirrorPOS in Microsoft Edge',
           detail:
-            'Open Microsoft Edge on Windows 10/11 and visit https://mirror-pos.vercel.app/.',
+            'Open MirrorPOS in Microsoft Edge on Windows 10/11 using your Gmail verification link or approved Desktop License button.',
         },
         {
           step: 'Step 02',
@@ -757,7 +871,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'ধাপ ০১',
           title: 'Google Chrome-এ MirrorPOS ওপেন করুন',
           detail:
-            'Google Chrome চালু করে https://mirror-pos.vercel.app/ লিংকে প্রবেশ করুন।',
+            'আপনার Gmail ভেরিফিকেশন লিংক অথবা অ্যাপ্রুভড ডেস্কটপ লাইসেন্স বাটনের মাধ্যমে Google Chrome-এ MirrorPOS ওপেন করুন।',
         },
         {
           step: 'ধাপ ০২',
@@ -783,7 +897,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           step: 'ধাপ ০১',
           title: 'Microsoft Edge-এ MirrorPOS ওপেন করুন',
           detail:
-            'Microsoft Edge খুলে https://mirror-pos.vercel.app/ লিংকে যান।',
+            'আপনার Gmail ভেরিফিকেশন লিংক অথবা অ্যাপ্রুভড ডেস্কটপ লাইসেন্স বাটনের মাধ্যমে Microsoft Edge-এ MirrorPOS ওপেন করুন।',
         },
         {
           step: 'ধাপ ০২',
@@ -853,6 +967,40 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </button>
         </div>
 
+        {/* Single-Use Email Token Verification Banner (?free_access_token=...) */}
+        {tokenVerifyState.status !== 'idle' && (
+          <div
+            className={`mb-8 p-4 sm:p-5 rounded-2xl border flex items-start gap-3 ${
+              tokenVerifyState.status === 'verifying'
+                ? 'bg-[#B7F34A]/10 border-[#B7F34A]/35 text-[#F5F7F2]'
+                : tokenVerifyState.status === 'success'
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-100'
+                : 'bg-red-500/15 border-red-500/40 text-red-100'
+            }`}
+          >
+            {tokenVerifyState.status === 'verifying' ? (
+              <Loader2 size={18} className="animate-spin text-[#B7F34A] shrink-0 mt-0.5" />
+            ) : tokenVerifyState.status === 'success' ? (
+              <CheckCircle2 size={18} className="text-[#B7F34A] shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+            )}
+            <div className="min-w-0 flex-1 text-xs sm:text-sm leading-relaxed">
+              {tokenVerifyState.message}
+            </div>
+            {tokenVerifyState.status === 'error' && (
+              <button
+                type="button"
+                onClick={() => setTokenVerifyState({ status: 'idle', message: '' })}
+                className="p-1 text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer shrink-0"
+                aria-label="Dismiss notice"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* 1. Hero & Product Overview + Free Access Registration Card */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start mb-16">
           {/* Left: Product Overview & Actions */}
@@ -906,7 +1054,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {accessConfirmed || isPremiumPurchased ? (
+              {isApprovedPaidUser ? (
                 <a
                   href={MIRRORPOS_APP_URL}
                   target="_blank"
@@ -927,38 +1075,47 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 </button>
               )}
 
-              {onBuyPremium && !isPremiumPurchased ? (
-                <button
-                  type="button"
-                  onClick={onBuyPremium}
-                  className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn-secondary border-[#B7F34A]/45 hover:border-[#B7F34A] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-                >
-                  <Download size={15} className="text-[#B7F34A]" />
-                  <span>Desktop License - ৳9,999</span>
-                </button>
-              ) : (
+              {isApprovedPaidUser ? (
                 <div className="w-full min-h-[46px] px-6 py-3.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/35 text-[#B7F34A] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap">
                   <ShieldCheck size={15} />
                   <span>Desktop License Active</span>
                 </div>
+              ) : isPendingPaidUser ? (
+                <button
+                  type="button"
+                  onClick={() => scrollToLocalSection('get-access')}
+                  className="w-full min-h-[46px] px-6 py-3.5 rounded-xl bg-yellow-500/10 border border-yellow-500/35 text-yellow-300 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                >
+                  <Clock size={15} />
+                  <span>Payment Under Review</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleOpenBkashModal}
+                  className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn-secondary border-[#B7F34A]/45 hover:border-[#B7F34A] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                >
+                  <KeyRound size={15} className="text-[#B7F34A]" />
+                  <span>Desktop License - ৳9,999</span>
+                </button>
               )}
             </div>
           </div>
 
-          {/* Right: Free Email Access OR ৳9,999 Premium Direct Purchase */}
+          {/* Right: Free Email Access OR ৳9,999 Manual bKash Desktop License */}
           <div id="get-access" className="lg:col-span-5 scroll-mt-24">
             <div className="glossy-card p-6 sm:p-7 rounded-2xl border border-[#B7F34A]/30 space-y-5">
               <div className="space-y-1.5 border-b border-white/[0.09] pb-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
-                    Free via Email · Premium ৳9,999
+                    Free via Email · Desktop License ৳9,999
                   </span>
                 </div>
                 <h2 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">
                   Get MirrorPOS Access
                 </h2>
                 <p className="text-xs text-[#A1AAA2] leading-relaxed">
-                  For free access, register with your email below to receive your MirrorPOS access link directly in Gmail. Or purchase the full ৳9,999 desktop license for instant direct unlock.
+                  For free access, register with your email below to receive a single-use verification link in Gmail. Or submit a manual bKash payment (৳9,999) for direct Desktop Lifetime License activation after admin verification.
                 </p>
               </div>
 
@@ -969,24 +1126,21 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 </div>
               )}
 
-              {accessConfirmed || isPremiumPurchased ? (
+              {/* Paid License Status Cards (Approved / Pending / Rejected) */}
+              {isApprovedPaidUser ? (
                 <div className="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 size={20} className="text-[#B7F34A] shrink-0 mt-0.5" />
                     <div className="space-y-1 min-w-0">
                       <h3 className="text-sm font-bold text-[#F5F7F2]">
-                        {isPremiumPurchased
-                          ? 'Premium License Verified & Ready'
-                          : 'Access Confirmed & Email Sent'}
+                        Desktop License Active &amp; Verified
                       </h3>
                       <p className="text-xs text-[#D4DBD5] leading-relaxed break-words">
-                        {isPremiumPurchased
-                          ? 'Your MirrorPOS Desktop Lifetime License (৳9,999) is active. Launch MirrorPOS below anytime.'
-                          : accessConfirmed?.message}
+                        Your MirrorPOS Desktop Lifetime License (৳9,999) is approved and active. Launch MirrorPOS directly below anytime.
                       </p>
-                      {accessConfirmed?.referenceId && (
+                      {userLicense?.transactionId && (
                         <p className="text-[11px] font-mono text-[#B7F34A]">
-                          Reference ID: {accessConfirmed.referenceId}
+                          Verified TrxID: {userLicense.transactionId}
                         </p>
                       )}
                     </div>
@@ -1013,86 +1167,167 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleFreeAccessSubmit} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="mirrorpos-full-name"
-                      className="text-xs font-medium text-[#A1AAA2] block mb-1.5"
-                    >
-                      Full Name *
-                    </label>
-                    <input
-                      id="mirrorpos-full-name"
-                      type="text"
-                      required
-                      minLength={2}
-                      value={fullName}
-                      onChange={(e) => {
-                        setFullName(e.target.value);
-                        if (accessError) setAccessError('');
-                      }}
-                      placeholder="Enter your full name"
-                      className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
-                    />
-                  </div>
+                <>
+                  {isPendingPaidUser && latestRequest && (
+                    <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/35 space-y-2">
+                      <div className="flex items-start gap-2.5">
+                        <Clock size={18} className="text-yellow-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1 min-w-0">
+                          <h3 className="text-xs sm:text-sm font-bold text-yellow-200">
+                            Your payment is under review.
+                          </h3>
+                          <p className="text-[11px] text-[#D4DBD5] leading-relaxed break-words">
+                            Your bKash payment submission is queued for admin verification. Once approved, Launch MirrorPOS will unlock automatically for your account.
+                          </p>
+                          <p className="text-[11px] font-mono text-yellow-300 break-all">
+                            TrxID: {latestRequest.transactionId} · ৳{latestRequest.amount.toLocaleString()} · Status: PENDING
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                  <div>
-                    <label
-                      htmlFor="mirrorpos-email"
-                      className="text-xs font-medium text-[#A1AAA2] block mb-1.5"
-                    >
-                      Email Address *
-                    </label>
-                    <input
-                      id="mirrorpos-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (accessError) setAccessError('');
-                      }}
-                      placeholder="you@business.com"
-                      className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
-                    />
-                  </div>
+                  {isRejectedPaidUser && latestRequest && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/35 space-y-2.5">
+                      <div className="flex items-start gap-2.5">
+                        <XCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1 min-w-0">
+                          <h3 className="text-xs sm:text-sm font-bold text-red-200">
+                            Verification Unsuccessful
+                          </h3>
+                          <p className="text-[11px] text-red-100/90 leading-relaxed break-words">
+                            Your payment could not be verified. Please check your transaction details or contact support.
+                          </p>
+                          <p className="text-[11px] font-mono text-red-300 break-all">
+                            Submitted TrxID: {latestRequest.transactionId}
+                            {latestRequest.adminNote ? ` · Note: ${latestRequest.adminNote}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenBkashModal}
+                        className="w-full min-h-[40px] py-2 px-4 text-xs font-bold glossy-btn-secondary border-red-400/40 rounded-xl cursor-pointer"
+                      >
+                        Resubmit New bKash Transaction
+                      </button>
+                    </div>
+                  )}
 
-                  <button
-                    type="submit"
-                    disabled={isSubmittingAccess}
-                    className="w-full min-h-[44px] py-3 px-5 text-xs font-bold glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                  >
-                    {isSubmittingAccess ? (
-                      <>
-                        <Loader2 size={15} className="animate-spin" />
-                        <span>Sending Access Email...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Mail size={14} />
-                        <span>Get Access via Email</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
+                  {accessConfirmed ? (
+                    <div className="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Mail size={20} className="text-[#B7F34A] shrink-0 mt-0.5" />
+                        <div className="space-y-1.5 min-w-0">
+                          <h3 className="text-sm font-bold text-[#F5F7F2]">
+                            Verification Link Sent to Your Gmail
+                          </h3>
+                          <p className="text-xs text-[#D4DBD5] leading-relaxed break-words">
+                            {accessConfirmed.message}
+                          </p>
+                          <p className="text-[11px] text-[#A1AAA2] leading-relaxed">
+                            Open the single-use verification link inside your email inbox to launch MirrorPOS directly.
+                          </p>
+                          <p className="text-[11px] font-mono text-[#B7F34A]">
+                            Reference ID: {accessConfirmed.referenceId}
+                          </p>
+                        </div>
+                      </div>
 
-              {/* Direct Paid Option (৳9,999) */}
-              {onBuyPremium && !isPremiumPurchased && (
-                <div className="pt-4 border-t border-white/[0.09] space-y-2.5">
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="text-[#A1AAA2]">Direct Desktop Purchase (Instant Launch)</span>
-                    <span className="font-display font-bold text-[#F5F7F2] tabular-nums">৳9,999</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onBuyPremium}
-                    className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold glossy-btn-secondary border-[#B7F34A]/35 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Download size={14} className="text-[#B7F34A]" />
-                    <span>Purchase &amp; Launch MirrorPOS – ৳9,999</span>
-                  </button>
-                </div>
+                      <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => scrollToLocalSection('user-guide')}
+                          className="flex-1 min-h-[44px] py-2.5 px-4 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <BookOpen size={13} className="text-[#B7F34A]" />
+                          <span>Complete User Guide</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleFreeAccessSubmit} className="space-y-4">
+                      <div>
+                        <label
+                          htmlFor="mirrorpos-full-name"
+                          className="text-xs font-medium text-[#A1AAA2] block mb-1.5"
+                        >
+                          Full Name *
+                        </label>
+                        <input
+                          id="mirrorpos-full-name"
+                          type="text"
+                          required
+                          minLength={2}
+                          value={fullName}
+                          onChange={(e) => {
+                            setFullName(e.target.value);
+                            if (accessError) setAccessError('');
+                          }}
+                          placeholder="Enter your full name"
+                          className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="mirrorpos-email"
+                          className="text-xs font-medium text-[#A1AAA2] block mb-1.5"
+                        >
+                          Email Address *
+                        </label>
+                        <input
+                          id="mirrorpos-email"
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (accessError) setAccessError('');
+                          }}
+                          placeholder="you@gmail.com"
+                          className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingAccess}
+                        className="w-full min-h-[44px] py-3 px-5 text-xs font-bold glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      >
+                        {isSubmittingAccess ? (
+                          <>
+                            <Loader2 size={15} className="animate-spin" />
+                            <span>Sending Verification Link...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail size={14} />
+                            <span>Get Access via Email</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+
+                  {/* Manual bKash Paid Option (Desktop License - ৳9,999) */}
+                  {!isPendingPaidUser && !isRejectedPaidUser && (
+                    <div className="pt-4 border-t border-white/[0.09] space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-[#A1AAA2]">Desktop License (Manual bKash)</span>
+                        <span className="font-display font-bold text-[#F5F7F2] tabular-nums">৳9,999</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenBkashModal}
+                        className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold glossy-btn-secondary border-[#B7F34A]/35 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <KeyRound size={14} className="text-[#B7F34A]" />
+                        <span>Desktop License - ৳9,999</span>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -1212,6 +1447,8 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               <img
                 src={screenshots[activeScreenshot].image}
                 alt={screenshots[activeScreenshot].alt}
+                width={1280}
+                height={720}
                 loading="lazy"
                 decoding="async"
                 referrerPolicy="no-referrer"
@@ -1337,15 +1574,26 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 </div>
               </div>
 
-              <a
-                href={MIRRORPOS_APP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="glossy-btn min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
-              >
-                <span>{activeGuide.openBtn}</span>
-                <ExternalLink size={13} />
-              </a>
+              {isApprovedPaidUser ? (
+                <a
+                  href={MIRRORPOS_APP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="glossy-btn min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                >
+                  <span>{activeGuide.openBtn}</span>
+                  <ExternalLink size={13} />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => scrollToLocalSection('get-access')}
+                  className="glossy-btn min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Mail size={13} />
+                  <span>Get Access via Email</span>
+                </button>
+              )}
             </div>
           </div>
         </section>
@@ -1469,17 +1717,41 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               Access your business management software and manage your business smarter with MirrorPOS.
             </p>
             <div className="pt-3 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
-              <a
-                href={MIRRORPOS_APP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="glossy-btn w-full sm:w-auto min-h-[44px] px-7 py-3.5 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
-              >
-                <span>Launch MirrorPOS</span>
-                <ExternalLink size={14} />
-              </a>
+              {isApprovedPaidUser ? (
+                <a
+                  href={MIRRORPOS_APP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="glossy-btn w-full sm:w-auto min-h-[44px] px-7 py-3.5 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <span>Launch MirrorPOS</span>
+                  <ExternalLink size={14} />
+                </a>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => scrollToLocalSection('get-access')}
+                    className="glossy-btn w-full sm:w-auto min-h-[44px] px-7 py-3.5 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <Mail size={14} />
+                    <span>Get Access via Email</span>
+                  </button>
 
-              {verifiedDesktopUrl && (
+                  {!isPendingPaidUser && (
+                    <button
+                      type="button"
+                      onClick={handleOpenBkashModal}
+                      className="glossy-btn-secondary border-[#B7F34A]/40 w-full sm:w-auto min-h-[44px] px-6 py-3.5 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <KeyRound size={14} className="text-[#B7F34A]" />
+                      <span>Desktop License - ৳9,999</span>
+                    </button>
+                  )}
+                </>
+              )}
+
+              {isApprovedPaidUser && verifiedDesktopUrl && (
                 <a
                   href={verifiedDesktopUrl}
                   target="_blank"
@@ -1511,7 +1783,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                 </button>
               ) : (
                 <a
-                  href="mailto:khansaheb2572@gmail.com?subject=MirrorPOS%20Technical%20Support"
+                  href="mailto:mirrorbook.site@gmail.com?subject=MirrorPOS%20Technical%20Support"
                   className="w-full sm:w-auto min-h-[44px] px-6 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.04] border border-white/[0.09] text-[#A1AAA2] hover:text-[#F5F7F2] text-xs font-semibold tracking-wide transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
                 >
                   <LifeBuoy size={14} className="text-[#B7F34A]" />
@@ -1533,6 +1805,251 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           </div>
         </section>
       </div>
+
+      {/* Dedicated Manual bKash Payment Modal (Desktop License - ৳9,999) */}
+      {isBkashModalOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center p-3 sm:p-4 bg-[#0B0D0C]/85 backdrop-blur-xl animate-in fade-in duration-200 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mirrorpos-bkash-modal-title"
+        >
+          <div className="relative w-full max-w-lg max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col glossy-card bg-[#121614] border border-[#B7F34A]/35 rounded-2xl overflow-hidden shadow-2xl my-auto text-left">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.09] bg-[#171C19] shrink-0 gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#E2136E]/20 border border-[#E2136E]/45 flex items-center justify-center text-[#F46AA5] shrink-0">
+                  <Smartphone size={15} />
+                </div>
+                <div className="min-w-0">
+                  <h2
+                    id="mirrorpos-bkash-modal-title"
+                    className="font-display text-sm sm:text-base font-bold text-[#F5F7F2] truncate"
+                  >
+                    MirrorPOS Desktop License
+                  </h2>
+                  <p className="text-[11px] text-[#A1AAA2]">
+                    Manual bKash Payment Verification · Lifetime ৳9,999
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsBkashModalOpen(false)}
+                className="w-9 h-9 rounded-xl hover:bg-white/10 text-[#A1AAA2] hover:text-[#F5F7F2] flex items-center justify-center cursor-pointer shrink-0"
+                aria-label="Close payment modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 space-y-5 overflow-y-auto overscroll-contain">
+              {/* Official bKash Number & Instructions */}
+              <div className="p-4 rounded-xl bg-[#0B0D0C] border border-[#E2136E]/35 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-[#F46AA5] font-semibold">
+                    Official bKash (Send Money / Personal)
+                  </span>
+                  <span className="text-sm font-display font-bold text-[#B7F34A] tabular-nums">
+                    ৳9,999
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-[#171C19] border border-white/[0.09]">
+                  <span className="font-mono text-base sm:text-lg font-bold text-[#F5F7F2] tracking-wide tabular-nums">
+                    {officialBkashNumber}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyBkashNumber}
+                    className="px-3 py-1.5 rounded-lg bg-[#0B0D0C] hover:bg-white/10 border border-white/[0.1] text-xs font-semibold text-[#B7F34A] flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    {copiedBkashNumber ? <Check size={13} /> : <Copy size={13} />}
+                    <span>{copiedBkashNumber ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+
+                <ol className="list-decimal list-inside space-y-1 text-[11px] text-[#A1AAA2] leading-relaxed">
+                  <li>Open bKash app &rarr; select <strong className="text-[#F5F7F2]">Send Money</strong>.</li>
+                  <li>Send exact amount <strong className="text-[#B7F34A]">৳9,999</strong> to <strong className="text-[#F5F7F2] font-mono">{officialBkashNumber}</strong>.</li>
+                  <li>Enter your sender number &amp; bKash <strong className="text-[#F5F7F2]">Transaction ID (TrxID)</strong> below.</li>
+                </ol>
+              </div>
+
+              {bkashSuccessMessage ? (
+                <div className="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 size={20} className="text-[#B7F34A] shrink-0 mt-0.5" />
+                    <div className="space-y-1.5 min-w-0">
+                      <h3 className="text-sm font-bold text-[#F5F7F2]">
+                        Payment Information Submitted
+                      </h3>
+                      <p className="text-xs text-[#D4DBD5] leading-relaxed">
+                        {bkashSuccessMessage}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsBkashModalOpen(false)}
+                    className="w-full min-h-[44px] py-2.5 px-5 text-xs font-bold glossy-btn rounded-xl cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : !user || !user.emailVerified ? (
+                <div className="p-5 rounded-xl bg-[#171C19] border border-white/[0.1] space-y-4 text-center">
+                  <div className="w-11 h-11 rounded-2xl bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[#B7F34A] mx-auto flex items-center justify-center">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-[#F5F7F2]">
+                      {!user ? 'Sign In Required to Link License' : 'Email Verification Required'}
+                    </h3>
+                    <p className="text-xs text-[#A1AAA2] leading-relaxed">
+                      Sign in with your Google account so your Desktop Lifetime License binds securely to your account after admin verification.
+                    </p>
+                  </div>
+
+                  {bkashError && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/35 text-xs text-red-200 text-left">
+                      {bkashError}
+                    </div>
+                  )}
+
+                  {onGoogleSignIn && (
+                    <button
+                      type="button"
+                      onClick={handleInlineGoogleSignIn}
+                      disabled={isGoogleSigningIn}
+                      className="w-full min-h-[44px] py-3 px-4 bg-[#F5F7F2] hover:bg-white text-[#0B0D0C] font-semibold text-xs rounded-xl flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60"
+                    >
+                      {isGoogleSigningIn ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin text-[#0B0D0C]" />
+                          <span>Signing in with Google...</span>
+                        </>
+                      ) : (
+                        <span>Continue with Google</span>
+                      )}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleBkashSubmit} className="space-y-3.5">
+                  {bkashError && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/35 text-xs text-red-200 flex items-start gap-2">
+                      <AlertCircle size={15} className="text-red-400 shrink-0 mt-0.5" />
+                      <span className="break-words">{bkashError}</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor="bkash-customer-name" className="text-xs font-medium text-[#A1AAA2] block mb-1">
+                      Customer Name *
+                    </label>
+                    <input
+                      id="bkash-customer-name"
+                      type="text"
+                      required
+                      minLength={2}
+                      value={bkashCustomerName}
+                      onChange={(e) => setBkashCustomerName(e.target.value)}
+                      placeholder="Your full name"
+                      className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="bkash-gmail" className="text-xs font-medium text-[#A1AAA2] block mb-1">
+                      Gmail Address *
+                    </label>
+                    <input
+                      id="bkash-gmail"
+                      type="email"
+                      required
+                      value={bkashGmail}
+                      onChange={(e) => setBkashGmail(e.target.value)}
+                      placeholder="you@gmail.com"
+                      className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="bkash-sender-number" className="text-xs font-medium text-[#A1AAA2] block mb-1">
+                        bKash Sender Number *
+                      </label>
+                      <input
+                        id="bkash-sender-number"
+                        type="tel"
+                        required
+                        value={bkashSenderNumber}
+                        onChange={(e) => setBkashSenderNumber(e.target.value)}
+                        placeholder="01XXXXXXXXX"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="bkash-amount" className="text-xs font-medium text-[#A1AAA2] block mb-1">
+                        Payment Amount (BDT) *
+                      </label>
+                      <input
+                        id="bkash-amount"
+                        type="number"
+                        required
+                        min={9999}
+                        max={9999}
+                        value={bkashAmount}
+                        onChange={(e) => setBkashAmount(e.target.value)}
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#B7F34A] font-bold focus:border-[#B7F34A] focus:outline-none font-mono tabular-nums"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="bkash-trx-id" className="text-xs font-medium text-[#A1AAA2] block mb-1">
+                      bKash Transaction ID (TrxID) *
+                    </label>
+                    <input
+                      id="bkash-trx-id"
+                      type="text"
+                      required
+                      minLength={4}
+                      maxLength={40}
+                      value={bkashTransactionId}
+                      onChange={(e) => setBkashTransactionId(e.target.value.toUpperCase())}
+                      placeholder="e.g. BL98XY23Q1"
+                      className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#0B0D0C] border border-white/[0.12] rounded-xl text-[#F5F7F2] placeholder:text-[#707A72] focus:border-[#B7F34A] focus:outline-none font-mono uppercase"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingBkash}
+                    className="w-full min-h-[44px] py-3 px-5 text-xs font-bold glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {isSubmittingBkash ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" />
+                        <span>Submitting Payment Details...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={15} />
+                        <span>Submit Payment for Admin Verification</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

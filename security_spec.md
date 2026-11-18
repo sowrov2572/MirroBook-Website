@@ -21,3 +21,9 @@
 10. **Blanket Orders Scrape (`list /orders`):** Customer A querying orders belonging to Customer B.
 11. **Admin Secrets Theft (`get /settings/adminConfig`):** Customer reading `telegramBotToken`.
 12. **Paid Product URL Injection (`update /products/course-video-reels`):** Writing `protectedUrl: "https://drive.google.com/..."` onto a paid product document.
+13. **MirrorPOS Self-Approval (`create /mirrorpos_license_requests/{id}` with `paymentStatus: "APPROVED"` or `update /mirrorpos_license_requests/{id}`):** Customer attempting to auto-approve or flip `paymentStatus` / `licenseStatus`.
+14. **MirrorPOS Direct License Forgery (`create` or `update /mirrorpos_user_licenses/{uid}`):** Customer writing `licenseStatus: "ACTIVE"` directly without Admin authorization.
+15. **MirrorPOS Duplicate TrxID Replay (`create /mirrorpos_trx_locks/{trxId}`):** Reusing an already submitted Transaction ID.
+16. **MirrorPOS License Request Scraping (`list /mirrorpos_license_requests`):** Customer attempting to list another user's payment submissions.
+17. **Admin Audit Log Forgery or Deletion (`create /admin_activity_logs` as customer, or `delete/update` as anyone):** Tampering with audit logs.
+

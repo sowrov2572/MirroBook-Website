@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Copy,
   Check,
+  Clock,
+  XCircle,
 } from 'lucide-react';
 import {
   AppUser,
@@ -21,6 +23,8 @@ import {
   Order,
   PaymentConfig,
   ProductItem,
+  MirrorPOSLicenseRequest,
+  AdminActivityLog,
   generateDeterministicLicenseKey,
   isVerifiedAdminUser,
 } from '../types';
@@ -49,6 +53,13 @@ interface AdminAuthPortalProps {
   paymentConfig: PaymentConfig;
   onSavePaymentConfig: (config: PaymentConfig) => void;
   onRefreshOrdersFromSheet: (fetchedOrders: Order[]) => void;
+  mirrorPOSRequests?: MirrorPOSLicenseRequest[];
+  adminActivityLogs?: AdminActivityLog[];
+  onUpdateMirrorPOSStatus?: (
+    requestId: string,
+    action: 'APPROVE' | 'REJECT' | 'PENDING',
+    note?: string
+  ) => Promise<void>;
 }
 
 export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
@@ -74,14 +85,19 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   paymentConfig,
   onSavePaymentConfig,
   onRefreshOrdersFromSheet,
+  mirrorPOSRequests = [],
+  adminActivityLogs = [],
+  onUpdateMirrorPOSStatus,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [approvalError, setApprovalError] = useState<string | null>(null);
   const [isConsoleModalOpen, setIsConsoleModalOpen] = useState(false);
+  const [modalInitialTab, setModalInitialTab] = useState<'orders' | 'mirrorpos' | 'products' | 'automation'>('orders');
   const [customerSearch, setCustomerSearch] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
+  const [updatingMirrorPOSKey, setUpdatingMirrorPOSKey] = useState<string | null>(null);
 
   const isAdmin = isVerifiedAdminUser(user);
 
@@ -263,6 +279,26 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
   });
 
   const pendingOrders = orders.filter((o) => o.status === 'Pending');
+  const pendingMirrorPOS = mirrorPOSRequests.filter((r) => r.paymentStatus === 'PENDING');
+
+  const handleMirrorPOSQuickAction = async (
+    requestId: string,
+    action: 'APPROVE' | 'REJECT' | 'PENDING'
+  ) => {
+    if (!onUpdateMirrorPOSStatus) return;
+    setApprovalError(null);
+    const key = `${requestId}:${action}`;
+    setUpdatingMirrorPOSKey(key);
+    try {
+      await onUpdateMirrorPOSStatus(requestId, action);
+    } catch (err: unknown) {
+      setApprovalError(
+        err instanceof Error ? err.message : 'Failed to update MirrorPOS license status.'
+      );
+    } finally {
+      setUpdatingMirrorPOSKey(null);
+    }
+  };
 
   const handleApprovePendingOrder = async (ord: Order) => {
     setApprovalError(null);
@@ -302,7 +338,21 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              onClick={() => setIsConsoleModalOpen(true)}
+              onClick={() => {
+                setModalInitialTab('mirrorpos');
+                setIsConsoleModalOpen(true);
+              }}
+              className="glossy-btn-secondary border-[#B7F34A]/40 w-full sm:w-auto min-h-[44px] px-4 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <KeyRound size={14} className="text-[#B7F34A] shrink-0" />
+              <span>MirrorPOS Licenses ({pendingMirrorPOS.length} Pending)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setModalInitialTab('orders');
+                setIsConsoleModalOpen(true);
+              }}
               className="glossy-btn w-full sm:w-auto min-h-[44px] px-4 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
             >
               <Settings size={14} className="shrink-0" />
@@ -360,10 +410,90 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
               <KeyRound size={13} className="text-yellow-400 shrink-0" /> Pending Reviews
             </span>
             <span className="text-xl sm:text-2xl font-display font-bold text-yellow-300 tabular-nums mt-1 block">
-              {pendingOrders.length}
+              {pendingOrders.length + pendingMirrorPOS.length}
             </span>
           </div>
         </div>
+
+        {/* Pending MirrorPOS Manual bKash Verification Queue */}
+        {pendingMirrorPOS.length > 0 && (
+          <div className="glossy-card border-[#B7F34A]/35 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-display text-sm sm:text-base font-bold text-[#F5F7F2]">
+                MirrorPOS Manual bKash Payments Awaiting Verification ({pendingMirrorPOS.length})
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalInitialTab('mirrorpos');
+                  setIsConsoleModalOpen(true);
+                }}
+                className="text-xs font-semibold text-[#B7F34A] hover:underline cursor-pointer"
+              >
+                View All MirrorPOS Requests &amp; Audit Log
+              </button>
+            </div>
+            {approvalError && (
+              <div className="p-3 rounded-xl bg-red-950/40 border border-red-800 text-red-200 text-xs flex items-start gap-2">
+                <ShieldAlert size={15} className="shrink-0 text-red-400 mt-0.5" />
+                <span>{approvalError}</span>
+              </div>
+            )}
+            <div className="space-y-2.5">
+              {pendingMirrorPOS.map((req) => {
+                const isBusy = Boolean(updatingMirrorPOSKey?.startsWith(`${req.id}:`));
+                return (
+                  <div
+                    key={req.id}
+                    className="bg-[#121614] border border-white/[0.09] rounded-xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3"
+                  >
+                    <div className="text-xs space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono font-bold text-[#B7F34A]">{req.id}</span>
+                        <span className="text-[#F5F7F2] font-semibold">MirrorPOS Desktop License</span>
+                        <span className="text-[#A1AAA2] font-mono tabular-nums">(৳{req.amount.toLocaleString()})</span>
+                      </div>
+                      <p className="text-[#A1AAA2] break-words">
+                        {req.customerName} • <span className="break-all">{req.gmail}</span> • Sender:{' '}
+                        <strong className="text-[#F5F7F2] font-mono">{req.senderNumber}</strong> • TrxID:{' '}
+                        <strong className="text-[#B7F34A] font-mono break-all">{req.transactionId}</strong>
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => handleMirrorPOSQuickAction(req.id, 'APPROVE')}
+                        className="glossy-btn min-h-[40px] px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <CheckCircle2 size={14} />
+                        <span>Approve</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => handleMirrorPOSQuickAction(req.id, 'REJECT')}
+                        className="min-h-[40px] px-4 py-2 bg-red-500/20 hover:bg-red-500/35 border border-red-500/40 text-red-200 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <XCircle size={14} />
+                        <span>Reject</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => handleMirrorPOSQuickAction(req.id, 'PENDING')}
+                        className="min-h-[40px] px-3 py-2 bg-yellow-500/15 hover:bg-yellow-500/30 border border-yellow-500/35 text-yellow-200 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Clock size={14} />
+                        <span>Pending</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Pending Manual Order Approval Queue */}
         {pendingOrders.length > 0 && (
@@ -583,6 +713,10 @@ export const AdminAuthPortal: React.FC<AdminAuthPortalProps> = ({
         onSavePaymentConfig={onSavePaymentConfig}
         currentUser={user}
         onRefreshOrdersFromSheet={onRefreshOrdersFromSheet}
+        mirrorPOSRequests={mirrorPOSRequests}
+        adminActivityLogs={adminActivityLogs}
+        onUpdateMirrorPOSStatus={onUpdateMirrorPOSStatus}
+        initialTab={modalInitialTab}
       />
     </section>
   );

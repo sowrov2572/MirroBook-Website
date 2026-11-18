@@ -63,7 +63,6 @@ service cloud.firestore {
         && (!('thumbnailUrl' in data) || (data.thumbnailUrl is string && data.thumbnailUrl.size() <= 1000))
         && (!('iconUrl' in data) || (data.iconUrl is string && data.iconUrl.size() <= 1000))
         && (!('launchUrl' in data) || (data.launchUrl is string && data.launchUrl.size() <= 1000))
-        // Non-tutorial items (Software, Plugins, Courses, Packages) MUST NOT expose protectedUrl in public /products
         && (
           !('protectedUrl' in data) ||
           (data.type == 'Free Tutorial' && data.price == 0 && data.protectedUrl is string && data.protectedUrl.size() <= 1000) ||
@@ -173,6 +172,110 @@ service cloud.firestore {
         && (!('licenseKey' in data) || (data.licenseKey is string && data.licenseKey.size() <= 120))
         && (!('sessionToken' in data) || (data.sessionToken is string && data.sessionToken.size() <= 120))
         && data.downloadedAt is timestamp;
+    }
+
+    function isValidMirrorPOSLicenseRequest(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'customerName', 'gmail', 'senderNumber', 'transactionId',
+          'amount', 'accessType', 'licenseType', 'paymentStatus', 'licenseStatus',
+          'submittedAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'customerName', 'gmail', 'senderNumber', 'transactionId',
+          'amount', 'accessType', 'licenseType', 'paymentStatus', 'licenseStatus',
+          'submittedAt', 'updatedAt', 'approvedAt', 'approvedBy', 'adminNote'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 120
+        && data.gmail is string && data.gmail.size() >= 5 && data.gmail.size() <= 254
+        && data.senderNumber is string && data.senderNumber.size() >= 6 && data.senderNumber.size() <= 30
+        && isValidId(data.transactionId)
+        && data.transactionId.size() >= 4 && data.transactionId.size() <= 40
+        && (data.amount is int || data.amount is float) && data.amount > 0 && data.amount <= 1000000
+        && data.accessType is string && data.accessType == 'DESKTOP_LICENSE'
+        && data.licenseType is string && data.licenseType == 'LIFETIME'
+        && data.paymentStatus is string && data.paymentStatus in ['PENDING', 'APPROVED', 'REJECTED']
+        && data.licenseStatus is string && data.licenseStatus in ['PENDING', 'ACTIVE', 'INACTIVE']
+        && data.submittedAt is timestamp
+        && data.updatedAt is timestamp
+        && (!('approvedAt' in data) || data.approvedAt == null || data.approvedAt is timestamp)
+        && (!('approvedBy' in data) || data.approvedBy == null || (data.approvedBy is string && data.approvedBy.size() <= 254))
+        && (!('adminNote' in data) || data.adminNote == null || (data.adminNote is string && data.adminNote.size() <= 500));
+    }
+
+    function isValidMirrorPOSTrxLock(data) {
+      return data.keys().hasAll(['trxId', 'requestId', 'userId', 'createdAt'])
+        && data.keys().hasOnly(['trxId', 'requestId', 'userId', 'createdAt'])
+        && isValidId(data.trxId)
+        && isValidId(data.requestId)
+        && isValidId(data.userId)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidMirrorPOSUserLicense(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'productId', 'accessType', 'licenseType', 'licenseStatus', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'customerName', 'productId', 'accessType', 'licenseType',
+          'licenseStatus', 'requestId', 'transactionId', 'amount', 'approvedBy', 'approvedAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 254
+        && (!('customerName' in data) || (data.customerName is string && data.customerName.size() <= 120))
+        && data.productId is string && data.productId == 'software-mirrorpos'
+        && data.accessType is string && data.accessType == 'DESKTOP_LICENSE'
+        && data.licenseType is string && data.licenseType == 'LIFETIME'
+        && data.licenseStatus is string && data.licenseStatus in ['PENDING', 'ACTIVE', 'INACTIVE']
+        && (!('requestId' in data) || isValidId(data.requestId))
+        && (!('transactionId' in data) || (data.transactionId is string && data.transactionId.size() <= 40))
+        && (!('amount' in data) || ((data.amount is int || data.amount is float) && data.amount >= 0))
+        && (!('approvedBy' in data) || data.approvedBy == null || (data.approvedBy is string && data.approvedBy.size() <= 254))
+        && (!('approvedAt' in data) || data.approvedAt == null || data.approvedAt is timestamp)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMirrorPOSFreeAccess(data) {
+      return data.keys().hasAll([
+          'id', 'customerName', 'gmail', 'accessType', 'tokenId', 'tokenExpiresAt', 'used', 'requestedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'customerName', 'gmail', 'accessType',
+          'tokenId', 'tokenExpiresAt', 'used', 'requestedAt', 'usedAt'
+        ])
+        && isValidId(data.id)
+        && (!('userId' in data) || data.userId == null || isValidId(data.userId))
+        && data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120
+        && data.gmail is string && data.gmail.size() >= 5 && data.gmail.size() <= 254
+        && data.accessType is string && data.accessType == 'FREE_EMAIL'
+        && isValidId(data.tokenId)
+        && data.tokenExpiresAt is string && data.tokenExpiresAt.size() <= 64
+        && data.used is bool
+        && data.requestedAt is timestamp
+        && (!('usedAt' in data) || data.usedAt == null || data.usedAt is timestamp);
+    }
+
+    function isValidAdminActivityLog(data) {
+      return data.keys().hasAll([
+          'id', 'action', 'adminUid', 'adminEmail', 'targetRequestId', 'newStatus', 'timestamp'
+        ])
+        && data.keys().hasOnly([
+          'id', 'action', 'adminUid', 'adminEmail', 'targetRequestId', 'targetUserId',
+          'targetEmail', 'transactionId', 'previousStatus', 'newStatus', 'details', 'timestamp'
+        ])
+        && isValidId(data.id)
+        && data.action is string && data.action.size() >= 2 && data.action.size() <= 80
+        && isValidId(data.adminUid)
+        && data.adminEmail is string && data.adminEmail.size() >= 3 && data.adminEmail.size() <= 254
+        && isValidId(data.targetRequestId)
+        && (!('targetUserId' in data) || (data.targetUserId is string && data.targetUserId.size() <= 128))
+        && (!('targetEmail' in data) || (data.targetEmail is string && data.targetEmail.size() <= 254))
+        && (!('transactionId' in data) || (data.transactionId is string && data.transactionId.size() <= 40))
+        && (!('previousStatus' in data) || (data.previousStatus is string && data.previousStatus.size() <= 30))
+        && data.newStatus is string && data.newStatus.size() >= 2 && data.newStatus.size() <= 30
+        && (!('details' in data) || (data.details is string && data.details.size() <= 500))
+        && data.timestamp is timestamp;
     }
 
     // ==================== COLLECTION RULES ====================
@@ -305,6 +408,133 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if isValidId(userId) && isValidId(downloadId) && isAdmin();
       }
+    }
+
+    // 6. MirrorPOS Manual bKash Desktop License Requests
+    // Customers can ONLY submit PENDING requests bound to their own UID + unique trx lock.
+    // Customers can NEVER edit paymentStatus or licenseStatus. Only verified Admin can approve/reject/pending.
+    match /mirrorpos_license_requests/{requestId} {
+      allow get: if isValidId(requestId) && isSignedIn() && (
+        isAdmin() ||
+        existing().userId == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        isVerifiedOwnerEmail() ||
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if isEmailVerified()
+        && isValidId(requestId)
+        && isValidMirrorPOSLicenseRequest(incoming())
+        && incoming().id == requestId
+        && incoming().userId == request.auth.uid
+        && incoming().paymentStatus == 'PENDING'
+        && incoming().licenseStatus == 'PENDING'
+        && incoming().accessType == 'DESKTOP_LICENSE'
+        && incoming().licenseType == 'LIFETIME'
+        && incoming().amount == 9999
+        && !('approvedAt' in incoming())
+        && !('approvedBy' in incoming())
+        && !('adminNote' in incoming())
+        && incoming().submittedAt == request.time
+        && incoming().updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/mirrorpos_trx_locks/$(incoming().transactionId));
+      allow update: if isValidMirrorPOSLicenseRequest(incoming())
+        && isAdmin()
+        && isValidId(requestId)
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().transactionId == existing().transactionId
+        && incoming().submittedAt == existing().submittedAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'paymentStatus', 'licenseStatus', 'approvedAt', 'approvedBy', 'adminNote', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(requestId);
+    }
+
+    // 6b. MirrorPOS Duplicate Transaction ID Lock (Zero PII, create-once atomic lock)
+    match /mirrorpos_trx_locks/{trxId} {
+      allow get: if isValidId(trxId) && isSignedIn();
+      allow list: if isVerifiedOwnerEmail();
+      allow create: if isEmailVerified()
+        && isValidId(trxId)
+        && isValidMirrorPOSTrxLock(incoming())
+        && incoming().trxId == trxId
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(trxId);
+    }
+
+    // 7. MirrorPOS Activated User Licenses (Strictly Read-Only for Customer Owner; Writes Admin-only)
+    match /mirrorpos_user_licenses/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (
+        isVerifiedOwnerEmail() ||
+        resource.data.uid == request.auth.uid
+      );
+      allow create: if isAdmin()
+        && isValidId(userId)
+        && isValidMirrorPOSUserLicense(incoming())
+        && incoming().uid == userId
+        && incoming().updatedAt == request.time;
+      allow update: if isValidMirrorPOSUserLicense(incoming())
+        && isAdmin()
+        && isValidId(userId)
+        && incoming().uid == existing().uid
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 8. MirrorPOS Free Email Access Tracking
+    match /mirrorpos_free_access/{accessId} {
+      allow get: if isValidId(accessId) && isSignedIn() && (
+        isAdmin() ||
+        (('userId' in existing()) && existing().userId == request.auth.uid)
+      );
+      allow list: if isSignedIn() && (
+        isVerifiedOwnerEmail() ||
+        (('userId' in resource.data) && resource.data.userId == request.auth.uid)
+      );
+      allow create: if isEmailVerified()
+        && isValidId(accessId)
+        && isValidMirrorPOSFreeAccess(incoming())
+        && incoming().id == accessId
+        && ('userId' in incoming()) && incoming().userId == request.auth.uid
+        && incoming().accessType == 'FREE_EMAIL'
+        && incoming().used == false
+        && incoming().requestedAt == request.time;
+      allow update: if isValidMirrorPOSFreeAccess(incoming())
+        && isValidId(accessId)
+        && isSignedIn()
+        && (
+          isAdmin() ||
+          (
+            ('userId' in existing()) &&
+            existing().userId == request.auth.uid &&
+            incoming().id == existing().id &&
+            incoming().userId == existing().userId &&
+            incoming().gmail == existing().gmail &&
+            incoming().accessType == existing().accessType &&
+            incoming().tokenId == existing().tokenId &&
+            incoming().requestedAt == existing().requestedAt &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['used', 'usedAt'])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(accessId);
+    }
+
+    // 9. Admin Activity Audit Logs (Admin create & read only; strictly immutable)
+    match /admin_activity_logs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isVerifiedOwnerEmail();
+      allow create: if isAdmin()
+        && isValidId(logId)
+        && isValidAdminActivityLog(incoming())
+        && incoming().id == logId
+        && incoming().adminUid == request.auth.uid
+        && incoming().timestamp == request.time;
+      allow update, delete: if false;
     }
   }
 }

@@ -10,6 +10,7 @@ import { processGetPaymentSmsLogs } from './api/payment-sms/logs';
 import { processSubmitAndVerifyOrder } from './api/orders/submit-and-verify';
 import { processAdminApproveOrder } from './api/orders/admin-approve';
 import { processFreeSoftwareAccess } from './api/software/free-access';
+import { processVerifyFreeAccess } from './api/software/verify-free-access';
 import { processSoftwareAccess } from './api/software/access';
 import {
   processGetCourseLessons,
@@ -166,11 +167,56 @@ function apiDevServerPlugin(): Plugin {
 
           const bodyStr = await readRequestBody(req);
           try {
+            const originHeader = typeof req.headers['origin'] === 'string' ? req.headers['origin'] : '';
+            const hostHeader = typeof req.headers['host'] === 'string' ? req.headers['host'] : 'localhost:3000';
+            const requestOrigin = originHeader || `http://${hostHeader}`;
             const result = await processFreeSoftwareAccess({
               authorizationHeader: authHeader,
               body: bodyStr || '{}',
               clientIp,
+              requestOrigin,
             });
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/software/verify-free-access') {
+          if (req.method !== 'GET' && req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed.' });
+            return;
+          }
+
+          const bodyStr = req.method === 'POST' ? await readRequestBody(req) : '';
+          try {
+            let parsedBody: Record<string, any> = {};
+            if (bodyStr) {
+              try {
+                parsedBody = JSON.parse(bodyStr);
+              } catch {
+                sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+                return;
+              }
+            }
+            const params = new URLSearchParams(queryStr || '');
+            const token =
+              params.get('token') ||
+              params.get('free_access_token') ||
+              parsedBody.token ||
+              '';
+            const shouldRedirect =
+              req.method === 'GET' && (params.get('redirect') === '1' || params.get('go') === '1');
+
+            const result = await processVerifyFreeAccess({ token, clientIp });
+            res.setHeader('Cache-Control', 'no-store');
+            if (shouldRedirect && result.status === 200 && result.redirectUrl) {
+              res.statusCode = 302;
+              res.setHeader('Location', result.redirectUrl);
+              res.end();
+              return;
+            }
             sendJson(res, result.status, result.data);
           } catch (err: any) {
             sendJson(res, 500, { success: false, error: err?.message || 'Server error' });

@@ -25,8 +25,24 @@ import {
   Zap,
   MessageSquare,
   ShieldCheck,
+  Clock,
+  XCircle,
+  KeyRound,
+  Activity,
 } from 'lucide-react';
-import { Order, ProductItem, ProductType, ProductStatus, PaymentConfig, AppUser, SheetPaymentLog, isVerifiedAdminUser } from '../types';
+import {
+  Order,
+  ProductItem,
+  ProductType,
+  ProductStatus,
+  PaymentConfig,
+  AppUser,
+  SheetPaymentLog,
+  MirrorPOSLicenseRequest,
+  MirrorPOSPaymentStatus,
+  AdminActivityLog,
+  isVerifiedAdminUser,
+} from '../types';
 import {
   COMPLETE_PAYMENT_GOOGLE_APPS_SCRIPT,
   sendTelegramNotification,
@@ -54,6 +70,14 @@ interface AdminModalProps {
   onSavePaymentConfig?: (config: PaymentConfig) => void;
   currentUser?: AppUser | null;
   onRefreshOrdersFromSheet?: (fetchedOrders: Order[]) => void;
+  mirrorPOSRequests?: MirrorPOSLicenseRequest[];
+  adminActivityLogs?: AdminActivityLog[];
+  onUpdateMirrorPOSStatus?: (
+    requestId: string,
+    action: 'APPROVE' | 'REJECT' | 'PENDING',
+    note?: string
+  ) => Promise<void>;
+  initialTab?: 'orders' | 'mirrorpos' | 'products' | 'automation';
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -75,6 +99,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onSavePaymentConfig,
   currentUser,
   onRefreshOrdersFromSheet: _onRefreshOrdersFromSheet,
+  mirrorPOSRequests = [],
+  adminActivityLogs = [],
+  onUpdateMirrorPOSStatus,
+  initialTab = 'orders',
 }) => {
   const paymentConfig = passedPaymentConfig || loadPaymentConfig();
   const isOwnerVerified = isVerifiedAdminUser(currentUser);
@@ -82,8 +110,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [productSavedToast, setProductSavedToast] = useState<string | null>(null);
   const [productErrorToast, setProductErrorToast] = useState<string | null>(null);
 
-  // Active Main Tab: 'orders' | 'products' | 'automation'
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'automation'>('orders');
+  // Active Main Tab: 'orders' | 'mirrorpos' | 'products' | 'automation'
+  const [activeTab, setActiveTab] = useState<'orders' | 'mirrorpos' | 'products' | 'automation'>(initialTab);
 
   // Orders Sub-tab: 'orders' | 'sms_logs'
   const [ordersSubTab, setOrdersSubTab] = useState<'orders' | 'sms_logs'>('orders');
@@ -94,6 +122,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   // Orders State
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
+
+  // MirrorPOS Licenses State
+  const [mirrorPOSStatusFilter, setMirrorPOSStatusFilter] = useState<'ALL' | MirrorPOSPaymentStatus>('ALL');
+  const [mirrorPOSSearch, setMirrorPOSSearch] = useState('');
+  const [updatingMirrorPOSKey, setUpdatingMirrorPOSKey] = useState<string | null>(null);
+  const [mirrorPOSFeedback, setMirrorPOSFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   // Products State
   const [productTypeFilter, setProductTypeFilter] = useState<'All' | ProductType>('All');
@@ -214,10 +251,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   }, [isOpen, isOwnerVerified]);
 
+  // Sync initialTab when modal opens
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
+
   // Reset view states when modal closes
   useEffect(() => {
     if (!isOpen) {
       setOrderSearchTerm('');
+      setMirrorPOSSearch('');
+      setMirrorPOSFeedback(null);
       setProductSearchTerm('');
       setIsFormOpen(false);
       setEditingProduct(null);
@@ -311,6 +357,36 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       setTimeout(() => setSyncFeedback(null), 5000);
     } finally {
       setApprovingOrderId(null);
+    }
+  };
+
+  // Update MirrorPOS Manual bKash Request Status (APPROVE / REJECT / PENDING)
+  const handleMirrorPOSActionClick = async (
+    requestId: string,
+    action: 'APPROVE' | 'REJECT' | 'PENDING'
+  ) => {
+    if (!onUpdateMirrorPOSStatus) return;
+    const actionKey = `${requestId}:${action}`;
+    setUpdatingMirrorPOSKey(actionKey);
+    setMirrorPOSFeedback(null);
+    try {
+      await onUpdateMirrorPOSStatus(requestId, action);
+      setMirrorPOSFeedback({
+        type: 'success',
+        message:
+          action === 'APPROVE'
+            ? `✓ Request ${requestId} approved — customer MirrorPOS Desktop License is now ACTIVE.`
+            : action === 'REJECT'
+            ? `Request ${requestId} marked as REJECTED and license set INACTIVE.`
+            : `Request ${requestId} reset to PENDING review.`,
+      });
+    } catch (err: unknown) {
+      setMirrorPOSFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to update MirrorPOS license status.',
+      });
+    } finally {
+      setUpdatingMirrorPOSKey(null);
     }
   };
 
@@ -584,6 +660,21 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     );
   });
 
+  const pendingMirrorPOSCount = mirrorPOSRequests.filter((r) => r.paymentStatus === 'PENDING').length;
+
+  const filteredMirrorPOSRequests = mirrorPOSRequests.filter((r) => {
+    if (mirrorPOSStatusFilter !== 'ALL' && r.paymentStatus !== mirrorPOSStatusFilter) return false;
+    const q = mirrorPOSSearch.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      r.customerName.toLowerCase().includes(q) ||
+      r.gmail.toLowerCase().includes(q) ||
+      r.senderNumber.toLowerCase().includes(q) ||
+      r.transactionId.toLowerCase().includes(q) ||
+      r.id.toLowerCase().includes(q)
+    );
+  });
+
   const filteredProducts = products.filter((p) => {
     if (productTypeFilter !== 'All' && p.type !== productTypeFilter) return false;
     const term = productSearchTerm.toLowerCase();
@@ -668,6 +759,27 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   <span>Orders</span>
                   <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono bg-[#0B0D0C] text-[#A1AAA2] rounded">
                     {orders.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('mirrorpos')}
+                  className={`px-3 sm:px-4 min-h-[44px] py-2.5 text-xs font-semibold uppercase tracking-normal transition-all border-b-2 cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                    activeTab === 'mirrorpos'
+                      ? 'border-[#B7F34A] text-[#F5F7F2]'
+                      : 'border-transparent text-[#A1AAA2] hover:text-[#F5F7F2]'
+                  }`}
+                >
+                  <KeyRound size={13} className={activeTab === 'mirrorpos' ? 'text-[#B7F34A]' : ''} />
+                  <span>MirrorPOS Licenses</span>
+                  <span
+                    className={`ml-1 px-1.5 py-0.5 text-[10px] font-mono rounded ${
+                      pendingMirrorPOSCount > 0
+                        ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/35 font-bold'
+                        : 'bg-[#0B0D0C] text-[#A1AAA2]'
+                    }`}
+                  >
+                    {pendingMirrorPOSCount > 0 ? `${pendingMirrorPOSCount} Pending` : mirrorPOSRequests.length}
                   </span>
                 </button>
 
@@ -1055,6 +1167,276 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </div>
             )}
 
+            {/* TAB 1B: MIRRORPOS MANUAL BKASH LICENSES & ADMIN AUDIT LOG */}
+            {activeTab === 'mirrorpos' && (
+              <div className="p-4 sm:p-6 md:p-8 space-y-6 overflow-y-auto overscroll-contain flex-1 min-w-0">
+                {/* Summary Strip */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-[#171C19] border border-white/[0.09] rounded-xl p-3.5">
+                    <span className="text-[10px] text-[#A1AAA2] uppercase font-mono block">Total Requests</span>
+                    <span className="text-xl font-display font-bold text-[#F5F7F2] tabular-nums">
+                      {mirrorPOSRequests.length}
+                    </span>
+                  </div>
+                  <div className="bg-[#171C19] border border-yellow-500/25 rounded-xl p-3.5">
+                    <span className="text-[10px] text-yellow-300 uppercase font-mono block">Pending Review</span>
+                    <span className="text-xl font-display font-bold text-yellow-300 tabular-nums">
+                      {pendingMirrorPOSCount}
+                    </span>
+                  </div>
+                  <div className="bg-[#171C19] border border-[#B7F34A]/25 rounded-xl p-3.5">
+                    <span className="text-[10px] text-[#B7F34A] uppercase font-mono block">Approved / Active</span>
+                    <span className="text-xl font-display font-bold text-[#B7F34A] tabular-nums">
+                      {mirrorPOSRequests.filter((r) => r.paymentStatus === 'APPROVED').length}
+                    </span>
+                  </div>
+                  <div className="bg-[#171C19] border border-red-500/25 rounded-xl p-3.5">
+                    <span className="text-[10px] text-red-300 uppercase font-mono block">Rejected</span>
+                    <span className="text-xl font-display font-bold text-red-400 tabular-nums">
+                      {mirrorPOSRequests.filter((r) => r.paymentStatus === 'REJECTED').length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Filter Tabs & Search */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-white/[0.09]">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((statusOpt) => (
+                      <button
+                        key={statusOpt}
+                        type="button"
+                        onClick={() => setMirrorPOSStatusFilter(statusOpt)}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                          mirrorPOSStatusFilter === statusOpt
+                            ? 'bg-[#B7F34A] text-black shadow-sm'
+                            : 'bg-[#171C19] text-[#A1AAA2] hover:text-[#F5F7F2]'
+                        }`}
+                      >
+                        {statusOpt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full md:w-72">
+                    <Search
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#707A72]"
+                    />
+                    <input
+                      type="text"
+                      value={mirrorPOSSearch}
+                      onChange={(e) => setMirrorPOSSearch(e.target.value)}
+                      placeholder="Search name, Gmail, TrxID, sender..."
+                      className="w-full bg-[#0B0D0C] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl pl-9 pr-3 py-2.5 sm:py-2 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Action Feedback Toast */}
+                {mirrorPOSFeedback && (
+                  <div
+                    className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                      mirrorPOSFeedback.type === 'error'
+                        ? 'bg-red-950/40 border-red-700/60 text-red-200'
+                        : 'bg-[#B7F34A]/10 border-[#B7F34A]/35 text-[#B7F34A]'
+                    }`}
+                  >
+                    <span>{mirrorPOSFeedback.message}</span>
+                    <button
+                      type="button"
+                      onClick={() => setMirrorPOSFeedback(null)}
+                      className="text-[#A1AAA2] hover:text-[#F5F7F2] cursor-pointer"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+
+                {/* License Requests Table */}
+                <div className="border border-white/[0.09] rounded-xl overflow-x-auto">
+                  <table className="w-full text-left text-xs whitespace-nowrap">
+                    <thead className="bg-[#171C19] border-b border-white/[0.09] uppercase tracking-normal font-mono text-[#A1AAA2]">
+                      <tr>
+                        <th className="py-3 px-4 font-normal">Customer Name</th>
+                        <th className="py-3 px-4 font-normal">Gmail</th>
+                        <th className="py-3 px-4 font-normal">Sender Number</th>
+                        <th className="py-3 px-4 font-normal">Transaction ID</th>
+                        <th className="py-3 px-4 font-normal">Amount</th>
+                        <th className="py-3 px-4 font-normal">Submitted Date</th>
+                        <th className="py-3 px-4 font-normal">Payment Status</th>
+                        <th className="py-3 px-4 font-normal">License Status</th>
+                        <th className="py-3 px-4 font-normal text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.06]">
+                      {filteredMirrorPOSRequests.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="py-10 text-center text-[#707A72]">
+                            No MirrorPOS manual bKash license requests match the current filter.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredMirrorPOSRequests.map((req) => {
+                          const isApproving = updatingMirrorPOSKey === `${req.id}:APPROVE`;
+                          const isRejecting = updatingMirrorPOSKey === `${req.id}:REJECT`;
+                          const isResetting = updatingMirrorPOSKey === `${req.id}:PENDING`;
+                          const busy = Boolean(isApproving || isRejecting || isResetting);
+
+                          return (
+                            <tr key={req.id} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="py-3 px-4 font-semibold text-[#F5F7F2]">
+                                <div>{req.customerName}</div>
+                                <div className="text-[10px] font-mono text-[#707A72]">{req.id}</div>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-[#A1AAA2]">{req.gmail}</td>
+                              <td className="py-3 px-4 font-mono text-[#F5F7F2]">{req.senderNumber}</td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-1.5 font-mono font-bold text-[#B7F34A]">
+                                  <span>{req.transactionId}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(req.transactionId, `mpos_trx_${req.id}`)}
+                                    className="text-[#707A72] hover:text-[#F5F7F2] cursor-pointer"
+                                    title="Copy Transaction ID"
+                                  >
+                                    {copiedKey === `mpos_trx_${req.id}` ? (
+                                      <Check size={11} className="text-[#B7F34A]" />
+                                    ) : (
+                                      <Copy size={11} />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-mono font-bold text-[#F5F7F2] tabular-nums">
+                                ৳{req.amount.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-4 font-mono text-[#A1AAA2] text-[11px]">
+                                {req.submittedAt ? new Date(req.submittedAt).toLocaleString() : 'Just now'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                    req.paymentStatus === 'APPROVED'
+                                      ? 'bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/35'
+                                      : req.paymentStatus === 'REJECTED'
+                                      ? 'bg-red-500/15 text-red-300 border border-red-500/35'
+                                      : 'bg-yellow-500/15 text-yellow-300 border border-yellow-500/35'
+                                  }`}
+                                >
+                                  {req.paymentStatus}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono ${
+                                    req.licenseStatus === 'ACTIVE'
+                                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/35'
+                                      : req.licenseStatus === 'INACTIVE'
+                                      ? 'bg-red-500/10 text-red-300 border border-red-500/25'
+                                      : 'bg-white/5 text-[#A1AAA2] border border-white/10'
+                                  }`}
+                                >
+                                  {req.licenseStatus}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    disabled={busy || req.paymentStatus === 'APPROVED'}
+                                    onClick={() => handleMirrorPOSActionClick(req.id, 'APPROVE')}
+                                    className="px-2.5 py-1 text-[10px] font-bold uppercase bg-[#B7F34A] hover:bg-[#c8fa6b] text-[#0B0D0C] rounded cursor-pointer disabled:opacity-40 inline-flex items-center gap-1"
+                                  >
+                                    <CheckCircle2 size={11} />
+                                    <span>{isApproving ? '...' : 'Approve'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy || req.paymentStatus === 'REJECTED'}
+                                    onClick={() => handleMirrorPOSActionClick(req.id, 'REJECT')}
+                                    className="px-2.5 py-1 text-[10px] font-bold uppercase bg-red-500/20 hover:bg-red-500/35 border border-red-500/40 text-red-200 rounded cursor-pointer disabled:opacity-40 inline-flex items-center gap-1"
+                                  >
+                                    <XCircle size={11} />
+                                    <span>{isRejecting ? '...' : 'Reject'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy || req.paymentStatus === 'PENDING'}
+                                    onClick={() => handleMirrorPOSActionClick(req.id, 'PENDING')}
+                                    className="px-2.5 py-1 text-[10px] font-bold uppercase bg-yellow-500/15 hover:bg-yellow-500/30 border border-yellow-500/35 text-yellow-200 rounded cursor-pointer disabled:opacity-40 inline-flex items-center gap-1"
+                                  >
+                                    <Clock size={11} />
+                                    <span>{isResetting ? '...' : 'Pending'}</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Admin Activity Audit Logs */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-2 border-b border-white/[0.09] pb-2">
+                    <Activity size={15} className="text-[#B7F34A] shrink-0" />
+                    <h4 className="font-display text-sm font-bold text-[#F5F7F2]">
+                      Admin Activity Logs ({adminActivityLogs.length})
+                    </h4>
+                  </div>
+
+                  <div className="border border-white/[0.09] rounded-xl overflow-x-auto">
+                    <table className="w-full text-left text-xs whitespace-nowrap">
+                      <thead className="bg-[#171C19] border-b border-white/[0.09] uppercase tracking-normal font-mono text-[#A1AAA2]">
+                        <tr>
+                          <th className="py-2.5 px-4 font-normal">Timestamp</th>
+                          <th className="py-2.5 px-4 font-normal">Action</th>
+                          <th className="py-2.5 px-4 font-normal">Target Customer</th>
+                          <th className="py-2.5 px-4 font-normal">TrxID</th>
+                          <th className="py-2.5 px-4 font-normal">Transition</th>
+                          <th className="py-2.5 px-4 font-normal">Admin</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.06]">
+                        {adminActivityLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-6 text-center text-[#707A72]">
+                              No admin verification actions logged yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          adminActivityLogs.slice(0, 30).map((log) => (
+                            <tr key={log.id} className="hover:bg-white/[0.02]">
+                              <td className="py-2.5 px-4 font-mono text-[#A1AAA2] text-[11px]">
+                                {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Just now'}
+                              </td>
+                              <td className="py-2.5 px-4 font-mono font-bold text-[#B7F34A] text-[11px]">
+                                {log.action}
+                              </td>
+                              <td className="py-2.5 px-4 font-mono text-[#F5F7F2]">
+                                {log.targetEmail || log.targetRequestId}
+                              </td>
+                              <td className="py-2.5 px-4 font-mono text-[#A1AAA2]">
+                                {log.transactionId || '—'}
+                              </td>
+                              <td className="py-2.5 px-4 font-mono text-[11px] text-[#D4DBD5]">
+                                {log.previousStatus ? `${log.previousStatus} → ${log.newStatus}` : log.newStatus}
+                              </td>
+                              <td className="py-2.5 px-4 font-mono text-[#A1AAA2] text-[11px]">
+                                {log.adminEmail}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TAB 2: MANAGE PRODUCTS */}
             {activeTab === 'products' && (
               <div className="p-4 sm:p-6 md:p-8 space-y-6 overflow-y-auto overscroll-contain flex-1 min-w-0">
@@ -1174,6 +1556,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             onChange={(e) => {
                               const nextType = e.target.value as ProductType;
                               setFormType(nextType);
+                              const defaultCats = new Set([
+                                'Premiere Pro',
+                                'PC & Mac',
+                                'After Effects & Premiere Pro',
+                                'After Effects',
+                                'Monthly Retainer',
+                              ]);
+                              if (!formCategory.trim() || defaultCats.has(formCategory.trim())) {
+                                if (nextType === 'Software') setFormCategory('PC & Mac');
+                                else if (nextType === 'Plugin') setFormCategory('Premiere Pro');
+                                else if (nextType === 'Course') setFormCategory('After Effects & Premiere Pro');
+                                else if (nextType === 'Free Tutorial') setFormCategory('After Effects');
+                                else if (nextType === 'Agency Package') setFormCategory('Monthly Retainer');
+                              }
                               if (nextType === 'Free Tutorial') {
                                 setFormIsFree(true);
                                 setFormPrice(0);

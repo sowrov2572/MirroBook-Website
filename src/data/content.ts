@@ -4,6 +4,10 @@ import courseVideoEditingThumb from '../assets/images/course_video_editing_thumb
 export const COURSE_VIDEO_EDITING_FUNDAMENTALS_ID = 'course-video-editing-fundamentals';
 export const SOFTWARE_MIRRORPOS_ID = 'software-mirrorpos';
 export const SOFTWARE_MIRRORPOS_PREMIUM_ID = 'software-mirrorpos-premium';
+export const ALL_FREE_TUTORIALS_CHANNEL_ID = 'tut-all-free-tutorials';
+export const ALL_FREE_TUTORIALS_CHANNEL_URL = 'https://www.youtube.com/@khan_saheb_editz';
+export const ALL_FREE_TUTORIALS_AVATAR_URL =
+  'https://yt3.googleusercontent.com/X934rAfdp4rVb4dCOHSlpV4ec3bw1BHweB4xXzwTUyQvBL2Kz_GiIC9YFFVsBB8rgmoLqg9KBA=s900-c-k-c0x00ffffff-no-rj';
 
 export const VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_URL = 'https://i.ibb.co/gbt45xMr/Video-Editing.jpg';
 export const VIDEO_EDITING_FUNDAMENTALS_THUMBNAIL_FALLBACK = courseVideoEditingThumb;
@@ -76,6 +80,24 @@ export const CANONICAL_FEATURED_PRODUCTS: ProductItem[] = [
     status: 'active',
     featured: true,
     createdAt: '2026-11-17',
+  },
+  {
+    id: ALL_FREE_TUTORIALS_CHANNEL_ID,
+    type: 'Free Tutorial',
+    category: 'YouTube Channel',
+    title: 'ALL FREE TUTORIALS',
+    description: 'Visit our official YouTube channel @khan_saheb_editz for all free Bangla editing, VFX, and design tutorials.',
+    price: 0,
+    isFree: true,
+    priceDisplay: 'Free',
+    duration: 'Channel',
+    instructor: 'Khan Saheb Editz',
+    thumbnailUrl: ALL_FREE_TUTORIALS_AVATAR_URL,
+    launchUrl: ALL_FREE_TUTORIALS_CHANNEL_URL,
+    protectedUrl: ALL_FREE_TUTORIALS_CHANNEL_URL,
+    status: 'active',
+    featured: true,
+    createdAt: '2026-11-18',
   },
 ];
 
@@ -331,6 +353,24 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     thumbnailUrl: 'https://i.ytimg.com/vi/Dg8MbL71kW8/maxresdefault.jpg',
     protectedUrl: 'https://www.youtube.com/watch?v=Dg8MbL71kW8',
     createdAt: '2026-10-04'
+  },
+  {
+    id: ALL_FREE_TUTORIALS_CHANNEL_ID,
+    type: 'Free Tutorial',
+    category: 'YouTube Channel',
+    title: 'ALL FREE TUTORIALS',
+    description: 'Visit our official YouTube channel @khan_saheb_editz for all free tutorials.',
+    price: 0,
+    isFree: true,
+    priceDisplay: 'Free',
+    duration: 'Channel',
+    instructor: 'Khan Saheb Editz',
+    thumbnailUrl: ALL_FREE_TUTORIALS_AVATAR_URL,
+    launchUrl: ALL_FREE_TUTORIALS_CHANNEL_URL,
+    protectedUrl: ALL_FREE_TUTORIALS_CHANNEL_URL,
+    status: 'active',
+    featured: true,
+    createdAt: '2026-11-18'
   },
 
   // Agency Packages (Two Separate Monthly Subscription Services Starting From ৳25,000/mo)

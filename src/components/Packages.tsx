@@ -150,10 +150,10 @@ export const Packages: React.FC<PackagesProps> = ({
                   </div>
 
                   <div className="pt-3 border-t border-white/[0.07]">
-                    <h5 className="text-xs font-semibold text-[#B7F34A] mb-1 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[#B7F34A] mb-1 flex items-center gap-1.5">
                       <Sparkles size={13} />
                       <span>Our Creative Approach</span>
-                    </h5>
+                    </h4>
                     <p className="text-xs text-[#A1AAA2] leading-relaxed">
                       Every design is created with the brand&apos;s identity, target audience, marketing goals, and visual consistency in mind. We don&apos;t just create ordinary posts; we develop creative concepts that represent the brand.
                     </p>
@@ -248,10 +248,10 @@ export const Packages: React.FC<PackagesProps> = ({
                   </div>
 
                   <div className="pt-3 border-t border-white/[0.07]">
-                    <h5 className="text-xs font-semibold text-[#B7F34A] mb-1 flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-[#B7F34A] mb-1 flex items-center gap-1.5">
                       <Sparkles size={13} />
                       <span>Our Creative Approach</span>
-                    </h5>
+                    </h4>
                     <p className="text-xs text-[#A1AAA2] leading-relaxed">
                       Engineered with psychological retention hooks, seamless pacing, and Hollywood color grading to turn fleeting TikTok, Instagram, and YouTube viewers into dedicated brand followers.
                     </p>

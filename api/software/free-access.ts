@@ -8,10 +8,35 @@ import {
 } from '../_lib/firebaseAdmin';
 import { checkRateLimitBucket } from '../_lib/security';
 import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../_lib/courseCatalog';
+import {
+  issueFreeAccessToken,
+  resetFreeAccessTokensForTests,
+} from '../_lib/freeAccessToken';
 
 const recentDeliveries = new Map<string, number>();
 const inFlightRequests = new Set<string>();
 const DEDUP_WINDOW_MS = 60 * 1000; // 60 seconds cooldown per (productId, email)
+
+function resolveSafeOrigin(candidate?: string): string {
+  const fallback = 'https://mirrorbook.site';
+  const raw = (candidate || process.env.APP_URL || '').trim();
+  if (!raw) return fallback;
+  try {
+    const parsed = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+    const host = parsed.hostname.toLowerCase();
+    const isTrustedHost =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === 'mirrorbook.site' ||
+      host.endsWith('.mirrorbook.site') ||
+      host.endsWith('.vercel.app') ||
+      host.endsWith('.run.app');
+    if (!isTrustedHost) return fallback;
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return fallback;
+  }
+}
 
 function sanitizeHtml(input: unknown): string {
   if (typeof input !== 'string') return '';
@@ -51,6 +76,7 @@ function resolvePublicAssetUrl(url?: string): string {
 export function resetFreeSoftwareCachesForTests(): void {
   recentDeliveries.clear();
   inFlightRequests.clear();
+  resetFreeAccessTokensForTests();
 }
 
 export interface EmailDispatchPayload {
@@ -64,6 +90,7 @@ export interface FreeSoftwareAccessInput {
   authorizationHeader?: string;
   body: Record<string, any> | string;
   clientIp?: string;
+  requestOrigin?: string;
 }
 
 export interface FreeSoftwareAccessDeps {
@@ -94,24 +121,25 @@ export function buildFreeSoftwareEmailHtml(params: {
     params.productId === SOFTWARE_MIRRORPOS_ID ||
     params.productTitle.toLowerCase().includes('mirrorpos');
   const userGuideUrl = 'https://mirrorbook.site/mirrorpos#user-guide';
-  const supportEmail = 'khansaheb2572@gmail.com';
+  const supportEmail = 'mirrorbook.site@gmail.com';
 
   const subject = isMirrorPOS
-    ? 'Your MirrorPOS Access is Ready | MirrorBook'
+    ? 'Verify Your MirrorPOS Free Email Access | MirrorBook'
     : `Your ${params.productTitle} Download Link - MirrorBook`;
 
   const textLines = isMirrorPOS
     ? [
         `Hello ${params.recipientName},`,
         '',
-        `Thank you for registering for MirrorPOS by MirrorBook. Your Lifetime Access is ready.`,
+        `Thank you for requesting Free Access to MirrorPOS by MirrorBook.`,
+        `To prevent unauthorized sharing, click the single-use verification link below to open MirrorPOS (valid for 24 hours).`,
         '',
         `Product: MirrorPOS`,
         `Developer: MirrorBook`,
-        `Access Type: Lifetime Access`,
+        `Access Type: Free Email Access (Single-Use Verification Link)`,
         `Reference ID: ${params.referenceId}`,
         '',
-        `Launch MirrorPOS:`,
+        `Verify & Open MirrorPOS:`,
         safeLaunchUrl,
         '',
         `Complete User Guide:`,
@@ -178,7 +206,7 @@ export function buildFreeSoftwareEmailHtml(params: {
                     </table>
                   </td>
                   <td align="right" valign="middle">
-                    <span style="display: inline-block; padding: 4px 10px; background-color: rgba(183, 243, 74, 0.14); border: 1px solid rgba(183, 243, 74, 0.35); border-radius: 6px; font-size: 11px; font-weight: 700; color: #B7F34A; text-transform: uppercase;">Lifetime Access</span>
+                    <span style="display: inline-block; padding: 4px 10px; background-color: rgba(183, 243, 74, 0.14); border: 1px solid rgba(183, 243, 74, 0.35); border-radius: 6px; font-size: 11px; font-weight: 700; color: #B7F34A; text-transform: uppercase;">${isMirrorPOS ? 'Email Verification' : 'Free Access'}</span>
                   </td>
                 </tr>
               </table>
@@ -190,7 +218,11 @@ export function buildFreeSoftwareEmailHtml(params: {
             <td style="padding: 30px 28px;">
               <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: 600; color: #F5F7F2;">Hello ${safeName},</p>
               <p style="margin: 0 0 22px 0; font-size: 14px; line-height: 1.6; color: #A1AAA2;">
-                Thank you for registering for <strong style="color: #F5F7F2;">${safeTitle}</strong> by MirrorBook. Your access details and official guide links are ready below.
+                ${
+                  isMirrorPOS
+                    ? `Thank you for requesting free email access to <strong style="color: #F5F7F2;">${safeTitle}</strong> by MirrorBook. Use the single-use verification button below to verify your email and launch MirrorPOS (expires in 24 hours).`
+                    : `Thank you for registering for <strong style="color: #F5F7F2;">${safeTitle}</strong> by MirrorBook. Your access details are ready below.`
+                }
               </p>
 
               <!-- Product Details Card -->
@@ -208,7 +240,7 @@ export function buildFreeSoftwareEmailHtml(params: {
                           <div style="font-size: 12px; color: #D4DBD5; line-height: 1.6;">
                             <div><strong style="color: #F5F7F2;">Product:</strong> ${safeTitle}</div>
                             <div><strong style="color: #F5F7F2;">Developer:</strong> MirrorBook</div>
-                            <div><strong style="color: #F5F7F2;">Access Type:</strong> Lifetime Access</div>
+                            <div><strong style="color: #F5F7F2;">Access Type:</strong> ${isMirrorPOS ? 'Free Email Access (Single-Use)' : 'Free Software'}</div>
                             <div style="font-family: monospace; color: #B7F34A; margin-top: 2px;">Ref: ${safeRef}</div>
                           </div>
                         </td>
@@ -223,7 +255,7 @@ export function buildFreeSoftwareEmailHtml(params: {
                 <tr>
                   <td align="center" style="padding-bottom: 10px;">
                     <a href="${safeLaunchUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 13px 28px; background-color: #B7F34A; color: #0B0D0C; font-size: 13px; font-weight: 700; border-radius: 10px; text-decoration: none;">
-                      Launch ${safeTitle}
+                      ${isMirrorPOS ? 'Verify &amp; Open MirrorPOS' : `Launch ${safeTitle}`}
                     </a>
                   </td>
                 </tr>
@@ -242,7 +274,7 @@ export function buildFreeSoftwareEmailHtml(params: {
 
               <!-- Links Box -->
               <div style="background-color: #0B0D0C; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px; margin-bottom: 22px;">
-                <div style="font-size: 11px; color: #A1AAA2; margin-bottom: 4px;">Launch Link:</div>
+                <div style="font-size: 11px; color: #A1AAA2; margin-bottom: 4px;">${isMirrorPOS ? 'Verification Access Link (Single-Use · 24h Expiry):' : 'Launch Link:'}</div>
                 <a href="${safeLaunchUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #B7F34A; word-break: break-all; text-decoration: none; font-family: monospace; display: block; margin-bottom: 10px;">${safeLaunchUrl}</a>
                 ${
                   isMirrorPOS
@@ -606,24 +638,50 @@ export async function processFreeSoftwareAccess(
       };
     }
 
-    const productTitle = String(productDoc.title || 'MirrorBook Software');
-    const productDescription = String(productDoc.description || '');
-    const iconUrl = String(productDoc.iconUrl || productDoc.thumbnailUrl || '');
-    const referenceId = `MB-SW-${Date.now().toString(36).toUpperCase()}-${crypto
-      .randomBytes(2)
-      .toString('hex')
-      .toUpperCase()}`;
+    const productTitle = cleanPlainText(
+      productDoc.title || canonicalFallback?.title || 'MirrorPOS',
+      140
+    );
+    const productDescription = cleanPlainText(
+      productDoc.description || canonicalFallback?.description || '',
+      400
+    );
+    const iconUrl =
+      typeof productDoc.iconUrl === 'string' && productDoc.iconUrl.trim()
+        ? productDoc.iconUrl.trim()
+        : canonicalFallback?.iconUrl || '/mirror-pos-icon.png';
+    const referenceId = `MB-SW-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-    const resolvedLaunchUrl = publicLaunchUrl || primaryDownloadUrl;
+    const isMirrorPOSProduct =
+      productId === SOFTWARE_MIRRORPOS_ID ||
+      productTitle.toLowerCase().includes('mirrorpos');
+
+    let deliveredActionUrl = publicLaunchUrl || primaryDownloadUrl;
+    let issuedTokenId = referenceId;
+    let tokenExpiresAtIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    if (isMirrorPOSProduct) {
+      const origin = resolveSafeOrigin(input.requestOrigin);
+      const issued = issueFreeAccessToken({
+        productId,
+        email: targetEmail,
+        name: recipientName,
+      });
+      issuedTokenId = issued.tokenId;
+      tokenExpiresAtIso = issued.expiresAtIso;
+      // Only send single-use signed verification link in Free Access email (never expose raw MirrorPOS URL directly)
+      deliveredActionUrl = `${origin}/mirrorpos?free_access_token=${encodeURIComponent(issued.token)}`;
+    }
+
     const emailContent = buildFreeSoftwareEmailHtml({
       recipientName,
       productId,
       productTitle,
       productDescription,
       iconUrl,
-      downloadUrl: primaryDownloadUrl,
-      launchUrl: resolvedLaunchUrl,
-      referenceId,
+      downloadUrl: deliveredActionUrl,
+      launchUrl: deliveredActionUrl,
+      referenceId: issuedTokenId,
     });
 
     try {
@@ -643,8 +701,8 @@ export async function processFreeSoftwareAccess(
           recipientName,
           productId,
           productTitle,
-          launchUrl: resolvedLaunchUrl,
-          referenceId,
+          launchUrl: deliveredActionUrl,
+          referenceId: issuedTokenId,
         });
       }
     } catch (mailErr: unknown) {
@@ -665,12 +723,29 @@ export async function processFreeSoftwareAccess(
 
     // Best-effort server-side registration & delivery log when Admin SDK is available
     if (store) {
+      if (isMirrorPOSProduct) {
+        store
+          .setDoc('mirrorpos_free_access', issuedTokenId, {
+            id: issuedTokenId,
+            userId: verifiedUser?.uid || null,
+            customerName: recipientName,
+            gmail: targetEmail,
+            accessType: 'FREE_EMAIL',
+            tokenId: issuedTokenId,
+            tokenExpiresAt: tokenExpiresAtIso,
+            used: false,
+            requestedAt: sentAtIso,
+            usedAt: null,
+          })
+          .catch(() => {});
+      }
+
       store
-        .setDoc('softwareAccessRequests', referenceId, {
-          id: referenceId,
+        .setDoc('softwareAccessRequests', issuedTokenId, {
+          id: issuedTokenId,
           productId,
           productTitle,
-          accessType: 'Lifetime Access',
+          accessType: isMirrorPOSProduct ? 'FREE_EMAIL' : 'Lifetime Access',
           fullName: recipientName,
           email: targetEmail,
           uid: verifiedUser?.uid || null,
@@ -680,8 +755,8 @@ export async function processFreeSoftwareAccess(
         .catch(() => {});
 
       store
-        .setDoc('softwareDeliveryLogs', referenceId, {
-          id: referenceId,
+        .setDoc('softwareDeliveryLogs', issuedTokenId, {
+          id: issuedTokenId,
           productId,
           productTitle,
           email: targetEmail,
@@ -696,11 +771,17 @@ export async function processFreeSoftwareAccess(
       status: 200,
       data: {
         success: true,
-        referenceId,
+        referenceId: issuedTokenId,
+        tokenId: issuedTokenId,
+        tokenExpiresAt: tokenExpiresAtIso,
         email: targetEmail,
         productTitle,
-        launchUrl: resolvedLaunchUrl,
-        message: `${productTitle} access details have been sent to ${targetEmail}.`,
+        accessType: isMirrorPOSProduct ? 'FREE_EMAIL' : 'LIFETIME',
+        // Do NOT expose raw direct MirrorPOS launchUrl in free-access response
+        ...(isMirrorPOSProduct ? {} : { launchUrl: deliveredActionUrl }),
+        message: isMirrorPOSProduct
+          ? `A single-use verification link has been sent to ${targetEmail}. Open the link in your email to access MirrorPOS.`
+          : `${productTitle} access details have been sent to ${targetEmail}.`,
       },
     };
   } finally {
@@ -722,10 +803,16 @@ export default async function handler(req: any, res: any) {
   const authHeader =
     typeof req.headers?.authorization === 'string' ? req.headers.authorization : undefined;
 
+  const protoHeader = req.headers?.['x-forwarded-proto']?.toString().split(',')[0].trim() || 'https';
+  const hostHeader = req.headers?.['x-forwarded-host']?.toString().split(',')[0].trim() || req.headers?.host || '';
+  const originHeader = typeof req.headers?.origin === 'string' ? req.headers.origin : '';
+  const requestOrigin = originHeader || (hostHeader ? `${protoHeader}://${hostHeader}` : undefined);
+
   const result = await processFreeSoftwareAccess({
     authorizationHeader: authHeader,
     body: req.body ?? {},
     clientIp,
+    requestOrigin,
   });
 
   return res.status(result.status).json(result.data);

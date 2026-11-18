@@ -21,7 +21,7 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-[#A1AAA2] max-w-xl leading-relaxed">
-            Full-spectrum digital marketing agency services in Bangladesh — from cinematic video editing and graphic design to responsive web development and AI software tools.
+            MirrorBook Creative Agency services in Bangladesh — from cinematic video editing, motion graphics, and graphic design to digital marketing, web development, and modern software solutions.
           </p>
         </div>
 
