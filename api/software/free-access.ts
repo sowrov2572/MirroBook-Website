@@ -375,7 +375,7 @@ async function sendViaAppsScriptAutomation(payload: FreeSoftwareMailPayload): Pr
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        type: 'software-access',
+        type: 'software_inquiry',
         name: payload.recipientName,
         email: payload.to,
         service: `${payload.productTitle} (Lifetime Access)`,
