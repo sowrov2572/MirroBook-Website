@@ -70,6 +70,7 @@ export interface PackageOrderRequestBody {
   name: string;
   email: string;
   service?: string;
+  inquiryType?: 'general_inquiry' | 'package_inquiry';
   message?: string;
   phone?: string;
   whatsAppNumber?: string;
@@ -301,10 +302,11 @@ export async function processPackageOrder(body: PackageOrderRequestBody, clientI
     };
   }
 
+  const inquiryType = body.inquiryType === 'general_inquiry' ? 'general_inquiry' : 'package_inquiry';
+
   const appsScriptPayload = {
-    // Apps Script doPost(e) routes requests by type. Without this field,
-    // package inquiries fall through to the wrong/default handler.
-    type: 'package_inquiry',
+    // Route each inquiry to the matching Apps Script customer confirmation handler.
+    type: inquiryType,
     name: plainName,
     email: plainEmail,
     service: plainService,
