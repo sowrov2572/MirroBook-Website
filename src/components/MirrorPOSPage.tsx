@@ -329,7 +329,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
       if (!res.ok || !data?.success) {
         setAccessError(
           data?.error ||
-            'Unable to send confirmation email right now. Please verify your email address or try again.'
+            `Unable to send confirmation email (HTTP ${res.status}). Please check Vercel Function Logs for /api/software/free-access.`
         );
         return;
       }
