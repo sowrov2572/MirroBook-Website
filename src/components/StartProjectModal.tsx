@@ -108,27 +108,35 @@ Sent via https://mirrorbook.site/`;
 
     const formattedMessage = `Phone / WhatsApp: ${cleanPhone}\n\n${cleanBrief}`;
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
     try {
       const response = await fetch('/api/inquiry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          type: 'general_inquiry',
+          requestType: 'general_inquiry',
           name: cleanName,
           email: cleanEmail,
           service: projectType,
           inquiryType: 'general_inquiry',
           message: formattedMessage,
           phone: cleanPhone,
-          packageName: projectType,
           additionalRequirements: cleanBrief,
           honeypot: honeypot.trim(),
         }),
+        signal: controller.signal,
       });
 
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch(() => null);
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to submit project request. Please try again.');
+      if (!response.ok || data?.success !== true) {
+        throw new Error(
+          data?.error ||
+            'Unable to send confirmation email right now. Please verify your email address or try again.'
+        );
       }
 
       const generatedId = data.orderId || `MB-PRJ-${Date.now()}`;
@@ -169,8 +177,15 @@ Sent via https://mirrorbook.site/`;
       setProjectBrief('');
     } catch (err: any) {
       console.error('Project inquiry error:', err);
-      setErrorMsg(err.message || 'An error occurred while submitting your request. Please try again.');
+      const isTimeout = err?.name === 'AbortError';
+      setErrorMsg(
+        isTimeout
+          ? 'The request timed out while sending confirmation email. Please try again.'
+          : err?.message ||
+              'Unable to send confirmation email right now. Please verify your email address or try again.'
+      );
     } finally {
+      window.clearTimeout(timeoutId);
       submitLockRef.current = false;
       setIsSubmitting(false);
     }

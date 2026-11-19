@@ -72,6 +72,36 @@ interface UserGuideCategory {
   steps: string[];
 }
 
+// Deduplicates single-use token verification across React StrictMode double-invocations
+const pendingTokenVerifications = new Map<
+  string,
+  Promise<{ ok: boolean; data: Record<string, any> | null }>
+>();
+
+function verifyFreeAccessTokenOnce(
+  token: string
+): Promise<{ ok: boolean; data: Record<string, any> | null }> {
+  const existing = pendingTokenVerifications.get(token);
+  if (existing) return existing;
+
+  const promise = fetch(`/api/software/verify-free-access?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    cache: 'no-store',
+  })
+    .then(async (res) => ({
+      ok: res.ok,
+      data: await res.json().catch(() => null),
+    }))
+    .finally(() => {
+      window.setTimeout(() => {
+        pendingTokenVerifications.delete(token);
+      }, 5000);
+    });
+
+  pendingTokenVerifications.set(token, promise);
+  return promise;
+}
+
 export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
   onNavigateHome,
   onStartProject,
@@ -105,6 +135,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
   const [tokenVerifyState, setTokenVerifyState] = useState<{
     status: 'idle' | 'verifying' | 'success' | 'error';
     message: string;
+    redirectUrl?: string;
   }>({ status: 'idle', message: '' });
 
   // Dedicated Manual bKash Payment Modal State (Desktop License - ৳9,999)
@@ -164,14 +195,23 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
       message: 'Verifying your single-use MirrorPOS email access link...',
     });
 
-    fetch(`/api/software/verify-free-access?token=${encodeURIComponent(token)}`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => null);
+    verifyFreeAccessTokenOnce(token)
+      .then(({ ok, data }) => {
         if (cancelled) return;
-        if (res.ok && data?.success && data?.redirectUrl) {
+        // Strip single-use token from URL bar so browser refreshes do not re-submit a used token
+        try {
+          const cleanedUrl = new URL(window.location.href);
+          cleanedUrl.searchParams.delete('free_access_token');
+          window.history.replaceState({}, '', `${cleanedUrl.pathname}${cleanedUrl.search}${cleanedUrl.hash}`);
+        } catch {
+          // ignore history errors
+        }
+
+        if (ok && data?.success === true && data?.redirectUrl) {
           setTokenVerifyState({
             status: 'success',
             message: 'Email verified! Redirecting to MirrorPOS...',
+            redirectUrl: data.redirectUrl,
           });
           window.location.href = data.redirectUrl;
         } else {
@@ -306,6 +346,9 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     setIsSubmittingAccess(true);
     setAccessError('');
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
     try {
       let idToken = '';
       if (auth.currentUser) {
@@ -323,10 +366,11 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           name: cleanName,
           email: cleanEmail,
         }),
+        signal: controller.signal,
       });
 
       const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.success) {
+      if (!res.ok || data?.success !== true) {
         setAccessError(
           data?.error ||
             `Unable to send confirmation email (HTTP ${res.status}). Please check Vercel Function Logs for /api/software/free-access.`
@@ -350,11 +394,15 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
           tokenExpiresAt: data.tokenExpiresAt,
         }).catch(() => {});
       }
-    } catch {
+    } catch (err: any) {
+      const isTimeout = err?.name === 'AbortError';
       setAccessError(
-        'Network error while sending access confirmation email. Please try again.'
+        isTimeout
+          ? 'The request timed out while sending confirmation email. Please try again.'
+          : 'Unable to send confirmation email right now. Please verify your email address or try again.'
       );
     } finally {
+      window.clearTimeout(timeoutId);
       setIsSubmittingAccess(false);
     }
   };
@@ -985,8 +1033,17 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             ) : (
               <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
             )}
-            <div className="min-w-0 flex-1 text-xs sm:text-sm leading-relaxed">
-              {tokenVerifyState.message}
+            <div className="min-w-0 flex-1 text-xs sm:text-sm leading-relaxed space-y-2">
+              <p>{tokenVerifyState.message}</p>
+              {tokenVerifyState.status === 'success' && tokenVerifyState.redirectUrl && (
+                <a
+                  href={tokenVerifyState.redirectUrl}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#B7F34A] text-[#0B0D0C] text-xs font-bold"
+                >
+                  <span>Open MirrorPOS Now</span>
+                  <ExternalLink size={13} />
+                </a>
+              )}
             </div>
             {tokenVerifyState.status === 'error' && (
               <button

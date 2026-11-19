@@ -109,6 +109,9 @@ Sent via https://mirrorbook.site/`;
       `Additional Requirements:\n${cleanRequirements || 'Standard package onboarding and discovery scope.'}`,
     ].join('\n');
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
     try {
       const response = await fetch('/api/package-order', {
         method: 'POST',
@@ -116,6 +119,8 @@ Sent via https://mirrorbook.site/`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          type: 'package_inquiry',
+          requestType: 'package_inquiry',
           name: cleanName,
           email: cleanEmail,
           service: requiredService,
@@ -130,12 +135,16 @@ Sent via https://mirrorbook.site/`;
           additionalRequirements: cleanRequirements,
           honeypot: honeypot.trim(),
         }),
+        signal: controller.signal,
       });
 
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch(() => null);
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to submit package order. Please try again.');
+      if (!response.ok || data?.success !== true) {
+        throw new Error(
+          data?.error ||
+            'Unable to send confirmation email right now. Please verify your email address or try again.'
+        );
       }
 
       const generatedId = data.orderId || `MB-PKG-${Date.now()}`;
@@ -182,8 +191,15 @@ Sent via https://mirrorbook.site/`;
       }
     } catch (err: any) {
       console.error('Package order error:', err);
-      setErrorMsg(err.message || 'An error occurred while submitting your order. Please check your connection.');
+      const isTimeout = err?.name === 'AbortError';
+      setErrorMsg(
+        isTimeout
+          ? 'The request timed out while sending confirmation email. Please try again.'
+          : err?.message ||
+              'Unable to send confirmation email right now. Please verify your email address or try again.'
+      );
     } finally {
+      window.clearTimeout(timeoutId);
       submitLockRef.current = false;
       setIsSubmitting(false);
     }
