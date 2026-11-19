@@ -2,11 +2,17 @@ import {
   SendEmailOptions,
   SendEmailResult,
   SmtpConfigError,
+  classifySmtpError,
   getAdminNotificationEmail,
   isSmtpConfigured,
   sanitizeLogMessage,
-  sendEmail,
+  sendEmailBatch,
 } from './_lib/mailer.js';
+import {
+  buildInquiryEmails,
+  cleanText as cleanPlainText,
+  formatDhakaDateTime,
+} from './_lib/emailTemplates.js';
 
 // In-memory rate limiting map: IP -> array of timestamps
 const rateLimitMap = new Map<string, number[]>();
@@ -45,23 +51,6 @@ const CANONICAL_PACKAGES: Record<string, { name: string; price: string; descript
 export function resetPackageOrderCachesForTests(): void {
   rateLimitMap.clear();
   recentSubmissionsMap.clear();
-}
-
-// HTML escape sanitization helper to prevent HTML injection in emails
-function sanitize(input: unknown): string {
-  if (typeof input !== 'string') return '';
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .trim();
-}
-
-function cleanPlainText(input: unknown): string {
-  if (typeof input !== 'string') return '';
-  return input.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
 }
 
 function isValidEmail(email: string): boolean {
@@ -170,15 +159,6 @@ export async function processPackageOrder(
   const plainBudgetRange = cleanPlainText(body.budgetRange || '');
   const plainAdditionalReq = cleanPlainText(body.additionalRequirements || '');
 
-  const name = sanitize(rawName);
-  const email = sanitize(rawEmail).toLowerCase();
-  const phone = sanitize(rawPhone);
-  const brandName = sanitize(body.brandName || '');
-  const monthlyDesignQty = sanitize(body.monthlyDesignQty || '');
-  const monthlyVideoQty = sanitize(body.monthlyVideoQty || '');
-  const budgetRange = sanitize(body.budgetRange || '');
-  const additionalRequirements = sanitize(body.additionalRequirements || '');
-
   if (!plainName || plainName.length < 2) {
     return {
       status: 400,
@@ -226,17 +206,12 @@ export async function processPackageOrder(
     matchedPackage = CANONICAL_PACKAGES['monthly-graphic-design'];
   }
 
-  const packageName = sanitize(plainService || matchedPackage.name);
-  const packagePrice = budgetRange || matchedPackage.price;
+  const resolvedServiceName = plainService || matchedPackage.name;
+  const resolvedPackagePrice = plainBudgetRange || matchedPackage.price;
 
   // 5. Generate unique Reference ID
   const orderRef = `MB-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
-  const submissionDate =
-    new Date().toLocaleString('en-US', {
-      timeZone: 'Asia/Dhaka',
-      dateStyle: 'full',
-      timeStyle: 'medium',
-    }) + ' (BST / GMT+6)';
+  const submissionDate = formatDhakaDateTime();
 
   // Build standardized plain-text message if not explicitly passed
   const assembledMessageParts: string[] = [];
@@ -285,7 +260,6 @@ export async function processPackageOrder(
 
   // 6. Verify Gmail SMTP configuration
   const smtpReady = deps.isSmtpConfiguredFn ? deps.isSmtpConfiguredFn() : isSmtpConfigured();
-  const dispatchEmail = deps.sendEmailFn || sendEmail;
   const adminEmail = getAdminNotificationEmail();
 
   if (!smtpReady && !deps.sendEmailFn) {
@@ -294,318 +268,81 @@ export async function processPackageOrder(
       status: 503,
       data: {
         success: false,
-        error: 'Email service is temporarily unavailable. Please try again shortly.',
+        errorCode: 'SMTP_NOT_CONFIGURED',
+        error:
+          'Email service is not configured on the server (missing GMAIL_USER or GMAIL_APP_PASSWORD). Please contact MirrorBook support.',
       },
     };
   }
 
-  // 7. Build Admin Notification Email
-  const adminSubject = isGeneralInquiry
-    ? 'New General Inquiry Received - MirrorBook'
-    : 'New Package Order Received - MirrorBook';
-  const adminBadgeLabel = isGeneralInquiry ? 'New Inquiry' : 'New Order';
-  const adminHeading = isGeneralInquiry
-    ? 'New General Inquiry Received'
-    : 'New Package Order Received';
-  const adminIntro = isGeneralInquiry
-    ? 'A visitor has submitted a new project inquiry through <a href="https://mirrorbook.site" style="color: #71B913; text-decoration: none;">mirrorbook.site</a>. Review inquiry details below:'
-    : 'A customer has submitted a new monthly service package request through <a href="https://mirrorbook.site" style="color: #71B913; text-decoration: none;">mirrorbook.site</a>. Review order details below:';
-  const sanitizedFullMessage = sanitize(plainMessage).replace(/\n/g, '<br/>');
+  // 7. Build branded Admin Notification + Customer Confirmation emails
+  const built = buildInquiryEmails({
+    inquiryType,
+    orderRef,
+    submissionDate,
+    customerName: plainName,
+    customerEmail: plainEmail,
+    phone: plainPhone || undefined,
+    brandName: plainBrandName || undefined,
+    serviceName: resolvedServiceName,
+    packagePrice: resolvedPackagePrice,
+    monthlyDesignQty: plainDesignQty || undefined,
+    monthlyVideoQty: plainVideoQty || undefined,
+    budgetRange: plainBudgetRange || undefined,
+    message: plainMessage,
+    additionalRequirements: plainAdditionalReq || undefined,
+  });
 
-  const adminHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${adminSubject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #070707; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #FFFFFF;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #070707; padding: 30px 15px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" style="max-width: 600px; background-color: #0E0E0E; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
-          <!-- Header -->
-          <tr>
-            <td style="background-color: #121212; padding: 24px 30px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <table width="100%" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td>
-                    <span style="font-size: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px; display: block;">MirrorBook</span>
-                    <span style="font-size: 11px; color: #71B913; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Reflecting Creativity • Admin Notification</span>
-                  </td>
-                  <td align="right">
-                    <span style="display: inline-block; padding: 6px 12px; background-color: rgba(113, 185, 19, 0.15); border: 1px solid rgba(113, 185, 19, 0.4); border-radius: 8px; font-size: 11px; font-weight: 700; color: #71B913; text-transform: uppercase;">${adminBadgeLabel}</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+  const adminMailOptions: SendEmailOptions = {
+    to: adminEmail,
+    replyTo: plainEmail,
+    subject: built.adminEmail.subject,
+    text: built.adminEmail.text,
+    html: built.adminEmail.html,
+  };
 
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 30px;">
-              <h2 style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">${adminHeading}</h2>
-              <p style="margin: 0 0 24px 0; font-size: 13px; line-height: 1.6; color: #AAAAAA;">${adminIntro}</p>
+  const customerMailOptions: SendEmailOptions = {
+    to: plainEmail,
+    replyTo: adminEmail,
+    subject: built.customerEmail.subject,
+    text: built.customerEmail.text,
+    html: built.customerEmail.html,
+  };
 
-              <!-- Summary Card -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #161616; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; margin-bottom: 24px;">
-                <tr>
-                  <td style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888; width: 35%;">Reference ID</td>
-                  <td style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; font-weight: 700; color: #71B913; font-family: monospace;">${orderRef}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Submission Date &amp; Time</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #FFFFFF;">${submissionDate}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">${isGeneralInquiry ? 'Selected Service' : 'Selected Package'}</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 14px; font-weight: 700; color: #FFFFFF;">${packageName}</td>
-                </tr>
-                ${
-                  !isGeneralInquiry || budgetRange
-                    ? `<tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Package Price / Budget</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; font-weight: 600; color: #71B913;">${packagePrice}</td>
-                </tr>`
-                    : ''
-                }
-                <tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Customer Full Name</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; font-weight: 600; color: #FFFFFF;">${name}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Customer Email</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; color: #FFFFFF;"><a href="mailto:${email}" style="color: #71B913; text-decoration: none;">${email}</a></td>
-                </tr>
-                ${
-                  phone
-                    ? `<tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Phone / WhatsApp</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; font-weight: 600; color: #FFFFFF;">
-                    <a href="https://wa.me/${phone.replace(/[^0-9]/g, '')}" style="color: #25D366; text-decoration: none;" target="_blank">${phone} (Open WhatsApp)</a>
-                  </td>
-                </tr>`
-                    : ''
-                }
-                ${
-                  brandName
-                    ? `<tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Business / Brand Name</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 13px; color: #FFFFFF;">${brandName}</td>
-                </tr>`
-                    : ''
-                }
-                ${
-                  monthlyDesignQty
-                    ? `<tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Design Quantity</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #CCCCCC;">${monthlyDesignQty}</td>
-                </tr>`
-                    : ''
-                }
-                ${
-                  monthlyVideoQty
-                    ? `<tr>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #888888;">Video / Reels Quantity</td>
-                  <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #CCCCCC;">${monthlyVideoQty}</td>
-                </tr>`
-                    : ''
-                }
-                <tr>
-                  <td style="padding: 14px 20px; font-size: 12px; color: #888888; vertical-align: top;">${isGeneralInquiry ? 'Project Details' : 'Additional Requirements'}</td>
-                  <td style="padding: 14px 20px; font-size: 12px; color: #CCCCCC; line-height: 1.6;">${
-                    additionalRequirements || sanitizedFullMessage || 'Standard onboarding and discovery scope.'
-                  }</td>
-                </tr>
-              </table>
-
-              <!-- Quick Action -->
-              <table width="100%" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td align="center">
-                    <a href="mailto:${email}?subject=${encodeURIComponent(
-                      (isGeneralInquiry ? 'Re: Your MirrorBook Inquiry (' : 'Re: Your MirrorBook Package Request (') +
-                        orderRef +
-                        ')'
-                    )}" style="display: inline-block; padding: 12px 24px; background-color: #71B913; color: #000000; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px; text-decoration: none;">Reply to Customer</a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #0A0A0A; padding: 20px 30px; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; font-size: 11px; color: #666666;">
-              MirrorBook Creative Agency • <a href="https://mirrorbook.site" style="color: #888888; text-decoration: none;">https://mirrorbook.site</a> • Dhaka, Bangladesh
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
-
-  // 8. Build Customer Confirmation Email
-  const customerSubject = isGeneralInquiry
-    ? 'Thank You for Contacting MirrorBook'
-    : 'Your Package Request Has Been Received - MirrorBook';
-  const customerPlainText = `Hello ${plainName},
-
-Thank you for contacting MirrorBook!
-
-${isGeneralInquiry ? 'We have successfully received your inquiry.' : 'We have successfully received your package request.'}
-
-Reference: ${orderRef}
-${isGeneralInquiry ? 'Inquiry Type: ' : 'Selected Package: '}${plainService}
-
-Our team has received your message and will contact you shortly to discuss the next steps and any details needed.
-
-If you have any questions, simply reply to this email.
-
-Best regards,
-MirrorBook Team
-Reflecting Creativity
-https://mirrorbook.site/`;
-
-  const customerHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${customerSubject}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #070707; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #FFFFFF;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #070707; padding: 30px 15px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" style="max-width: 560px; background-color: #0E0E0E; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
-          <!-- Header -->
-          <tr>
-            <td style="background-color: #121212; padding: 24px 30px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <span style="font-size: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px; display: block;">MirrorBook</span>
-              <span style="font-size: 11px; color: #71B913; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Reflecting Creativity</span>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding: 32px 30px;">
-              <p style="margin: 0 0 16px 0; font-size: 15px; color: #FFFFFF; font-weight: 600;">Hello ${name},</p>
-
-              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">Thank you for contacting <strong>MirrorBook</strong>!</p>
-
-              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">${
-                isGeneralInquiry
-                  ? 'We have successfully received your inquiry.'
-                  : 'We have successfully received your package request.'
-              }</p>
-
-              <!-- Details Box -->
-              <div style="background-color: #161616; border: 1px solid rgba(255, 255, 255, 0.08); border-left: 3px solid #71B913; border-radius: 8px; padding: 18px 20px; margin-bottom: 24px;">
-                <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #71B913;">${
-                  isGeneralInquiry ? 'Your Inquiry Details' : 'Your Order Details'
-                }</p>
-                <p style="margin: 0 0 6px 0; font-size: 13px; color: #AAAAAA;">Reference ID: <strong style="color: #FFFFFF; font-family: monospace;">${orderRef}</strong></p>
-                <p style="margin: 0; font-size: 13px; color: #AAAAAA;">${
-                  isGeneralInquiry ? 'Inquiry Type' : 'Selected Package'
-                }: <strong style="color: #FFFFFF;">${packageName}</strong></p>
-              </div>
-
-              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #CCCCCC;">
-                Our team has received your message and will contact you shortly to discuss the next steps and any details needed.
-              </p>
-
-              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #888888;">
-                If you have any questions, simply reply to this email.
-              </p>
-
-              <!-- Important Disclaimer -->
-              <div style="background-color: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 11px; color: #888888; line-height: 1.5;">
-                <strong>Notice:</strong> This email confirms receipt of your request only. Payment details, deliverable timelines, and project scope will be finalized directly with our team.
-              </div>
-
-              <!-- Sign-off -->
-              <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 18px;">
-                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #FFFFFF;">Best regards,</p>
-                <p style="margin: 2px 0 0 0; font-size: 13px; color: #71B913; font-weight: 600;">MirrorBook Team</p>
-                <p style="margin: 2px 0 0 0; font-size: 11px; color: #888888;">Reflecting Creativity</p>
-                <p style="margin: 2px 0 0 0; font-size: 11px;"><a href="https://mirrorbook.site/" style="color: #71B913; text-decoration: none;">https://mirrorbook.site/</a></p>
-              </div>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #0A0A0A; padding: 18px 30px; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; font-size: 11px; color: #555555;">
-              © ${new Date().getFullYear()} MirrorBook. All rights reserved. • Dhaka, Bangladesh
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
-
-  // 9. Send Admin Notification Email via Gmail SMTP
+  // 9. Send Admin Notification + Customer Confirmation over a single Gmail SMTP connection
   try {
-    await dispatchEmail({
-      to: adminEmail,
-      replyTo: plainEmail,
-      subject: adminSubject,
-      text: `${adminHeading}\n\nRef: ${orderRef}\nCustomer: ${plainName}\nEmail: ${plainEmail}\nPhone: ${plainPhone || 'N/A'}\nService: ${plainService}\nDetails:\n${plainMessage}\nDate: ${submissionDate}`,
-      html: adminHtml,
-    });
-  } catch (adminErr: any) {
-    console.error('[package-order] Gmail SMTP admin notification failed:', {
+    if (deps.sendEmailFn) {
+      await deps.sendEmailFn(adminMailOptions);
+      await deps.sendEmailFn(customerMailOptions);
+    } else {
+      await sendEmailBatch([
+        { options: adminMailOptions },
+        { options: customerMailOptions },
+      ]);
+    }
+  } catch (mailErr: any) {
+    const classified = classifySmtpError(mailErr);
+    console.error('[package-order] Gmail SMTP delivery failed:', {
       inquiryType,
-      reason: sanitizeLogMessage(adminErr?.message || 'unknown'),
+      errorCode: classified.errorCode,
+      smtpCode: classified.smtpCode,
+      responseCode: classified.responseCode,
+      reason: sanitizeLogMessage(classified.message),
     });
-    const isConfigErr = adminErr instanceof SmtpConfigError;
+    const status = mailErr instanceof SmtpConfigError ? 503 : classified.httpStatus;
     return {
-      status: isConfigErr ? 503 : 502,
+      status,
       data: {
         success: false,
-        error:
-          'Unable to send confirmation email right now. Please verify your email address or try again.',
-      },
-    };
-  }
-
-  // 10. Send Customer Confirmation Email via Gmail SMTP
-  try {
-    await dispatchEmail({
-      to: plainEmail,
-      replyTo: adminEmail,
-      subject: customerSubject,
-      text: customerPlainText,
-      html: customerHtml,
-    });
-  } catch (custErr: any) {
-    console.error('[package-order] Gmail SMTP customer confirmation failed:', {
-      inquiryType,
-      reason: sanitizeLogMessage(custErr?.message || 'unknown'),
-    });
-    recentSubmissionsMap.set(dedupKey, Date.now());
-    return {
-      status: 502,
-      data: {
-        success: false,
-        orderId: orderRef,
-        customerEmailSent: false,
-        error:
-          'Unable to send confirmation email right now. Please verify your email address or try again.',
+        errorCode: classified.errorCode,
+        error: classified.userMessage,
       },
     };
   }
 
   recentSubmissionsMap.set(dedupKey, Date.now());
 
-  // 11. Both Admin Notification and Customer Confirmation succeeded via Gmail SMTP
+  // 10. Both Admin Notification and Customer Confirmation succeeded via Gmail SMTP
   return {
     status: 200,
     data: {

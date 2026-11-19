@@ -447,7 +447,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     setIsSubmittingBkash(true);
     try {
       const parsedAmount = Number(bkashAmount.replace(/[^0-9.]/g, ''));
-      await submitMirrorPOSLicenseRequest({
+      const createdRequest = await submitMirrorPOSLicenseRequest({
         customerName: bkashCustomerName,
         gmail: bkashGmail,
         senderNumber: bkashSenderNumber,
@@ -455,9 +455,34 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         amount: parsedAmount,
       });
 
+      // Notify Admin + Customer via server-verified Gmail SMTP (non-destructive: Firestore payment record is already saved)
+      let emailNotice = '';
+      try {
+        const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+        if (idToken && createdRequest?.id) {
+          const mailRes = await fetch('/api/orders/submit-and-verify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              action: 'notify_mirrorpos_license_submitted',
+              requestId: createdRequest.id,
+            }),
+          });
+          const mailData = await mailRes.json().catch(() => null);
+          if (mailRes.ok && mailData?.emailSent === true) {
+            emailNotice = ' A confirmation receipt has been sent to your email.';
+          }
+        }
+      } catch {
+        // Non-fatal: payment request is already safely persisted in Firestore
+      }
+
       setBkashTransactionId('');
       setBkashSuccessMessage(
-        'Your payment information has been submitted. Your license will be activated after admin verification.'
+        `Your payment information has been submitted. Your license will be activated after admin verification.${emailNotice}`
       );
     } catch (err: unknown) {
       setBkashError(

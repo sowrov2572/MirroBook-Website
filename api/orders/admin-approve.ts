@@ -7,6 +7,19 @@ import {
   isFirebaseAdminConfigured,
 } from '../_lib/firebaseAdmin.js';
 import { getServerProductFallback } from '../_lib/courseCatalog.js';
+import {
+  SendEmailOptions,
+  SendEmailResult,
+  classifySmtpError,
+  getAdminNotificationEmail,
+  isSmtpConfigured,
+  sanitizeLogMessage,
+  sendEmailBatch,
+} from '../_lib/mailer.js';
+import {
+  buildOrderVerifiedAccessEmails,
+  formatDhakaDateTime,
+} from '../_lib/emailTemplates.js';
 
 export interface AdminApproveInput {
   authorizationHeader?: string;
@@ -16,6 +29,9 @@ export interface AdminApproveInput {
 export interface AdminApproveDeps {
   store?: AdminStore;
   verifyTokenFn?: (idToken: string) => Promise<VerifiedFirebaseToken>;
+  sendEmailBatchFn?: (
+    messages: Array<{ options: SendEmailOptions; optional?: boolean }>
+  ) => Promise<SendEmailResult[]>;
 }
 
 export async function processAdminApproveOrder(
@@ -62,6 +78,178 @@ export async function processAdminApproveOrder(
     return { status: 400, data: { success: false, error: 'Invalid request body.' } };
   }
 
+  const retryEmail = payload.retryEmail === true;
+
+  // ==================== MIRRORPOS DESKTOP LICENSE APPROVAL EMAIL ====================
+  if (payload.targetType === 'mirrorpos_license') {
+    const requestId =
+      typeof payload.requestId === 'string'
+        ? payload.requestId.trim()
+        : typeof payload.orderId === 'string'
+        ? payload.orderId.trim()
+        : '';
+    if (!requestId || requestId.length > 128) {
+      return { status: 400, data: { success: false, error: 'Valid requestId is required.' } };
+    }
+
+    let licenseStore: AdminStore;
+    try {
+      licenseStore = deps.store || createFirebaseAdminStore();
+    } catch (err: unknown) {
+      return {
+        status: 503,
+        data: {
+          success: false,
+          error: err instanceof Error ? err.message : 'Firebase Admin SDK not initialized.',
+        },
+      };
+    }
+
+    const reqDoc = await licenseStore.getDoc('mirrorpos_license_requests', requestId);
+    if (!reqDoc) {
+      return {
+        status: 404,
+        data: { success: false, error: `MirrorPOS license request ${requestId} not found.` },
+      };
+    }
+
+    // Security guard: NEVER send paid MirrorPOS access email unless payment & license are verified APPROVED/ACTIVE
+    if (reqDoc.paymentStatus !== 'APPROVED' || reqDoc.licenseStatus !== 'ACTIVE') {
+      return {
+        status: 409,
+        data: {
+          success: false,
+          error: 'Cannot send paid MirrorPOS access email before payment is verified and APPROVED.',
+        },
+      };
+    }
+
+    if (reqDoc.approvalEmailSent === true && !retryEmail) {
+      return {
+        status: 200,
+        data: {
+          success: true,
+          alreadySent: true,
+          duplicateEmailPrevented: true,
+          emailSent: true,
+          accessEmailSent: true,
+          emailDeliveryStatus: 'SENT',
+          message: `MirrorPOS license activation email for ${requestId} was already sent.`,
+        },
+      };
+    }
+
+    const customerEmail = String(reqDoc.gmail || '').trim().toLowerCase();
+    if (!customerEmail || !customerEmail.includes('@')) {
+      return {
+        status: 400,
+        data: { success: false, error: 'License request does not contain a valid customer email.' },
+      };
+    }
+
+    const adminEmail = getAdminNotificationEmail();
+    const amountNum = Number(reqDoc.amount) || 9999;
+    const built = buildOrderVerifiedAccessEmails({
+      orderId: requestId,
+      productTitle: 'MirrorPOS Desktop Lifetime License',
+      amountDisplay: `৳${amountNum.toLocaleString()}`,
+      paymentMethod: 'bKash',
+      trxId: String(reqDoc.transactionId || ''),
+      customerName: String(reqDoc.customerName || 'Customer'),
+      customerEmail,
+      accessUrl: 'https://mirrorbook.site/mirrorpos',
+      verifiedBy: `Admin (${verifiedAdmin.email || verifiedAdmin.uid})`,
+      verifiedAt: formatDhakaDateTime(),
+      isMirrorPOSLicense: true,
+    });
+
+    const batch: Array<{ options: SendEmailOptions; optional?: boolean }> = [
+      {
+        options: {
+          to: customerEmail,
+          replyTo: adminEmail,
+          subject: built.customerEmail.subject,
+          text: built.customerEmail.text,
+          html: built.customerEmail.html,
+        },
+      },
+    ];
+    if (adminEmail && adminEmail.toLowerCase() !== customerEmail) {
+      batch.push({
+        optional: true,
+        options: {
+          to: adminEmail,
+          replyTo: customerEmail,
+          subject: built.adminEmail.subject,
+          text: built.adminEmail.text,
+          html: built.adminEmail.html,
+        },
+      });
+    }
+
+    const sendBatch = deps.sendEmailBatchFn || sendEmailBatch;
+    const smtpAvailable = Boolean(deps.sendEmailBatchFn) || isSmtpConfigured();
+    const attemptAt = new Date().toISOString();
+    const prevAttempts = Number(reqDoc.emailDeliveryAttempts || 0);
+
+    try {
+      if (!smtpAvailable) {
+        throw new Error('Gmail SMTP is not configured.');
+      }
+      await sendBatch(batch);
+      await licenseStore
+        .setDoc('mirrorpos_license_requests', requestId, {
+          approvalEmailSent: true,
+          approvalEmailSentAt: attemptAt,
+          emailDeliveryStatus: 'SENT',
+          emailDeliveryError: null,
+          emailDeliveryAttempts: prevAttempts + 1,
+        })
+        .catch(() => {});
+
+      return {
+        status: 200,
+        data: {
+          success: true,
+          emailSent: true,
+          accessEmailSent: true,
+          emailDeliveryStatus: 'SENT',
+          message: `MirrorPOS Desktop License activation email sent to ${customerEmail}.`,
+        },
+      };
+    } catch (mailErr: unknown) {
+      const classified = classifySmtpError(mailErr);
+      console.error('[admin-approve] MirrorPOS activation email failed (license remains ACTIVE):', {
+        requestId,
+        errorCode: classified.errorCode,
+        reason: sanitizeLogMessage(classified.message, 200),
+      });
+      await licenseStore
+        .setDoc('mirrorpos_license_requests', requestId, {
+          approvalEmailSent: false,
+          emailDeliveryStatus: 'FAILED',
+          emailDeliveryError: classified.errorCode,
+          emailLastAttemptAt: attemptAt,
+          emailDeliveryAttempts: prevAttempts + 1,
+        })
+        .catch(() => {});
+
+      return {
+        status: 200,
+        data: {
+          success: true,
+          emailSent: false,
+          accessEmailSent: false,
+          emailDeliveryStatus: 'FAILED',
+          emailErrorCode: classified.errorCode,
+          emailWarning:
+            'License is ACTIVE in Firestore, but customer confirmation email delivery failed and can be retried safely.',
+          message: 'MirrorPOS license is ACTIVE, but confirmation email delivery failed.',
+        },
+      };
+    }
+  }
+
   const orderId = typeof payload.orderId === 'string' ? payload.orderId.trim() : '';
   if (!orderId || orderId.length > 128) {
     return { status: 400, data: { success: false, error: 'Valid orderId is required.' } };
@@ -87,7 +275,24 @@ export async function processAdminApproveOrder(
     if (!order) {
       return {
         httpStatus: 404,
-        payload: { success: false, error: `Order ${orderId} not found.` },
+        alreadyCompleted: false,
+        alreadySentAccessEmail: false,
+        payload: { success: false, error: `Order ${orderId} not found.` } as Record<string, any>,
+      };
+    }
+
+    // Idempotent handling: if already Completed, preserve existing verified record & licenseKey (never regenerate!)
+    if (order.status === 'Completed') {
+      return {
+        httpStatus: 200,
+        alreadyCompleted: true,
+        alreadySentAccessEmail: order.accessEmailSent === true,
+        payload: {
+          success: true,
+          alreadyCompleted: true,
+          order,
+          message: `Order ${orderId} is already verified and Completed.`,
+        } as Record<string, any>,
       };
     }
 
@@ -97,11 +302,13 @@ export async function processAdminApproveOrder(
       if (existingLock && existingLock.orderId && existingLock.orderId !== orderId) {
         return {
           httpStatus: 409,
+          alreadyCompleted: false,
+          alreadySentAccessEmail: false,
           payload: {
             success: false,
             alreadyUsed: true,
             error: `Transaction ID ${normalizedTrx} was already redeemed by Order ${existingLock.orderId}.`,
-          },
+          } as Record<string, any>,
         };
       }
     }
@@ -120,11 +327,13 @@ export async function processAdminApproveOrder(
     if (!resolvedDownloadUrl) {
       return {
         httpStatus: 400,
+        alreadyCompleted: false,
+        alreadySentAccessEmail: false,
         payload: {
           success: false,
           error:
             'No protected download URL is configured for this product in productSecrets. Add the Google Drive link in Manage Products first.',
-        },
+        } as Record<string, any>,
       };
     }
 
@@ -183,18 +392,160 @@ export async function processAdminApproveOrder(
 
     return {
       httpStatus: 200,
+      alreadyCompleted: false,
+      alreadySentAccessEmail: false,
       payload: {
         success: true,
         order: updatedOrder,
         message: `Order ${orderId} approved as Completed via Admin SDK.`,
-      },
+      } as Record<string, any>,
     };
   });
 
-  return {
-    status: txResult.httpStatus,
-    data: txResult.payload,
-  };
+  if (txResult.httpStatus !== 200 || !txResult.payload.success || !txResult.payload.order) {
+    return {
+      status: txResult.httpStatus,
+      data: txResult.payload,
+    };
+  }
+
+  const verifiedOrder = txResult.payload.order as Record<string, any>;
+
+  // Duplicate access email guard: skip resending if already sent unless explicit retryEmail is requested
+  if (txResult.alreadySentAccessEmail && !retryEmail) {
+    return {
+      status: 200,
+      data: {
+        ...txResult.payload,
+        duplicateEmailPrevented: true,
+        emailSent: true,
+        accessEmailSent: true,
+        emailDeliveryStatus: 'SENT',
+      },
+    };
+  }
+
+  // ==================== POST-COMMIT CUSTOMER ACCESS EMAIL ====================
+  // Verified order is already durably committed above. SMTP errors NEVER roll back verification.
+  const customerEmail = String(verifiedOrder.customerEmail || '').trim().toLowerCase();
+  const adminEmail = getAdminNotificationEmail();
+  const sendBatch = deps.sendEmailBatchFn || sendEmailBatch;
+  const smtpAvailable = Boolean(deps.sendEmailBatchFn) || isSmtpConfigured();
+  const prevAttempts = Number(verifiedOrder.emailDeliveryAttempts || 0);
+  const emailAttemptAt = new Date().toISOString();
+
+  if (!customerEmail || !customerEmail.includes('@')) {
+    return {
+      status: 200,
+      data: {
+        ...txResult.payload,
+        emailSent: false,
+        accessEmailSent: false,
+        emailDeliveryStatus: 'SKIPPED_INVALID_EMAIL',
+        emailWarning: 'Order verified, but customer email address is missing or invalid.',
+      },
+    };
+  }
+
+  const built = buildOrderVerifiedAccessEmails({
+    orderId,
+    productTitle: String(verifiedOrder.itemName || 'MirrorBook Digital Product'),
+    amountDisplay:
+      String(verifiedOrder.itemPrice || '') ||
+      `৳${Number(verifiedOrder.canonicalAmount || 0).toLocaleString()}`,
+    paymentMethod: String(verifiedOrder.paymentMethod || 'bKash'),
+    trxId: String(verifiedOrder.trxId || 'N/A'),
+    customerName: String(verifiedOrder.customerName || 'Customer'),
+    customerEmail,
+    accessUrl: String(verifiedOrder.downloadUrl || ''),
+    licenseKey: String(verifiedOrder.licenseKey || ''),
+    verifiedBy: `Admin (${verifiedAdmin.email || verifiedAdmin.uid})`,
+    verifiedAt: formatDhakaDateTime(),
+  });
+
+  const batch: Array<{ options: SendEmailOptions; optional?: boolean }> = [
+    {
+      options: {
+        to: customerEmail,
+        replyTo: adminEmail,
+        subject: built.customerEmail.subject,
+        text: built.customerEmail.text,
+        html: built.customerEmail.html,
+      },
+    },
+  ];
+  if (adminEmail && adminEmail.toLowerCase() !== customerEmail) {
+    batch.push({
+      optional: true,
+      options: {
+        to: adminEmail,
+        replyTo: customerEmail,
+        subject: built.adminEmail.subject,
+        text: built.adminEmail.text,
+        html: built.adminEmail.html,
+      },
+    });
+  }
+
+  try {
+    if (!smtpAvailable) {
+      throw new Error('Gmail SMTP is not configured.');
+    }
+    await sendBatch(batch);
+    const emailMeta = {
+      emailDeliveryStatus: 'SENT',
+      accessEmailSent: true,
+      accessEmailSentAt: emailAttemptAt,
+      emailDeliveryError: null,
+      emailDeliveryAttempts: prevAttempts + 1,
+    };
+    await store.setDoc('orders', orderId, emailMeta).catch(() => {});
+    Object.assign(verifiedOrder, emailMeta);
+
+    return {
+      status: 200,
+      data: {
+        ...txResult.payload,
+        order: verifiedOrder,
+        emailSent: true,
+        accessEmailSent: true,
+        emailDeliveryStatus: 'SENT',
+        message: txResult.alreadyCompleted
+          ? `Order ${orderId} was already verified; customer access email delivered successfully.`
+          : `Order ${orderId} approved as Completed and customer access email sent.`,
+      },
+    };
+  } catch (mailErr: unknown) {
+    const classified = classifySmtpError(mailErr);
+    console.error('[admin-approve] Verified order access email failed (verified payment preserved):', {
+      orderId,
+      errorCode: classified.errorCode,
+      reason: sanitizeLogMessage(classified.message, 200),
+    });
+    const emailMeta = {
+      emailDeliveryStatus: 'FAILED',
+      accessEmailSent: false,
+      emailDeliveryError: classified.errorCode,
+      emailLastAttemptAt: emailAttemptAt,
+      emailDeliveryAttempts: prevAttempts + 1,
+    };
+    await store.setDoc('orders', orderId, emailMeta).catch(() => {});
+    Object.assign(verifiedOrder, emailMeta);
+
+    return {
+      status: 200,
+      data: {
+        ...txResult.payload,
+        order: verifiedOrder,
+        emailSent: false,
+        accessEmailSent: false,
+        emailDeliveryStatus: 'FAILED',
+        emailErrorCode: classified.errorCode,
+        emailWarning:
+          'Payment is verified and saved safely, but customer access email delivery failed. You can safely retry approval to resend only the email without regenerating credentials.',
+      },
+    };
+  }
 }
 
 export default async function handler(req: any, res: any) {

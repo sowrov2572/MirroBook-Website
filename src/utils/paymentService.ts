@@ -359,8 +359,17 @@ export async function submitAndVerifyOrderApi(
  */
 export async function adminApproveOrderApi(
   orderId: string,
-  idToken: string
-): Promise<{ success: boolean; order?: Order; message: string; error?: string }> {
+  idToken: string,
+  options?: { retryEmail?: boolean }
+): Promise<{
+  success: boolean;
+  order?: Order;
+  message: string;
+  error?: string;
+  emailSent?: boolean;
+  emailDeliveryStatus?: string;
+  emailWarning?: string;
+}> {
   try {
     const res = await fetch('/api/orders/admin-approve', {
       method: 'POST',
@@ -368,7 +377,10 @@ export async function adminApproveOrderApi(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ orderId }),
+      body: JSON.stringify({
+        orderId,
+        ...(options?.retryEmail ? { retryEmail: true } : {}),
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.success) {
@@ -382,6 +394,10 @@ export async function adminApproveOrderApi(
       success: true,
       order: data.order as Order,
       message: String(data.message || 'Order approved.'),
+      emailSent: typeof data.emailSent === 'boolean' ? data.emailSent : undefined,
+      emailDeliveryStatus:
+        typeof data.emailDeliveryStatus === 'string' ? data.emailDeliveryStatus : undefined,
+      emailWarning: typeof data.emailWarning === 'string' ? data.emailWarning : undefined,
     };
   } catch (err) {
     return {

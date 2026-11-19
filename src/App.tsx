@@ -883,10 +883,19 @@ export default function App() {
       setAdminOrders((prev) =>
         prev.map((o) => (o.id === res.order!.id ? res.order! : o))
       );
-      showToast(`✓ Order ${res.order.id} approved & license activated via Admin API.`);
+      if (res.emailWarning) {
+        showToast(
+          `✓ Order ${res.order.id} approved, but email delivery failed (can retry safely).`,
+          'info'
+        );
+      } else {
+        showToast(`✓ Order ${res.order.id} approved & customer access email sent.`);
+      }
       return {
         success: true,
-        message: res.message || `Order ${res.order.id} approved and unlocked.`,
+        message: res.emailWarning
+          ? `${res.message} (${res.emailWarning})`
+          : res.message || `Order ${res.order.id} approved and unlocked.`,
       };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Admin approval failed.';
@@ -908,10 +917,39 @@ export default function App() {
       action,
       adminNote,
     });
+
+    if (action === 'APPROVE') {
+      let emailSent = false;
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        const mailRes = await fetch('/api/orders/admin-approve', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            targetType: 'mirrorpos_license',
+            requestId,
+          }),
+        });
+        const mailData = await mailRes.json().catch(() => null);
+        emailSent = Boolean(mailRes.ok && mailData?.emailSent === true);
+      } catch {
+        emailSent = false;
+      }
+
+      showToast(
+        emailSent
+          ? `✓ MirrorPOS Desktop License activated (${requestId}) & customer email sent.`
+          : `✓ MirrorPOS Desktop License activated (${requestId}), but confirmation email failed to send.`,
+        emailSent ? 'success' : 'info'
+      );
+      return;
+    }
+
     showToast(
-      action === 'APPROVE'
-        ? `✓ MirrorPOS Desktop License activated (${requestId}).`
-        : action === 'REJECT'
+      action === 'REJECT'
         ? `MirrorPOS request ${requestId} rejected.`
         : `MirrorPOS request ${requestId} reset to ${res.paymentStatus}.`,
       action === 'REJECT' ? 'info' : 'success'

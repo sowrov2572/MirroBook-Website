@@ -1,10 +1,12 @@
 import crypto from 'crypto';
 import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
 import {
+  SmtpConfigError,
+  classifySmtpError,
   getAdminNotificationEmail,
   isSmtpConfigured,
   sanitizeLogMessage,
-  sendEmail,
+  sendEmailBatch,
 } from '../_lib/mailer.js';
 import {
   AdminStore,
@@ -17,6 +19,7 @@ import {
   issueFreeAccessToken,
   resetFreeAccessTokensForTests,
 } from '../_lib/freeAccessToken.js';
+import { buildFreeSoftwareAccessEmails } from '../_lib/emailTemplates.js';
 
 const recentDeliveries = new Map<string, number>();
 const inFlightRequests = new Set<string>();
@@ -43,17 +46,6 @@ function resolveSafeOrigin(candidate?: string): string {
   }
 }
 
-function sanitizeHtml(input: unknown): string {
-  if (typeof input !== 'string') return '';
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .trim();
-}
-
 function cleanPlainText(input: unknown, maxLen = 200): string {
   if (typeof input !== 'string') return '';
   return input
@@ -68,14 +60,6 @@ function isValidEmail(email: string): boolean {
 
 function isSafeHttpUrl(url: string): boolean {
   return /^https?:\/\/[^\s"'<>]+$/i.test(url.trim());
-}
-
-function resolvePublicAssetUrl(url?: string): string {
-  const clean = typeof url === 'string' ? url.trim() : '';
-  if (!clean) return 'https://mirrorbook.site/mirror-pos-icon.png';
-  if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
-  if (clean.startsWith('/')) return `https://mirrorbook.site${clean}`;
-  return `https://mirrorbook.site/${clean}`;
 }
 
 export function resetFreeSoftwareCachesForTests(): void {
@@ -114,268 +98,72 @@ export function buildFreeSoftwareEmailHtml(params: {
   launchUrl?: string;
   referenceId: string;
 }): { subject: string; text: string; html: string } {
-  const safeName = sanitizeHtml(params.recipientName);
-  const safeTitle = sanitizeHtml(params.productTitle);
-  const safeDesc = sanitizeHtml(params.productDescription);
-  const safeIconUrl = sanitizeHtml(resolvePublicAssetUrl(params.iconUrl));
-  const safeDownloadUrl = sanitizeHtml(params.downloadUrl);
-  const safeLaunchUrl = params.launchUrl ? sanitizeHtml(params.launchUrl) : safeDownloadUrl;
-  const safeRef = sanitizeHtml(params.referenceId);
-
-  const isMirrorPOS =
-    params.productId === SOFTWARE_MIRRORPOS_ID ||
-    params.productTitle.toLowerCase().includes('mirrorpos');
-  const userGuideUrl = 'https://mirrorbook.site/mirrorpos#user-guide';
-  const supportEmail = 'mirrorbook.site@gmail.com';
-
-  const subject = isMirrorPOS
-    ? 'Verify Your MirrorPOS Free Email Access | MirrorBook'
-    : `Your ${params.productTitle} Download Link - MirrorBook`;
-
-  const textLines = isMirrorPOS
-    ? [
-        `Hello ${params.recipientName},`,
-        '',
-        `Thank you for requesting Free Access to MirrorPOS by MirrorBook.`,
-        `To prevent unauthorized sharing, click the single-use verification link below to open MirrorPOS (valid for 24 hours).`,
-        '',
-        `Product: MirrorPOS`,
-        `Developer: MirrorBook`,
-        `Access Type: Free Email Access (Single-Use Verification Link)`,
-        `Reference ID: ${params.referenceId}`,
-        '',
-        `Verify & Open MirrorPOS:`,
-        safeLaunchUrl,
-        '',
-        `Complete User Guide:`,
-        userGuideUrl,
-        '',
-        `Need Help? MirrorBook Support:`,
-        `Email: ${supportEmail}`,
-        `Website: https://mirrorbook.site/`,
-        '',
-        `Regards,`,
-        `Team MirrorBook`,
-        `Reflecting Creativity.`,
-      ]
-    : [
-        `Hello ${params.recipientName},`,
-        '',
-        `Thank you for choosing ${params.productTitle} by MirrorBook!`,
-        '',
-        `Product: ${params.productTitle} (Free Software)`,
-        params.productDescription ? `Overview: ${params.productDescription}` : '',
-        `Reference ID: ${params.referenceId}`,
-        '',
-        `Direct Download / Access Link:`,
-        params.downloadUrl,
-        params.launchUrl && params.launchUrl !== params.downloadUrl
-          ? `\nLaunch Web Application:\n${params.launchUrl}`
-          : '',
-        '',
-        `Need help? Reply to this email or visit https://mirrorbook.site/`,
-        '',
-        `Regards,`,
-        `Team MirrorBook`,
-        `Reflecting Creativity.`,
-      ].filter(Boolean);
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${sanitizeHtml(subject)}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0B0D0C; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F5F7F2;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0B0D0C; padding: 32px 16px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" style="max-width: 580px; background-color: #121614; border: 1px solid rgba(255, 255, 255, 0.10); border-radius: 16px; overflow: hidden;">
-          <!-- Brand Header -->
-          <tr>
-            <td style="background-color: #171C19; padding: 22px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                  <td valign="middle">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td style="padding-right: 12px;" valign="middle">
-                          <img src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png" alt="MirrorBook" width="36" height="36" style="display: block; border-radius: 8px; object-fit: contain;" />
-                        </td>
-                        <td valign="middle">
-                          <span style="font-size: 18px; font-weight: 800; color: #F5F7F2; letter-spacing: -0.3px; display: block;">MirrorBook</span>
-                          <span style="font-size: 11px; color: #B7F34A; font-weight: 600; letter-spacing: 0.4px;">Reflecting Creativity.</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td align="right" valign="middle">
-                    <span style="display: inline-block; padding: 4px 10px; background-color: rgba(183, 243, 74, 0.14); border: 1px solid rgba(183, 243, 74, 0.35); border-radius: 6px; font-size: 11px; font-weight: 700; color: #B7F34A; text-transform: uppercase;">${isMirrorPOS ? 'Email Verification' : 'Free Access'}</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 30px 28px;">
-              <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: 600; color: #F5F7F2;">Hello ${safeName},</p>
-              <p style="margin: 0 0 22px 0; font-size: 14px; line-height: 1.6; color: #A1AAA2;">
-                ${
-                  isMirrorPOS
-                    ? `Thank you for requesting free email access to <strong style="color: #F5F7F2;">${safeTitle}</strong> by MirrorBook. Use the single-use verification button below to verify your email and launch MirrorPOS (expires in 24 hours).`
-                    : `Thank you for registering for <strong style="color: #F5F7F2;">${safeTitle}</strong> by MirrorBook. Your access details are ready below.`
-                }
-              </p>
-
-              <!-- Product Details Card -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0B0D0C; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; margin-bottom: 24px;">
-                <tr>
-                  <td style="padding: 18px 20px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td width="56" valign="top" style="padding-right: 14px;">
-                          <img src="${safeIconUrl}" alt="${safeTitle}" width="48" height="48" style="display: block; width: 48px; height: 48px; border-radius: 10px; background-color: #171C19; border: 1px solid rgba(255,255,255,0.09); object-fit: contain; padding: 4px;" />
-                        </td>
-                        <td valign="middle">
-                          <div style="font-size: 16px; font-weight: 700; color: #F5F7F2; margin-bottom: 4px;">${safeTitle}</div>
-                          ${safeDesc ? `<div style="font-size: 12px; color: #A1AAA2; line-height: 1.45; margin-bottom: 8px;">${safeDesc}</div>` : ''}
-                          <div style="font-size: 12px; color: #D4DBD5; line-height: 1.6;">
-                            <div><strong style="color: #F5F7F2;">Product:</strong> ${safeTitle}</div>
-                            <div><strong style="color: #F5F7F2;">Developer:</strong> MirrorBook</div>
-                            <div><strong style="color: #F5F7F2;">Access Type:</strong> ${isMirrorPOS ? 'Free Email Access (Single-Use)' : 'Free Software'}</div>
-                            <div style="font-family: monospace; color: #B7F34A; margin-top: 2px;">Ref: ${safeRef}</div>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Primary & Secondary CTAs -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 22px;">
-                <tr>
-                  <td align="center" style="padding-bottom: 10px;">
-                    <a href="${safeLaunchUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 13px 28px; background-color: #B7F34A; color: #0B0D0C; font-size: 13px; font-weight: 700; border-radius: 10px; text-decoration: none;">
-                      ${isMirrorPOS ? 'Verify &amp; Open MirrorPOS' : `Launch ${safeTitle}`}
-                    </a>
-                  </td>
-                </tr>
-                ${
-                  isMirrorPOS
-                    ? `<tr>
-                  <td align="center">
-                    <a href="${userGuideUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 10px 22px; background-color: #171C19; border: 1px solid rgba(255, 255, 255, 0.14); color: #F5F7F2; font-size: 12px; font-weight: 600; border-radius: 10px; text-decoration: none;">
-                      Complete User Guide
-                    </a>
-                  </td>
-                </tr>`
-                    : ''
-                }
-              </table>
-
-              <!-- Links Box -->
-              <div style="background-color: #0B0D0C; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px; margin-bottom: 22px;">
-                <div style="font-size: 11px; color: #A1AAA2; margin-bottom: 4px;">${isMirrorPOS ? 'Verification Access Link (Single-Use · 24h Expiry):' : 'Launch Link:'}</div>
-                <a href="${safeLaunchUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #B7F34A; word-break: break-all; text-decoration: none; font-family: monospace; display: block; margin-bottom: 10px;">${safeLaunchUrl}</a>
-                ${
-                  isMirrorPOS
-                    ? `<div style="font-size: 11px; color: #A1AAA2; margin-bottom: 4px;">User Guide:</div>
-                <a href="${userGuideUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #B7F34A; word-break: break-all; text-decoration: none; font-family: monospace; display: block;">${userGuideUrl}</a>`
-                    : ''
-                }
-              </div>
-
-              <!-- Support Information -->
-              <div style="background-color: #171C19; border-left: 3px solid #B7F34A; border-radius: 8px; padding: 14px 16px; margin-bottom: 24px;">
-                <div style="font-size: 12px; font-weight: 700; color: #F5F7F2; margin-bottom: 6px;">MirrorBook Support</div>
-                <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #A1AAA2;">
-                  Need help with setup, billing counter workflow, or Google account sync? Contact MirrorBook Support at <a href="mailto:${supportEmail}" style="color: #B7F34A; text-decoration: none;">${supportEmail}</a> or visit <a href="https://mirrorbook.site/mirrorpos#user-guide" style="color: #B7F34A; text-decoration: none;">mirrorbook.site/mirrorpos</a>.
-                </p>
-              </div>
-
-              <!-- Sign-off -->
-              <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 18px;">
-                <p style="margin: 0; font-size: 13px; font-weight: 600; color: #F5F7F2;">Regards,</p>
-                <p style="margin: 3px 0 0 0; font-size: 13px; font-weight: 700; color: #B7F34A;">Team MirrorBook</p>
-                <p style="margin: 2px 0 0 0; font-size: 11px; color: #A1AAA2;">Reflecting Creativity. • <a href="https://mirrorbook.site/" style="color: #B7F34A; text-decoration: none;">https://mirrorbook.site/</a></p>
-              </div>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #0B0D0C; padding: 16px 28px; border-top: 1px solid rgba(255, 255, 255, 0.07); text-align: center; font-size: 11px; color: #707A72;">
-              © ${new Date().getFullYear()} MirrorBook • Reflecting Creativity. • Dhaka, Bangladesh
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  return {
-    subject,
-    text: textLines.join('\n'),
-    html,
-  };
+  const { customerEmail } = buildFreeSoftwareAccessEmails(params);
+  return customerEmail;
 }
 
 interface FreeSoftwareMailPayload extends EmailDispatchPayload {
   recipientName: string;
   productId: string;
   productTitle: string;
+  productDescription: string;
+  iconUrl: string;
   launchUrl: string;
   referenceId: string;
   isMirrorPOS: boolean;
 }
 
-function buildAdminSafeSoftwareSummary(payload: FreeSoftwareMailPayload): string {
-  return [
-    `Product: ${payload.productTitle}`,
-    `Product ID: ${payload.productId}`,
-    `Customer Name: ${payload.recipientName}`,
-    `Customer Email: ${payload.to}`,
-    `Access Type: ${payload.isMirrorPOS ? 'Free Email Access (Single-Use Verification Link)' : 'Free Software Access'}`,
-    `Reference ID: ${payload.referenceId}`,
-    payload.isMirrorPOS
-      ? 'Verification Link: Sent privately to customer email (redacted from admin summary).'
-      : `Access Link: ${payload.launchUrl}`,
-  ].join('\n');
-}
-
 async function dispatchFreeSoftwareEmail(payload: FreeSoftwareMailPayload): Promise<void> {
   if (!isSmtpConfigured()) {
-    throw new Error('Email service is temporarily unavailable. Please try again shortly.');
+    throw new SmtpConfigError(
+      'Email service is not configured. Missing valid GMAIL_USER or GMAIL_APP_PASSWORD.'
+    );
   }
 
   const adminEmail = getAdminNotificationEmail();
-
-  // Primary & sole delivery: Gmail SMTP via centralized Nodemailer service
-  await sendEmail({
-    to: payload.to,
-    replyTo: adminEmail,
-    subject: payload.subject,
-    text: payload.text,
-    html: payload.html,
+  const built = buildFreeSoftwareAccessEmails({
+    recipientName: payload.recipientName,
+    recipientEmail: payload.to,
+    productId: payload.productId,
+    productTitle: payload.productTitle,
+    productDescription: payload.productDescription,
+    iconUrl: payload.iconUrl,
+    downloadUrl: payload.launchUrl,
+    launchUrl: payload.launchUrl,
+    referenceId: payload.referenceId,
+    isMirrorPOS: payload.isMirrorPOS,
   });
 
-  // Best-effort token-redacted admin alert (non-blocking; never contains free_access_token)
+  const batch: Array<{
+    options: { to: string; replyTo?: string; subject: string; text: string; html: string };
+    optional?: boolean;
+  }> = [
+    {
+      options: {
+        to: payload.to,
+        replyTo: adminEmail,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      },
+    },
+  ];
+
+  // Optional token-redacted branded admin alert over the same SMTP connection (never contains free_access_token)
   if (adminEmail && adminEmail.toLowerCase() !== payload.to.toLowerCase()) {
-    const safeSummary = buildAdminSafeSoftwareSummary(payload);
-    sendEmail({
-      to: adminEmail,
-      replyTo: payload.to,
-      subject: `New Software Access Request (${payload.productTitle}) - MirrorBook`,
-      text: safeSummary,
-      html: `<pre style="font-family:monospace;white-space:pre-wrap;">${sanitizeHtml(safeSummary)}</pre>`,
-    }).catch(() => {});
+    batch.push({
+      optional: true,
+      options: {
+        to: adminEmail,
+        replyTo: payload.to,
+        subject: built.adminEmail.subject,
+        text: built.adminEmail.text,
+        html: built.adminEmail.html,
+      },
+    });
   }
+
+  await sendEmailBatch(batch);
 }
 
 export async function processFreeSoftwareAccess(
@@ -615,24 +403,28 @@ export async function processFreeSoftwareAccess(
           recipientName,
           productId,
           productTitle,
+          productDescription,
+          iconUrl,
           launchUrl: deliveredActionUrl,
           referenceId: issuedTokenId,
           isMirrorPOS: isMirrorPOSProduct,
         });
       }
     } catch (mailErr: unknown) {
-      const msg =
-        mailErr instanceof Error ? mailErr.message : 'Unable to send software access email.';
+      const classified = classifySmtpError(mailErr);
       console.error('[MirrorPOS free-access] Gmail SMTP dispatch failed:', {
-        message: sanitizeLogMessage(msg, 200),
+        errorCode: classified.errorCode,
+        smtpCode: classified.smtpCode,
+        responseCode: classified.responseCode,
+        message: sanitizeLogMessage(classified.message, 200),
         hasSmtp: isSmtpConfigured(),
       });
       return {
-        status: isSmtpConfigured() ? 502 : 503,
+        status: classified.httpStatus,
         data: {
           success: false,
-          error:
-            'Unable to send confirmation email right now. Please verify your email address or try again.',
+          errorCode: classified.errorCode,
+          error: classified.userMessage,
         },
       };
     }

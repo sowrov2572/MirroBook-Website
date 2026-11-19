@@ -13,6 +13,20 @@ import {
 } from '../_lib/firebaseAdmin.js';
 import { checkRateLimitBucket } from '../_lib/security.js';
 import { getServerProductFallback } from '../_lib/courseCatalog.js';
+import {
+  SendEmailOptions,
+  SendEmailResult,
+  classifySmtpError,
+  getAdminNotificationEmail,
+  isSmtpConfigured,
+  sanitizeLogMessage,
+  sendEmailBatch,
+} from '../_lib/mailer.js';
+import {
+  buildOrderVerifiedAccessEmails,
+  buildPaymentSubmissionEmails,
+  formatDhakaDateTime,
+} from '../_lib/emailTemplates.js';
 
 const ALLOWED_METHODS = new Set(['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer']);
 
@@ -26,6 +40,9 @@ export interface SubmitAndVerifyDeps {
   store?: AdminStore;
   verifyTokenFn?: (idToken: string) => Promise<VerifiedFirebaseToken>;
   expectedOwnerNumber?: string;
+  sendEmailBatchFn?: (
+    messages: Array<{ options: SendEmailOptions; optional?: boolean }>
+  ) => Promise<SendEmailResult[]>;
 }
 
 function cleanStr(val: unknown, maxLen: number): string {
@@ -78,6 +95,163 @@ export async function processSubmitAndVerifyOrder(
           },
         };
       }
+    }
+  }
+
+  // Authenticated notification branch for MirrorPOS Desktop License bKash submissions
+  // (Firestore record is already written atomically by client; server verifies ownership & sends emails)
+  if (payload.action === 'notify_mirrorpos_license_submitted') {
+    if (!verifiedUser) {
+      return {
+        status: 401,
+        data: { success: false, error: 'Authentication required to send license payment notification.' },
+      };
+    }
+
+    const requestId = cleanStr(payload.requestId, 128);
+    if (!requestId) {
+      return { status: 400, data: { success: false, error: 'Valid requestId is required.' } };
+    }
+
+    let licenseStore: AdminStore;
+    try {
+      licenseStore = deps.store || createFirebaseAdminStore();
+    } catch (err: unknown) {
+      return {
+        status: 503,
+        data: {
+          success: false,
+          error: err instanceof Error ? err.message : 'Firebase Admin SDK is not initialized.',
+        },
+      };
+    }
+
+    const reqDoc = await licenseStore.getDoc('mirrorpos_license_requests', requestId);
+    if (!reqDoc) {
+      return {
+        status: 404,
+        data: { success: false, error: `MirrorPOS license request ${requestId} not found.` },
+      };
+    }
+
+    if (reqDoc.userId !== verifiedUser.uid && !verifiedUser.isAdmin) {
+      return {
+        status: 403,
+        data: { success: false, error: 'Forbidden: you cannot notify for another user’s request.' },
+      };
+    }
+
+    if (reqDoc.submissionEmailStatus === 'SENT') {
+      return {
+        status: 200,
+        data: {
+          success: true,
+          alreadySent: true,
+          emailSent: true,
+          emailDeliveryStatus: 'SENT',
+          message: 'Payment submission confirmation email was already sent.',
+        },
+      };
+    }
+
+    const customerEmailAddr = String(reqDoc.gmail || verifiedUser.email || '').trim().toLowerCase();
+    const customerFullName = String(reqDoc.customerName || verifiedUser.name || 'Customer').trim();
+    const amountNum = Number(reqDoc.amount) || 9999;
+    const adminEmail = getAdminNotificationEmail();
+    const built = buildPaymentSubmissionEmails({
+      orderId: requestId,
+      productTitle: 'MirrorPOS Desktop Lifetime License',
+      amountDisplay: `৳${amountNum.toLocaleString()}`,
+      paymentMethod: 'bKash',
+      trxId: String(reqDoc.transactionId || ''),
+      senderAccount: String(reqDoc.senderNumber || ''),
+      customerName: customerFullName,
+      customerEmail: customerEmailAddr,
+      customerPhone: String(reqDoc.senderNumber || ''),
+      verificationReason: 'Pending manual Admin verification (MirrorPOS Desktop License)',
+      submittedAt: formatDhakaDateTime(),
+    });
+
+    const batch: Array<{ options: SendEmailOptions; optional?: boolean }> = [
+      {
+        options: {
+          to: adminEmail,
+          replyTo: customerEmailAddr || undefined,
+          subject: built.adminEmail.subject,
+          text: built.adminEmail.text,
+          html: built.adminEmail.html,
+        },
+      },
+    ];
+    if (customerEmailAddr && customerEmailAddr !== adminEmail.toLowerCase()) {
+      batch.push({
+        optional: true,
+        options: {
+          to: customerEmailAddr,
+          replyTo: adminEmail,
+          subject: built.customerEmail.subject,
+          text: built.customerEmail.text,
+          html: built.customerEmail.html,
+        },
+      });
+    }
+
+    const sendBatch = deps.sendEmailBatchFn || sendEmailBatch;
+    const nowSentIso = new Date().toISOString();
+    const prevAttempts = Number(reqDoc.submissionEmailAttempts || 0);
+
+    try {
+      if (!deps.sendEmailBatchFn && !isSmtpConfigured()) {
+        throw new Error('SMTP credentials not configured');
+      }
+      await sendBatch(batch);
+      await licenseStore
+        .setDoc('mirrorpos_license_requests', requestId, {
+          submissionEmailStatus: 'SENT',
+          submissionEmailSentAt: nowSentIso,
+          submissionEmailError: null,
+          submissionEmailAttempts: prevAttempts + 1,
+        })
+        .catch(() => {});
+
+      return {
+        status: 200,
+        data: {
+          success: true,
+          emailSent: true,
+          emailDeliveryStatus: 'SENT',
+          message: 'Payment submission recorded and confirmation emails sent.',
+        },
+      };
+    } catch (mailErr: unknown) {
+      const classified = classifySmtpError(mailErr);
+      console.error('[submit-and-verify] MirrorPOS submission email failed (record preserved):', {
+        requestId,
+        errorCode: classified.errorCode,
+        reason: sanitizeLogMessage(classified.message, 200),
+      });
+      await licenseStore
+        .setDoc('mirrorpos_license_requests', requestId, {
+          submissionEmailStatus: 'FAILED',
+          submissionEmailError: classified.errorCode,
+          submissionEmailLastAttemptAt: nowSentIso,
+          submissionEmailAttempts: prevAttempts + 1,
+        })
+        .catch(() => {});
+
+      return {
+        status: 200,
+        data: {
+          success: true,
+          emailSent: false,
+          emailDeliveryStatus: 'FAILED',
+          emailErrorCode: classified.errorCode,
+          emailWarning:
+            'Your payment request was saved safely, but the confirmation email could not be sent right now.',
+          message:
+            'Payment submission recorded safely for Admin review, but confirmation email delivery failed.',
+        },
+      };
     }
   }
 
@@ -452,6 +626,206 @@ export async function processSubmitAndVerifyOrder(
       },
     };
   });
+
+  // ==================== POST-COMMIT GMAIL SMTP NOTIFICATIONS ====================
+  // Payment/order state is already atomically committed in Firestore above.
+  // Email failures NEVER roll back or lose a saved/verified order — they are recorded on the order for safe retry.
+  if (txResult.httpStatus === 200 && txResult.payload?.success && txResult.payload?.order) {
+    const savedOrder = txResult.payload.order as Record<string, any>;
+    const adminEmail = getAdminNotificationEmail();
+    const sendBatch = deps.sendEmailBatchFn || sendEmailBatch;
+    const smtpAvailable = Boolean(deps.sendEmailBatchFn) || isSmtpConfigured();
+
+    if (txResult.payload.pending === true) {
+      // Workflows D & E: Pending payment submission — notify Admin + Customer Pending Receipt (NEVER include paid access!)
+      const builtPending = buildPaymentSubmissionEmails({
+        orderId,
+        productTitle: canonicalTitle,
+        amountDisplay: canonicalPriceDisplay,
+        paymentMethod,
+        trxId: normalizedTrxId,
+        senderAccount,
+        customerName,
+        customerEmail,
+        customerPhone,
+        verificationReason: savedOrder.verificationNote || txResult.payload.reason || 'Pending verification',
+        submittedAt: formatDhakaDateTime(),
+      });
+
+      const pendingBatch: Array<{ options: SendEmailOptions; optional?: boolean }> = [
+        {
+          options: {
+            to: adminEmail,
+            replyTo: customerEmail,
+            subject: builtPending.adminEmail.subject,
+            text: builtPending.adminEmail.text,
+            html: builtPending.adminEmail.html,
+          },
+        },
+      ];
+      if (customerEmail && customerEmail !== adminEmail.toLowerCase()) {
+        pendingBatch.push({
+          optional: true,
+          options: {
+            to: customerEmail,
+            replyTo: adminEmail,
+            subject: builtPending.customerEmail.subject,
+            text: builtPending.customerEmail.text,
+            html: builtPending.customerEmail.html,
+          },
+        });
+      }
+
+      const emailAttemptAt = new Date().toISOString();
+      try {
+        if (!smtpAvailable) {
+          throw new Error('Gmail SMTP is not configured.');
+        }
+        await sendBatch(pendingBatch);
+        const emailMeta = {
+          submissionEmailStatus: 'SENT',
+          submissionEmailSentAt: emailAttemptAt,
+          submissionEmailError: null,
+          submissionEmailAttempts: 1,
+        };
+        await store.setDoc('orders', orderId, emailMeta).catch(() => {});
+        Object.assign(savedOrder, emailMeta);
+        return {
+          status: txResult.httpStatus,
+          data: {
+            ...txResult.payload,
+            order: savedOrder,
+            emailSent: true,
+            emailDeliveryStatus: 'SENT',
+          },
+        };
+      } catch (mailErr: unknown) {
+        const classified = classifySmtpError(mailErr);
+        console.error('[submit-and-verify] Pending order email failed (order preserved):', {
+          orderId,
+          errorCode: classified.errorCode,
+          reason: sanitizeLogMessage(classified.message, 200),
+        });
+        const emailMeta = {
+          submissionEmailStatus: 'FAILED',
+          submissionEmailError: classified.errorCode,
+          submissionEmailLastAttemptAt: emailAttemptAt,
+          submissionEmailAttempts: 1,
+        };
+        await store.setDoc('orders', orderId, emailMeta).catch(() => {});
+        Object.assign(savedOrder, emailMeta);
+        return {
+          status: txResult.httpStatus,
+          data: {
+            ...txResult.payload,
+            order: savedOrder,
+            emailSent: false,
+            emailDeliveryStatus: 'FAILED',
+            emailErrorCode: classified.errorCode,
+            emailWarning:
+              'Order was saved for verification, but confirmation email delivery failed temporarily.',
+          },
+        };
+      }
+    }
+
+    if (txResult.payload.verified === true && savedOrder.status === 'Completed') {
+      // Workflow F (Auto-SMS Verified): Payment verified & persisted -> send Customer Access + Admin Audit
+      const builtVerified = buildOrderVerifiedAccessEmails({
+        orderId,
+        productTitle: canonicalTitle,
+        amountDisplay: canonicalPriceDisplay,
+        paymentMethod,
+        trxId: normalizedTrxId,
+        customerName,
+        customerEmail,
+        accessUrl: String(savedOrder.downloadUrl || ''),
+        licenseKey: String(savedOrder.licenseKey || ''),
+        verifiedBy: 'Automated bKash SMS Verification',
+        verifiedAt: formatDhakaDateTime(),
+      });
+
+      const verifiedBatch: Array<{ options: SendEmailOptions; optional?: boolean }> = [
+        {
+          options: {
+            to: customerEmail,
+            replyTo: adminEmail,
+            subject: builtVerified.customerEmail.subject,
+            text: builtVerified.customerEmail.text,
+            html: builtVerified.customerEmail.html,
+          },
+        },
+      ];
+      if (adminEmail && adminEmail.toLowerCase() !== customerEmail) {
+        verifiedBatch.push({
+          optional: true,
+          options: {
+            to: adminEmail,
+            replyTo: customerEmail,
+            subject: builtVerified.adminEmail.subject,
+            text: builtVerified.adminEmail.text,
+            html: builtVerified.adminEmail.html,
+          },
+        });
+      }
+
+      const emailAttemptAt = new Date().toISOString();
+      try {
+        if (!smtpAvailable) {
+          throw new Error('Gmail SMTP is not configured.');
+        }
+        await sendBatch(verifiedBatch);
+        const emailMeta = {
+          emailDeliveryStatus: 'SENT',
+          accessEmailSent: true,
+          accessEmailSentAt: emailAttemptAt,
+          emailDeliveryError: null,
+          emailDeliveryAttempts: 1,
+        };
+        await store.setDoc('orders', orderId, emailMeta).catch(() => {});
+        Object.assign(savedOrder, emailMeta);
+        return {
+          status: txResult.httpStatus,
+          data: {
+            ...txResult.payload,
+            order: savedOrder,
+            emailSent: true,
+            accessEmailSent: true,
+            emailDeliveryStatus: 'SENT',
+          },
+        };
+      } catch (mailErr: unknown) {
+        const classified = classifySmtpError(mailErr);
+        console.error('[submit-and-verify] Verified access email failed (verified payment preserved):', {
+          orderId,
+          errorCode: classified.errorCode,
+          reason: sanitizeLogMessage(classified.message, 200),
+        });
+        const emailMeta = {
+          emailDeliveryStatus: 'FAILED',
+          accessEmailSent: false,
+          emailDeliveryError: classified.errorCode,
+          emailLastAttemptAt: emailAttemptAt,
+          emailDeliveryAttempts: 1,
+        };
+        await store.setDoc('orders', orderId, emailMeta).catch(() => {});
+        Object.assign(savedOrder, emailMeta);
+        return {
+          status: txResult.httpStatus,
+          data: {
+            ...txResult.payload,
+            order: savedOrder,
+            emailSent: false,
+            accessEmailSent: false,
+            emailDeliveryStatus: 'FAILED',
+            emailErrorCode: classified.errorCode,
+            emailWarning:
+              'Payment is verified and unlocked in your account, but confirmation email delivery failed and can be safely retried by Admin.',
+          },
+        };
+      }
+    }
+  }
 
   return {
     status: txResult.httpStatus,
