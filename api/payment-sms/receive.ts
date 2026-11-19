@@ -1,15 +1,15 @@
-import { parseBkashSms, normalizeBdPhone } from '../_lib/bkashSmsParser';
+import { parseBkashSms, normalizeBdPhone } from '../_lib/bkashSmsParser.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
+} from '../_lib/firebaseAdmin.js';
 import {
   checkRateLimitBucket,
   isRecentReplayHash,
   sha256Hex,
   timingSafeSecretMatch,
-} from '../_lib/security';
+} from '../_lib/security.js';
 
 export interface ReceiveSmsInput {
   headers: Record<string, string | string[] | undefined>;

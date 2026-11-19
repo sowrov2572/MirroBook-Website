@@ -1,9 +1,9 @@
-import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session';
+import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
+} from '../_lib/firebaseAdmin.js';
 
 export async function processGetPaymentSmsLogs(
   authorizationHeader?: string,

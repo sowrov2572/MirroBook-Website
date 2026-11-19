@@ -1,12 +1,12 @@
-import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session';
-import { normalizeTrxId } from '../_lib/bkashSmsParser';
+import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
+import { normalizeTrxId } from '../_lib/bkashSmsParser.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   generateServerLicenseKey,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
-import { getServerProductFallback } from '../_lib/courseCatalog';
+} from '../_lib/firebaseAdmin.js';
+import { getServerProductFallback } from '../_lib/courseCatalog.js';
 
 export interface AdminApproveInput {
   authorizationHeader?: string;

@@ -1,16 +1,16 @@
-import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session';
+import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
+} from '../_lib/firebaseAdmin.js';
 import {
   COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
   VIDEO_EDITING_FUNDAMENTALS_COURSE,
   enrichLessonDurationsFromYouTubeApi,
   resolveCourseLessons,
-} from '../_lib/courseCatalog';
-import { checkRateLimitBucket } from '../_lib/security';
+} from '../_lib/courseCatalog.js';
+import { checkRateLimitBucket } from '../_lib/security.js';
 
 export interface GetCourseLessonsInput {
   authorizationHeader?: string;

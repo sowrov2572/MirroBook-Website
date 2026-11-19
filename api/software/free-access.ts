@@ -1,17 +1,23 @@
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
-import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session';
+import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
+import {
+  getAdminNotificationEmail,
+  isSmtpConfigured,
+  sanitizeBodySnippetForLog,
+  sendGmailSmtpMail,
+  sendToAppsScriptAutomation,
+} from '../_lib/emailAutomation.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
-import { checkRateLimitBucket } from '../_lib/security';
-import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../_lib/courseCatalog';
+} from '../_lib/firebaseAdmin.js';
+import { checkRateLimitBucket } from '../_lib/security.js';
+import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../_lib/courseCatalog.js';
 import {
   issueFreeAccessToken,
   resetFreeAccessTokensForTests,
-} from '../_lib/freeAccessToken';
+} from '../_lib/freeAccessToken.js';
 
 const recentDeliveries = new Map<string, number>();
 const inFlightRequests = new Set<string>();
@@ -321,147 +327,108 @@ export function buildFreeSoftwareEmailHtml(params: {
   };
 }
 
-const DEFAULT_APPS_SCRIPT_INQUIRY_URL =
-  'https://script.google.com/macros/s/AKfycbySGdTFlRdWFg2VM0AeO-Jw1AiPvAPF0v8d7y82KpKIJBYrXJ8OCWHIqk5Snawqo1Xl4A/exec';
-
 interface FreeSoftwareMailPayload extends EmailDispatchPayload {
   recipientName: string;
   productId: string;
   productTitle: string;
   launchUrl: string;
   referenceId: string;
+  isMirrorPOS: boolean;
 }
 
-async function sendViaGmailSmtp(payload: EmailDispatchPayload): Promise<void> {
-  const gmailUser = process.env.GMAIL_USER?.trim();
-  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.trim();
-
-  if (!gmailUser || !gmailAppPassword) {
-    throw new Error(
-      'SMTP credentials are not configured (missing GMAIL_USER or GMAIL_APP_PASSWORD).'
-    );
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: gmailUser,
-      pass: gmailAppPassword,
-    },
-  });
-
-  await transporter.sendMail({
-    from: `"MirrorBook" <${gmailUser}>`,
-    to: payload.to,
-    subject: payload.subject,
-    text: payload.text,
-    html: payload.html,
-  });
+function buildAdminSafeSoftwareSummary(payload: FreeSoftwareMailPayload): string {
+  return [
+    `Product: ${payload.productTitle}`,
+    `Product ID: ${payload.productId}`,
+    `Customer Name: ${payload.recipientName}`,
+    `Customer Email: ${payload.to}`,
+    `Access Type: ${payload.isMirrorPOS ? 'Free Email Access (Single-Use Verification Link)' : 'Free Software Access'}`,
+    `Reference ID: ${payload.referenceId}`,
+    payload.isMirrorPOS
+      ? 'Verification Link: Sent privately to customer email (redacted from admin summary).'
+      : `Access Link: ${payload.launchUrl}`,
+  ].join('\n');
 }
 
 async function sendViaAppsScriptAutomation(payload: FreeSoftwareMailPayload): Promise<void> {
-  const targetUrl =
-    process.env.APPS_SCRIPT_INQUIRY_URL?.trim() || DEFAULT_APPS_SCRIPT_INQUIRY_URL;
+  const adminSafeMessage = buildAdminSafeSoftwareSummary(payload);
+  const result = await sendToAppsScriptAutomation({
+    type: 'software_inquiry',
+    inquiryType: 'software_inquiry',
+    requestType: 'software_inquiry',
+    action: 'software_inquiry',
+    name: payload.recipientName,
+    email: payload.to,
+    service: `${payload.productTitle} (Free Email Access)`,
+    subject: payload.subject,
+    // Keep free_access_token out of admin notification summary (`message`) while delivering full link to customer
+    message: adminSafeMessage,
+    customerText: payload.text,
+    html: payload.html,
+    htmlBody: payload.html,
+    productId: payload.productId,
+    productTitle: payload.productTitle,
+    launchUrl: payload.launchUrl,
+    verificationUrl: payload.launchUrl,
+    userGuideUrl: 'https://mirrorbook.site/mirrorpos#user-guide',
+    referenceId: payload.referenceId,
+  });
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const resp = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: 'software_inquiry',
-        name: payload.recipientName,
-        email: payload.to,
-        service: `${payload.productTitle} (Lifetime Access)`,
-        subject: payload.subject,
-        message: payload.text,
-        html: payload.html,
-        htmlBody: payload.html,
-        productId: payload.productId,
-        productTitle: payload.productTitle,
-        launchUrl: payload.launchUrl,
-        userGuideUrl: 'https://mirrorbook.site/mirrorpos#user-guide',
-        referenceId: payload.referenceId,
-      }),
-      redirect: 'follow',
-      signal: controller.signal,
+  if (!result.ok) {
+    console.error('[MirrorPOS free-access] Apps Script dispatch failed:', {
+      httpStatus: result.httpStatus ?? null,
+      authRequired: Boolean(result.authRequired),
+      authStrategy: result.authStrategy ?? 'none',
+      diagnostics: result.diagnostics ?? null,
     });
-
-    clearTimeout(timeoutId);
-
-    const rawText = await resp.text();
-    let parsed: Record<string, any> | null = null;
-    try {
-      parsed = rawText ? JSON.parse(rawText) : null;
-    } catch {
-      parsed = null;
-    }
-
-    if (!resp.ok) {
-      throw new Error(
-        parsed?.error ||
-          parsed?.message ||
-          `Email automation endpoint returned HTTP ${resp.status}.`
-      );
-    }
-
-    if (parsed && (parsed.success === false || parsed.status === 'error' || parsed.result === 'error')) {
-      throw new Error(
-        parsed.error ||
-          parsed.message ||
-          'The email automation service could not send your access confirmation email.'
-      );
-    }
-
-    const lowerText = rawText.toLowerCase();
-    if (
-      !parsed &&
-      (lowerText.includes('script function not found') ||
-        lowerText.includes('authorization is required') ||
-        lowerText.includes('typeerror:') ||
-        lowerText.includes('referenceerror:') ||
-        lowerText.includes('exception:'))
-    ) {
-      throw new Error('The email automation service reported a script execution error.');
-    }
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    if (err?.name === 'AbortError') {
-      throw new Error('The email automation service timed out. Please try again.');
-    }
-    throw err instanceof Error
-      ? err
-      : new Error('Unable to connect to the email automation endpoint.');
+    throw new Error(
+      result.error || 'The email automation service could not send your access confirmation email.'
+    );
   }
 }
 
 async function dispatchFreeSoftwareEmail(payload: FreeSoftwareMailPayload): Promise<void> {
-  const hasSmtp = Boolean(process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim());
+  const hasSmtp = isSmtpConfigured();
 
-  if (hasSmtp) {
+  // Primary dispatch: Google Apps Script Gmail Automation Endpoint
+  try {
+    await sendViaAppsScriptAutomation(payload);
+    return;
+  } catch (scriptErr: unknown) {
+    if (!hasSmtp) {
+      throw scriptErr instanceof Error
+        ? scriptErr
+        : new Error('Unable to send confirmation email right now.');
+    }
+
+    // Secondary fallback: Gmail SMTP when configured
     try {
-      await sendViaGmailSmtp(payload);
+      await sendGmailSmtpMail({
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.text,
+        html: payload.html,
+      });
+
+      // Best-effort token-redacted admin alert (non-blocking)
+      const adminEmail = getAdminNotificationEmail();
+      if (adminEmail && adminEmail.toLowerCase() !== payload.to.toLowerCase()) {
+        const safeSummary = buildAdminSafeSoftwareSummary(payload);
+        sendGmailSmtpMail({
+          to: adminEmail,
+          replyTo: payload.to,
+          subject: `New Software Access Request (${payload.productTitle}) - MirrorBook`,
+          text: safeSummary,
+          html: `<pre style="font-family:monospace;white-space:pre-wrap;">${sanitizeHtml(safeSummary)}</pre>`,
+        }).catch(() => {});
+      }
       return;
     } catch (smtpErr: unknown) {
-      // Fallback to MirrorBook Apps Script Gmail automation if SMTP transiently fails
-      try {
-        await sendViaAppsScriptAutomation(payload);
-        return;
-      } catch (scriptErr: unknown) {
-        const smtpMsg = smtpErr instanceof Error ? smtpErr.message : 'SMTP dispatch failed';
-        const scriptMsg = scriptErr instanceof Error ? scriptErr.message : 'Automation dispatch failed';
-        throw new Error(`Unable to send confirmation email (${smtpMsg}; ${scriptMsg}).`);
-      }
+      const scriptMsg = scriptErr instanceof Error ? scriptErr.message : 'Automation dispatch failed';
+      const smtpMsg = smtpErr instanceof Error ? smtpErr.message : 'SMTP dispatch failed';
+      throw new Error(`Unable to send confirmation email (${scriptMsg}; ${smtpMsg}).`);
     }
   }
-
-  await sendViaAppsScriptAutomation(payload);
 }
 
 export async function processFreeSoftwareAccess(
@@ -703,15 +670,18 @@ export async function processFreeSoftwareAccess(
           productTitle,
           launchUrl: deliveredActionUrl,
           referenceId: issuedTokenId,
+          isMirrorPOS: isMirrorPOSProduct,
         });
       }
     } catch (mailErr: unknown) {
       const msg =
         mailErr instanceof Error ? mailErr.message : 'Unable to send software access email.';
       console.error('[MirrorPOS free-access] Email dispatch failed:', {
-        message: msg,
-        hasSmtp: Boolean(process.env.GMAIL_USER?.trim() && process.env.GMAIL_APP_PASSWORD?.trim()),
+        message: sanitizeBodySnippetForLog(msg, 200),
+        hasSmtp: isSmtpConfigured(),
         hasAppsScriptUrl: Boolean(process.env.APPS_SCRIPT_INQUIRY_URL?.trim()),
+        hasAppsScriptApiKey: Boolean(process.env.APPS_SCRIPT_API_KEY?.trim()),
+        hasAppsScriptBearer: Boolean(process.env.APPS_SCRIPT_BEARER_TOKEN?.trim()),
       });
       return {
         status: 502,

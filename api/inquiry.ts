@@ -1,1 +1,1 @@
-export { default, processPackageOrder } from './package-order';
+export { default, processPackageOrder } from './package-order.js';

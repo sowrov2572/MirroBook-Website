@@ -1,18 +1,18 @@
 import crypto from 'crypto';
-import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session';
+import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
 import {
   isValidTrxIdFormat,
   normalizeBdPhone,
   normalizeTrxId,
-} from '../_lib/bkashSmsParser';
+} from '../_lib/bkashSmsParser.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   generateServerLicenseKey,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
-import { checkRateLimitBucket } from '../_lib/security';
-import { getServerProductFallback } from '../_lib/courseCatalog';
+} from '../_lib/firebaseAdmin.js';
+import { checkRateLimitBucket } from '../_lib/security.js';
+import { getServerProductFallback } from '../_lib/courseCatalog.js';
 
 const ALLOWED_METHODS = new Set(['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer']);
 

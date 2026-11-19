@@ -1,11 +1,11 @@
-import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session';
+import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
-import { checkRateLimitBucket } from '../_lib/security';
-import { getServerProductFallback } from '../_lib/courseCatalog';
+} from '../_lib/firebaseAdmin.js';
+import { checkRateLimitBucket } from '../_lib/security.js';
+import { getServerProductFallback } from '../_lib/courseCatalog.js';
 
 function cleanId(val: unknown): string {
   if (typeof val !== 'string') return '';

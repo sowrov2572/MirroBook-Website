@@ -2,14 +2,14 @@ import {
   verifySignedFreeAccessToken,
   isTokenConsumedInMemory,
   markTokenConsumedInMemory,
-} from '../_lib/freeAccessToken';
+} from '../_lib/freeAccessToken.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin';
-import { checkRateLimitBucket } from '../_lib/security';
-import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../_lib/courseCatalog';
+} from '../_lib/firebaseAdmin.js';
+import { checkRateLimitBucket } from '../_lib/security.js';
+import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../_lib/courseCatalog.js';
 
 function isSafeHttpUrl(url: unknown): url is string {
   return typeof url === 'string' && /^https?:\/\/[^\s"'<>]+$/i.test(url.trim());
