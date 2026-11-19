@@ -337,6 +337,46 @@ function isAllowedRedirectHost(urlStr: string): boolean {
   }
 }
 
+function maskSecretValueForLog(secret: string): string {
+  const clean = secret.trim();
+  if (!clean) return '[empty]';
+  if (clean.length < 12) {
+    return `[masked len=${clean.length}]`;
+  }
+  return `${clean.slice(0, 2)}***${clean.slice(-2)} (len=${clean.length})`;
+}
+
+/**
+ * Produces a safe, masked copy of outbound HTTP request headers for server logs.
+ * Masks `x-api-key`, `Authorization`, `Cookie`, and any token/key/secret headers.
+ */
+export function maskRequestHeadersForLog(
+  headers: Record<string, string>
+): Record<string, string> {
+  const masked: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey === 'x-api-key') {
+      masked[key] = maskSecretValueForLog(value);
+    } else if (lowerKey === 'authorization') {
+      const bearerMatch = /^Bearer\s+(.+)$/i.exec(value);
+      masked[key] = bearerMatch
+        ? `Bearer ${maskSecretValueForLog(bearerMatch[1])}`
+        : maskSecretValueForLog(value);
+    } else if (
+      lowerKey === 'cookie' ||
+      lowerKey.includes('secret') ||
+      lowerKey.includes('token') ||
+      lowerKey.includes('key')
+    ) {
+      masked[key] = maskSecretValueForLog(value);
+    } else {
+      masked[key] = value;
+    }
+  }
+  return masked;
+}
+
 function resolveAuthStrategy(hasBearer: boolean, hasApiKey: boolean): AppsScriptAuthStrategy {
   if (hasBearer && hasApiKey) return 'bearer+x-api-key';
   if (hasBearer) return 'bearer';
@@ -400,8 +440,16 @@ export async function sendToAppsScriptAutomation(
   const timeoutMs =
     typeof options.timeoutMs === 'number' && options.timeoutMs > 0 ? options.timeoutMs : 9500;
   const fetchImpl = options.fetchFn || fetch;
-  const apiKey =
-    options.apiKey !== undefined ? options.apiKey.trim() : getAppsScriptApiKey();
+  const envApiKey = getAppsScriptApiKey();
+  const apiKey = options.apiKey !== undefined ? options.apiKey.trim() : envApiKey;
+  const apiKeySource: 'override' | 'process.env.APPS_SCRIPT_API_KEY' | 'unset' =
+    options.apiKey !== undefined
+      ? apiKey
+        ? 'override'
+        : 'unset'
+      : envApiKey
+        ? 'process.env.APPS_SCRIPT_API_KEY'
+        : 'unset';
   const bearerToken =
     options.bearerToken !== undefined
       ? options.bearerToken.replace(/^Bearer\s+/i, '').trim()
@@ -495,6 +543,28 @@ export async function sendToAppsScriptAutomation(
         }
       }
 
+      const xApiKeyAssigned = Boolean(headers['x-api-key']);
+      const xApiKeyMatchesProcessEnv =
+        hop === 0 && xApiKeyAssigned && options.apiKey === undefined
+          ? headers['x-api-key'] === envApiKey
+          : null;
+
+      console.log('[emailAutomation] Outbound Apps Script request:', {
+        action: safeAction,
+        hop,
+        method: currentMethod,
+        url: sanitizeUrlForLog(currentUrl),
+        urlSource: endpoint.source,
+        isUsingDefaultFallbackUrl: diagnostics.isUsingDefaultFallbackUrl,
+        authStrategy,
+        apiKeySource,
+        envAppsScriptApiKeyPresent: Boolean(envApiKey),
+        xApiKeyHeaderAssigned: xApiKeyAssigned,
+        xApiKeyMatchesProcessEnv,
+        bodyApiKeyInjected: hop === 0 ? Boolean(apiKey) : false,
+        headers: maskRequestHeadersForLog(headers),
+      });
+
       resp = await fetchImpl(currentUrl, {
         method: currentMethod,
         headers,
@@ -509,6 +579,24 @@ export async function sendToAppsScriptAutomation(
         resp.status === 303 ||
         resp.status === 307 ||
         resp.status === 308;
+
+      const rawLocation = resp.headers?.get?.('location') || '';
+      let safeRedirectHost: string | null = null;
+      if (isRedirect && rawLocation) {
+        try {
+          safeRedirectHost = extractHostnameForLog(new URL(rawLocation, currentUrl).toString());
+        } catch {
+          safeRedirectHost = 'invalid-url';
+        }
+      }
+      console.log('[emailAutomation] Apps Script hop response:', {
+        action: safeAction,
+        hop,
+        status: resp.status,
+        contentType: (resp.headers?.get?.('content-type') || '').toLowerCase(),
+        isRedirect,
+        redirectHost: safeRedirectHost,
+      });
 
       if (!isRedirect) {
         break;
