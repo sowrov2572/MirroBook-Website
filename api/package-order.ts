@@ -1,14 +1,12 @@
 import {
-  AppsScriptDispatchResult,
-  MirrorBookEmailAction,
-  SmtpMailOptions,
+  SendEmailOptions,
+  SendEmailResult,
+  SmtpConfigError,
   getAdminNotificationEmail,
   isSmtpConfigured,
-  normalizeAppsScriptAction,
-  sendGmailSmtpMail,
-  sendToAppsScriptAutomation,
-  verifyInboundApiRequest,
-} from './_lib/emailAutomation.js';
+  sanitizeLogMessage,
+  sendEmail,
+} from './_lib/mailer.js';
 
 // In-memory rate limiting map: IP -> array of timestamps
 const rateLimitMap = new Map<string, number[]>();
@@ -49,7 +47,7 @@ export function resetPackageOrderCachesForTests(): void {
   recentSubmissionsMap.clear();
 }
 
-// HTML escape sanitization helper to prevent HTML injection in fallback SMTP emails
+// HTML escape sanitization helper to prevent HTML injection in emails
 function sanitize(input: unknown): string {
   if (typeof input !== 'string') return '';
   return input
@@ -83,14 +81,16 @@ function checkRateLimit(identifier: string): boolean {
   return true;
 }
 
+export type InquiryKind = 'general_inquiry' | 'package_inquiry';
+
 export interface PackageOrderRequestBody {
   name: string;
   email: string;
   service?: string;
-  inquiryType?: MirrorBookEmailAction | string;
-  type?: MirrorBookEmailAction | string;
-  requestType?: MirrorBookEmailAction | string;
-  action?: MirrorBookEmailAction | string;
+  inquiryType?: InquiryKind | string;
+  type?: InquiryKind | string;
+  requestType?: InquiryKind | string;
+  action?: InquiryKind | string;
   message?: string;
   phone?: string;
   whatsAppNumber?: string;
@@ -104,18 +104,21 @@ export interface PackageOrderRequestBody {
 }
 
 export interface PackageOrderDeps {
-  sendAppsScriptFn?: (payload: Record<string, any>) => Promise<AppsScriptDispatchResult>;
-  sendSmtpFn?: (options: SmtpMailOptions) => Promise<void>;
+  sendEmailFn?: (options: SendEmailOptions) => Promise<SendEmailResult | void>;
   isSmtpConfiguredFn?: () => boolean;
 }
 
-function resolveInquiryAction(body: PackageOrderRequestBody): MirrorBookEmailAction {
-  const explicitCandidate =
-    body.inquiryType || body.type || body.requestType || body.action || '';
-  if (explicitCandidate) {
-    return normalizeAppsScriptAction(String(explicitCandidate), 'package_inquiry');
-  }
-  // If package-specific customization fields are present, default to package_inquiry; otherwise general_inquiry
+function resolveInquiryType(body: PackageOrderRequestBody): InquiryKind {
+  const candidate = String(
+    body.inquiryType || body.type || body.requestType || body.action || ''
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (candidate === 'general_inquiry') return 'general_inquiry';
+  if (candidate === 'package_inquiry') return 'package_inquiry';
+
   const hasPackageFields = Boolean(
     body.packageName || body.monthlyDesignQty || body.monthlyVideoQty || body.budgetRange
   );
@@ -235,7 +238,7 @@ export async function processPackageOrder(
       timeStyle: 'medium',
     }) + ' (BST / GMT+6)';
 
-  // Build standardized plain-text message for Google Apps Script if not explicitly passed
+  // Build standardized plain-text message if not explicitly passed
   const assembledMessageParts: string[] = [];
   if (cleanPlainText(rawMessage)) {
     assembledMessageParts.push(cleanPlainText(rawMessage));
@@ -261,7 +264,7 @@ export async function processPackageOrder(
     };
   }
 
-  const inquiryType = resolveInquiryAction(body);
+  const inquiryType = resolveInquiryType(body);
   const isGeneralInquiry = inquiryType === 'general_inquiry';
 
   // Duplicate submission guard (45 seconds per inquiryType + email + service)
@@ -280,68 +283,23 @@ export async function processPackageOrder(
     };
   }
 
-  const appsScriptPayload = {
-    // Route each inquiry cleanly regardless of whether Code.gs reads type, inquiryType, requestType, or action.
-    type: inquiryType,
-    inquiryType,
-    requestType: inquiryType,
-    action: inquiryType,
-    referenceId: orderRef,
-    name: plainName,
-    email: plainEmail,
-    phone: plainPhone,
-    brandName: plainBrandName,
-    service: plainService,
-    budgetRange: plainBudgetRange,
-    message: `${plainMessage}\n\nReference ID: ${orderRef}`,
-    submittedAt: submissionDate,
-  };
-
-  // 6. Primary dispatch: Google Apps Script Gmail Automation Endpoint (with x-api-key / Bearer auth + explicit redirect handling)
-  const dispatchAppsScript = deps.sendAppsScriptFn || sendToAppsScriptAutomation;
-  const appsScriptResult = await dispatchAppsScript(appsScriptPayload);
-  if (appsScriptResult.ok) {
-    recentSubmissionsMap.set(dedupKey, Date.now());
-    return {
-      status: 200,
-      data: {
-        success: true,
-        orderId: orderRef,
-        inquiryType,
-        deliveryChannel: 'apps_script',
-        customerEmailSent: true,
-        message:
-          appsScriptResult.message ||
-          'Your inquiry has been submitted and a confirmation email has been sent to your address.',
-      },
-    };
-  }
-
-  // 7. Secondary fallback: Gmail SMTP (only if configured in environment or injected for tests)
+  // 6. Verify Gmail SMTP configuration
   const smtpReady = deps.isSmtpConfiguredFn ? deps.isSmtpConfiguredFn() : isSmtpConfigured();
-  const dispatchSmtp = deps.sendSmtpFn || sendGmailSmtpMail;
+  const dispatchEmail = deps.sendEmailFn || sendEmail;
   const adminEmail = getAdminNotificationEmail();
 
-  if (!smtpReady && !deps.sendSmtpFn) {
-    console.error('[package-order] Apps Script dispatch failed and SMTP fallback is not configured:', {
-      inquiryType,
-      httpStatus: appsScriptResult.httpStatus ?? null,
-      authRequired: Boolean(appsScriptResult.authRequired),
-      authStrategy: appsScriptResult.authStrategy ?? 'none',
-      diagnostics: appsScriptResult.diagnostics ?? null,
-    });
+  if (!smtpReady && !deps.sendEmailFn) {
+    console.error('[package-order] Gmail SMTP is not configured in environment.');
     return {
-      status: 502,
+      status: 503,
       data: {
         success: false,
-        error:
-          appsScriptResult.error ||
-          'Unable to send confirmation email right now. Please verify your email address or try again.',
+        error: 'Email service is temporarily unavailable. Please try again shortly.',
       },
     };
   }
 
-  // 8. Admin Notification Email (SMTP fallback)
+  // 7. Build Admin Notification Email
   const adminSubject = isGeneralInquiry
     ? 'New General Inquiry Received - MirrorBook'
     : 'New Package Order Received - MirrorBook';
@@ -490,7 +448,7 @@ export async function processPackageOrder(
 </html>
 `;
 
-  // 9. Customer Confirmation Email (SMTP fallback)
+  // 8. Build Customer Confirmation Email
   const customerSubject = isGeneralInquiry
     ? 'Thank You for Contacting MirrorBook'
     : 'Your Package Request Has Been Received - MirrorBook';
@@ -593,9 +551,9 @@ https://mirrorbook.site/`;
 </html>
 `;
 
-  // 10. Send Admin Notification Email via Gmail SMTP fallback
+  // 9. Send Admin Notification Email via Gmail SMTP
   try {
-    await dispatchSmtp({
+    await dispatchEmail({
       to: adminEmail,
       replyTo: plainEmail,
       subject: adminSubject,
@@ -603,9 +561,13 @@ https://mirrorbook.site/`;
       html: adminHtml,
     });
   } catch (adminErr: any) {
-    console.error('[package-order] SMTP fallback admin send failed:', adminErr?.message || 'unknown');
+    console.error('[package-order] Gmail SMTP admin notification failed:', {
+      inquiryType,
+      reason: sanitizeLogMessage(adminErr?.message || 'unknown'),
+    });
+    const isConfigErr = adminErr instanceof SmtpConfigError;
     return {
-      status: 502,
+      status: isConfigErr ? 503 : 502,
       data: {
         success: false,
         error:
@@ -614,16 +576,20 @@ https://mirrorbook.site/`;
     };
   }
 
-  // 11. Send Customer Confirmation Email via Gmail SMTP fallback
+  // 10. Send Customer Confirmation Email via Gmail SMTP
   try {
-    await dispatchSmtp({
+    await dispatchEmail({
       to: plainEmail,
+      replyTo: adminEmail,
       subject: customerSubject,
       text: customerPlainText,
       html: customerHtml,
     });
   } catch (custErr: any) {
-    console.error('[package-order] SMTP fallback customer send failed:', custErr?.message || 'unknown');
+    console.error('[package-order] Gmail SMTP customer confirmation failed:', {
+      inquiryType,
+      reason: sanitizeLogMessage(custErr?.message || 'unknown'),
+    });
     recentSubmissionsMap.set(dedupKey, Date.now());
     return {
       status: 502,
@@ -639,15 +605,16 @@ https://mirrorbook.site/`;
 
   recentSubmissionsMap.set(dedupKey, Date.now());
 
-  // 12. Both succeeded via Gmail SMTP fallback
+  // 11. Both Admin Notification and Customer Confirmation succeeded via Gmail SMTP
   return {
     status: 200,
     data: {
       success: true,
       orderId: orderRef,
       inquiryType,
-      deliveryChannel: 'gmail_smtp_fallback',
+      deliveryChannel: 'gmail_smtp',
       customerEmailSent: true,
+      adminEmailSent: true,
       message: isGeneralInquiry
         ? 'Your inquiry has been submitted and a confirmation email has been sent to your address.'
         : 'Package request received successfully! A confirmation email has been sent to your address.',
@@ -657,24 +624,9 @@ https://mirrorbook.site/`;
 
 // Default export for Vercel Serverless Function handler
 export default async function handler(req: any, res: any) {
-  // Allow only POST
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ success: false, error: 'Method not allowed. Use POST.' });
-  }
-
-  // Optional inbound API key / Bearer verification when INQUIRY_API_KEY is configured
-  const authCheck = verifyInboundApiRequest(req.headers);
-  if (!authCheck.authorized) {
-    console.error('[package-order] Inbound API authentication failed:', {
-      failedAuthCheck: authCheck.failedAuthCheck ?? 'missing_inbound_credentials',
-      mode: authCheck.mode,
-      inboundKeyConfigured: Boolean(process.env.INQUIRY_API_KEY?.trim()),
-    });
-    return res.status(401).json({
-      success: false,
-      error: authCheck.error || 'Unauthorized request.',
-    });
   }
 
   try {
@@ -695,7 +647,7 @@ export default async function handler(req: any, res: any) {
     const result = await processPackageOrder(body || {}, clientIp);
     return res.status(result.status).json(result.data);
   } catch (err: any) {
-    console.error('[package-order] API handler error:', err?.message || 'unknown');
+    console.error('[package-order] API handler error:', sanitizeLogMessage(err?.message || 'unknown'));
     return res.status(500).json({
       success: false,
       error: 'An internal error occurred while processing your request. Please try again.',

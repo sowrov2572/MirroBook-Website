@@ -3,10 +3,9 @@ import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js
 import {
   getAdminNotificationEmail,
   isSmtpConfigured,
-  sanitizeBodySnippetForLog,
-  sendGmailSmtpMail,
-  sendToAppsScriptAutomation,
-} from '../_lib/emailAutomation.js';
+  sanitizeLogMessage,
+  sendEmail,
+} from '../_lib/mailer.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
@@ -350,84 +349,32 @@ function buildAdminSafeSoftwareSummary(payload: FreeSoftwareMailPayload): string
   ].join('\n');
 }
 
-async function sendViaAppsScriptAutomation(payload: FreeSoftwareMailPayload): Promise<void> {
-  const adminSafeMessage = buildAdminSafeSoftwareSummary(payload);
-  const result = await sendToAppsScriptAutomation({
-    type: 'software_inquiry',
-    inquiryType: 'software_inquiry',
-    requestType: 'software_inquiry',
-    action: 'software_inquiry',
-    name: payload.recipientName,
-    email: payload.to,
-    service: `${payload.productTitle} (Free Email Access)`,
+async function dispatchFreeSoftwareEmail(payload: FreeSoftwareMailPayload): Promise<void> {
+  if (!isSmtpConfigured()) {
+    throw new Error('Email service is temporarily unavailable. Please try again shortly.');
+  }
+
+  const adminEmail = getAdminNotificationEmail();
+
+  // Primary & sole delivery: Gmail SMTP via centralized Nodemailer service
+  await sendEmail({
+    to: payload.to,
+    replyTo: adminEmail,
     subject: payload.subject,
-    // Keep free_access_token out of admin notification summary (`message`) while delivering full link to customer
-    message: adminSafeMessage,
-    customerText: payload.text,
+    text: payload.text,
     html: payload.html,
-    htmlBody: payload.html,
-    productId: payload.productId,
-    productTitle: payload.productTitle,
-    launchUrl: payload.launchUrl,
-    verificationUrl: payload.launchUrl,
-    userGuideUrl: 'https://mirrorbook.site/mirrorpos#user-guide',
-    referenceId: payload.referenceId,
   });
 
-  if (!result.ok) {
-    console.error('[MirrorPOS free-access] Apps Script dispatch failed:', {
-      httpStatus: result.httpStatus ?? null,
-      authRequired: Boolean(result.authRequired),
-      authStrategy: result.authStrategy ?? 'none',
-      diagnostics: result.diagnostics ?? null,
-    });
-    throw new Error(
-      result.error || 'The email automation service could not send your access confirmation email.'
-    );
-  }
-}
-
-async function dispatchFreeSoftwareEmail(payload: FreeSoftwareMailPayload): Promise<void> {
-  const hasSmtp = isSmtpConfigured();
-
-  // Primary dispatch: Google Apps Script Gmail Automation Endpoint
-  try {
-    await sendViaAppsScriptAutomation(payload);
-    return;
-  } catch (scriptErr: unknown) {
-    if (!hasSmtp) {
-      throw scriptErr instanceof Error
-        ? scriptErr
-        : new Error('Unable to send confirmation email right now.');
-    }
-
-    // Secondary fallback: Gmail SMTP when configured
-    try {
-      await sendGmailSmtpMail({
-        to: payload.to,
-        subject: payload.subject,
-        text: payload.text,
-        html: payload.html,
-      });
-
-      // Best-effort token-redacted admin alert (non-blocking)
-      const adminEmail = getAdminNotificationEmail();
-      if (adminEmail && adminEmail.toLowerCase() !== payload.to.toLowerCase()) {
-        const safeSummary = buildAdminSafeSoftwareSummary(payload);
-        sendGmailSmtpMail({
-          to: adminEmail,
-          replyTo: payload.to,
-          subject: `New Software Access Request (${payload.productTitle}) - MirrorBook`,
-          text: safeSummary,
-          html: `<pre style="font-family:monospace;white-space:pre-wrap;">${sanitizeHtml(safeSummary)}</pre>`,
-        }).catch(() => {});
-      }
-      return;
-    } catch (smtpErr: unknown) {
-      const scriptMsg = scriptErr instanceof Error ? scriptErr.message : 'Automation dispatch failed';
-      const smtpMsg = smtpErr instanceof Error ? smtpErr.message : 'SMTP dispatch failed';
-      throw new Error(`Unable to send confirmation email (${scriptMsg}; ${smtpMsg}).`);
-    }
+  // Best-effort token-redacted admin alert (non-blocking; never contains free_access_token)
+  if (adminEmail && adminEmail.toLowerCase() !== payload.to.toLowerCase()) {
+    const safeSummary = buildAdminSafeSoftwareSummary(payload);
+    sendEmail({
+      to: adminEmail,
+      replyTo: payload.to,
+      subject: `New Software Access Request (${payload.productTitle}) - MirrorBook`,
+      text: safeSummary,
+      html: `<pre style="font-family:monospace;white-space:pre-wrap;">${sanitizeHtml(safeSummary)}</pre>`,
+    }).catch(() => {});
   }
 }
 
@@ -676,18 +623,16 @@ export async function processFreeSoftwareAccess(
     } catch (mailErr: unknown) {
       const msg =
         mailErr instanceof Error ? mailErr.message : 'Unable to send software access email.';
-      console.error('[MirrorPOS free-access] Email dispatch failed:', {
-        message: sanitizeBodySnippetForLog(msg, 200),
+      console.error('[MirrorPOS free-access] Gmail SMTP dispatch failed:', {
+        message: sanitizeLogMessage(msg, 200),
         hasSmtp: isSmtpConfigured(),
-        hasAppsScriptUrl: Boolean(process.env.APPS_SCRIPT_INQUIRY_URL?.trim()),
-        hasAppsScriptApiKey: Boolean(process.env.APPS_SCRIPT_API_KEY?.trim()),
-        hasAppsScriptBearer: Boolean(process.env.APPS_SCRIPT_BEARER_TOKEN?.trim()),
       });
       return {
-        status: 502,
+        status: isSmtpConfigured() ? 502 : 503,
         data: {
           success: false,
-          error: msg,
+          error:
+            'Unable to send confirmation email right now. Please verify your email address or try again.',
         },
       };
     }
