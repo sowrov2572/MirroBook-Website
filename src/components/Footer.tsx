@@ -38,8 +38,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Reflecting Creativity
             </p>
             <p className="text-sm text-[#A1AAA2] max-w-sm leading-relaxed pt-1 font-normal">
-              MirrorBook is a creative agency in Bangladesh offering graphic design, video editing, motion graphics, digital marketing, web development, and modern software solutions.
+              MirrorBook is a creative agency and digital production studio in Bangladesh. We help brands bring ideas to life through graphic design, video editing, motion graphics, branding, digital marketing, web development, and practical digital solutions.
             </p>
+            <a href="/contact" onClick={(e) => handleNav(e, '/contact')} className="inline-flex items-center text-xs font-semibold text-[#B7F34A] hover:text-[#F5F7F2] transition-colors">Let’s discuss your project →</a>
           </div>
 
           {/* Direct Navigation */}
@@ -74,6 +75,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
                 >
                   Founder & Team
+                </a>
+              </li>
+              <li>
+                <a href="/contact" onClick={(e) => handleNav(e, '/contact')} className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium">
+                  Contact &amp; Project Enquiry
                 </a>
               </li>
               <li>
