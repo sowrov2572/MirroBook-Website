@@ -45,7 +45,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
       '@type': 'ProfilePage',
       '@id': 'https://mirrorbook.site/sowrov-hosen#profilepage',
       url: 'https://mirrorbook.site/sowrov-hosen',
-      name: 'Sowrov Hosen | Founder of MirrorBook',
+      name: 'MirrorBook Founder & Team | Sowrov Hosen and Team',
       description: newDesc,
       breadcrumb: {
         '@type': 'BreadcrumbList',
@@ -259,7 +259,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             <span>/</span>
             <span className="text-[#A1AAA2]">Leadership</span>
             <span>/</span>
-            <span className="text-[#B7F34A] font-medium">Sowrov Hosen</span>
+            <span className="text-[#B7F34A] font-medium">Founder &amp; Team</span>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -456,7 +456,82 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           </div>
         </section>
 
-        {/* Section 3: Professional Skills */}
+
+        {/* Section 3: Founder & Team */}
+        <section className="mb-16" aria-labelledby="founder-team-heading">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
+                <Briefcase size={14} />
+                <span>The People Behind MirrorBook</span>
+              </div>
+              <h2 id="founder-team-heading" className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
+                Founder &amp; Team
+              </h2>
+            </div>
+            <p className="text-xs text-[#A1AAA2] max-w-sm">
+              Meet the founders and creative team responsible for shaping, building and delivering MirrorBook projects.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
+            <article className="glossy-card rounded-2xl p-5 flex flex-col">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#B7F34A]/35 mb-4">
+                <img src="https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg" alt="Sowrov Hosen" loading="lazy" decoding="async" className="w-full h-full object-cover object-top" />
+              </div>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#B7F34A] mb-1">Founder</p>
+              <h3 className="text-lg font-bold text-[#F5F7F2]">Sowrov Hosen</h3>
+              <p className="text-xs text-[#B7F34A] font-medium mt-1">Creative Director</p>
+              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
+                Leads creative direction, client communication and project strategy. Works across graphic design, professional video editing, motion graphics, scriptwriting, visual storytelling and creative production quality.
+              </p>
+              <a href="https://sowrovhosenstudio.netlify.app" target="_blank" rel="noopener noreferrer" className="glossy-btn min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5">
+                <span>View Portfolio</span><ExternalLink size={13} />
+              </a>
+            </article>
+
+            <article className="glossy-card rounded-2xl p-5 flex flex-col">
+              <div className="w-16 h-16 rounded-2xl bg-[#B7F34A]/10 border border-[#B7F34A]/25 flex items-center justify-center text-xl font-bold text-[#B7F34A] mb-4">WS</div>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#B7F34A] mb-1">Co-Founder</p>
+              <h3 className="text-lg font-bold text-[#F5F7F2]">Walid Ahmed Shraban</h3>
+              <p className="text-xs text-[#B7F34A] font-medium mt-1">Web Developer</p>
+              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
+                Co-leads MirrorBook and handles web development, website architecture, front-end implementation, technical problem-solving and development of digital experiences and web-based solutions.
+              </p>
+              <button type="button" disabled aria-disabled="true" title="Portfolio link will be added soon" className="w-full min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5 bg-white/[0.04] border border-white/[0.09] text-[#707A72] cursor-not-allowed">
+                <span>View Portfolio</span><ExternalLink size={13} />
+              </button>
+            </article>
+
+            <article className="glossy-card rounded-2xl p-5 flex flex-col">
+              <div className="w-16 h-16 rounded-2xl bg-[#B7F34A]/10 border border-[#B7F34A]/25 flex items-center justify-center text-xl font-bold text-[#B7F34A] mb-4">MA</div>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#A1AAA2] mb-1">Team Member</p>
+              <h3 className="text-lg font-bold text-[#F5F7F2]">Musabbir Al Said</h3>
+              <p className="text-xs text-[#B7F34A] font-medium mt-1">Graphic Designer &amp; Video Editor</p>
+              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
+                Creates visual content for brands and digital platforms, including graphic design, social media creatives, visual layouts and video editing for short-form and promotional content.
+              </p>
+              <button type="button" disabled aria-disabled="true" title="Portfolio link will be added soon" className="w-full min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5 bg-white/[0.04] border border-white/[0.09] text-[#707A72] cursor-not-allowed">
+                <span>View Portfolio</span><ExternalLink size={13} />
+              </button>
+            </article>
+
+            <article className="glossy-card rounded-2xl p-5 flex flex-col">
+              <div className="w-16 h-16 rounded-2xl bg-[#B7F34A]/10 border border-[#B7F34A]/25 flex items-center justify-center text-xl font-bold text-[#B7F34A] mb-4">MH</div>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#A1AAA2] mb-1">Team Member</p>
+              <h3 className="text-lg font-bold text-[#F5F7F2]">Mehedi Hasan</h3>
+              <p className="text-xs text-[#B7F34A] font-medium mt-1">Visual Artist</p>
+              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
+                Produces brand-focused visual artwork and digital designs, with hands-on skills in graphic design, social media post design, creative layouts and video editing.
+              </p>
+              <button type="button" disabled aria-disabled="true" title="Portfolio link will be added soon" className="w-full min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5 bg-white/[0.04] border border-white/[0.09] text-[#707A72] cursor-not-allowed">
+                <span>View Portfolio</span><ExternalLink size={13} />
+              </button>
+            </article>
+          </div>
+        </section>
+
+        {/* Section 4: Professional Skills */}
         <section className="mb-16">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
