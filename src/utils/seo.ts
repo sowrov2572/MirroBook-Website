@@ -14,9 +14,9 @@ const NOINDEX_ROBOTS = 'noindex, nofollow';
 
 export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/': {
-    title: 'MirrorBook | Graphic Design, Video Editing & Motion Graphics',
+    title: 'MirrorBook | Creative Agency for Design, Video & Digital Solutions',
     description:
-      'MirrorBook is a creative agency in Bangladesh offering graphic design, video editing, motion graphics, digital marketing, web development, and modern software solutions. Reflecting Creativity.',
+      'MirrorBook is a Bangladesh-based creative agency helping brands grow with graphic design, branding, video editing, motion graphics, digital marketing, and web development. Reflecting Creativity.',
     canonicalUrl: 'https://mirrorbook.site/',
     robots: INDEX_ROBOTS,
     ogType: 'website',
@@ -36,12 +36,21 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/sowrov-hosen': {
     title: 'Founder & Team | MirrorBook',
     description:
-      'Meet the founders and creative team behind MirrorBook. Learn about Sowrov Hosen, co-founder Walid Ahmed Shraban, and the team delivering graphic design, video editing and web development.',
+      'Meet Sowrov Hosen and Walid Ahmed Shraban, the founders of MirrorBook, alongside the creative team behind graphic design, video editing, motion graphics, and web development.'
     canonicalUrl: 'https://mirrorbook.site/sowrov-hosen',
     robots: INDEX_ROBOTS,
     ogType: 'profile',
     ogImage: 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg',
     ogImageAlt: 'Sowrov Hosen, Founder of MirrorBook',
+  },
+  '/contact': {
+    title: 'Contact MirrorBook | Start a Creative Project',
+    description: 'Contact MirrorBook in Bangladesh to discuss graphic design, branding, video editing, motion graphics, digital marketing, or web development. Message us on WhatsApp or email our team.',
+    canonicalUrl: 'https://mirrorbook.site/contact',
+    robots: INDEX_ROBOTS,
+    ogType: 'website',
+    ogImage: DEFAULT_OG_IMAGE,
+    ogImageAlt: 'Contact MirrorBook Creative Agency',
   },
   '/login': {
     title: 'Customer Sign In | MirrorBook',
