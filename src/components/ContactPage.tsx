@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowLeft, ArrowUpRight, Mail, MessageCircle, Globe, Clock3 } from 'lucide-react';
 
 interface ContactPageProps {
@@ -9,6 +9,40 @@ const WHATSAPP_URL = 'https://wa.me/8801767079837?text=' + encodeURIComponent('H
 const EMAIL_URL = 'mailto:mirrorbook.site@gmail.com?subject=' + encodeURIComponent('Project Enquiry | MirrorBook');
 
 export const ContactPage: React.FC<ContactPageProps> = ({ onNavigateHome }) => {
+  useEffect(() => {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'ContactPage',
+      name: 'Contact MirrorBook',
+      url: 'https://mirrorbook.site/contact',
+      description: 'Contact MirrorBook for creative production, branding, video editing, motion graphics, digital marketing, and web development services.',
+      mainEntity: {
+        '@type': 'Organization',
+        '@id': 'https://mirrorbook.site/#organization',
+        name: 'MirrorBook',
+        email: 'mirrorbook.site@gmail.com',
+        telephone: '+8801767079837',
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'business inquiries',
+          email: 'mirrorbook.site@gmail.com',
+          telephone: '+8801767079837',
+          url: 'https://wa.me/8801767079837',
+          availableLanguage: ['English', 'Bengali'],
+        },
+      },
+    };
+    let script = document.getElementById('mirrorbook-contact-schema') as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = 'mirrorbook-contact-schema';
+      script.type = 'application/ld+json';
+      document.head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(schema);
+    return () => document.getElementById('mirrorbook-contact-schema')?.remove();
+  }, []);
+
   return (
     <div className="min-h-[70vh] bg-[#0B0D0C] text-[#F5F7F2]">
       <section className="relative overflow-hidden border-b border-white/[0.09] px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
