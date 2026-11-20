@@ -15,6 +15,7 @@ import { AuthModal } from './components/AuthModal';
 import { SecureDownloadModal, SecureDownloadTarget } from './components/SecureDownloadModal';
 import { Footer } from './components/Footer';
 import { SowrovHosenProfile } from './components/SowrovHosenProfile';
+import { ContactPage } from './components/ContactPage';
 import { MirrorPOSPage } from './components/MirrorPOSPage';
 import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -95,6 +96,7 @@ import {
 const KNOWN_ROUTES = new Set([
   '/',
   '/sowrov-hosen',
+  '/contact',
   '/mirrorpos',
   '/login',
   '/signup',
@@ -111,6 +113,7 @@ function resolveRouteFromLocation(): string {
   }
   const hash = window.location.hash.toLowerCase();
   if (hash === '#/sowrov-hosen') return '/sowrov-hosen';
+  if (hash === '#/contact') return '/contact';
   if (hash === '#/mirrorpos') return '/mirrorpos';
   if (hash === '#/login') return '/login';
   if (hash === '#/signup') return '/signup';
@@ -1082,6 +1085,8 @@ export default function App() {
             onNavigateHome={() => navigateTo('/')}
             onStartProject={() => setIsStartProjectOpen(true)}
           />
+        ) : currentPath === '/contact' ? (
+          <ContactPage onNavigateHome={() => navigateTo('/')} />
         ) : currentPath === '/mirrorpos' ? (
           <MirrorPOSPage
             onNavigateHome={() => navigateTo('/')}
