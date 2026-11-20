@@ -17,6 +17,7 @@ import {
   processGetCourseLessonThumbnail,
 } from './api/courses/lessons';
 
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 function readRequestBody(req: any): Promise<string> {

@@ -72,17 +72,16 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-2.5 sm:gap-3 group text-left cursor-pointer shrink-0"
         >
           <img
-            src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
+            src="/icon.png"
             alt="MirrorBook Official Logo"
             width={36}
             height={36}
             loading="eager"
             decoding="async"
-            referrerPolicy="no-referrer"
             onError={(e) => {
               const target = e.currentTarget;
-              if (!target.src.includes('DfSsjc5Z')) {
-                target.src = 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png';
+              if (!target.src.endsWith('/mirrorbook-logo.png')) {
+                target.src = '/mirrorbook-logo.png';
               }
             }}
             className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain transition-transform duration-150 group-hover:scale-105"

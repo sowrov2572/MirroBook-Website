@@ -8,7 +8,7 @@ export interface RouteSeoConfig {
   ogImageAlt: string;
 }
 
-const DEFAULT_OG_IMAGE = 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png';
+const DEFAULT_OG_IMAGE = 'https://mirrorbook.site/mirrorbook-logo.png';
 const INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 const NOINDEX_ROBOTS = 'noindex, nofollow';
 

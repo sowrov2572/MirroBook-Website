@@ -77,7 +77,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           name: 'MirrorBook',
           alternateName: 'Mirror Book',
           url: 'https://mirrorbook.site/',
-          logo: 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png',
+          logo: 'https://mirrorbook.site/mirrorbook-logo.png',
           slogan: 'Reflecting Creativity',
         },
         knowsAbout: [

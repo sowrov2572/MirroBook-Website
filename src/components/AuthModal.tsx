@@ -125,10 +125,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-2xl bg-[#121614] border border-white/[0.09] p-1 flex items-center justify-center shadow-inner shrink-0">
                 <img
-                  src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
+                  src="/icon.png"
                   alt="MirrorBook Official Logo"
                   width={40}
                   height={40}
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.src.endsWith('/mirrorbook-logo.png')) {
+                      target.src = '/mirrorbook-logo.png';
+                    }
+                  }}
                   className="w-full h-full rounded-xl object-contain"
                 />
               </div>

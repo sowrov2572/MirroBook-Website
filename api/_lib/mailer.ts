@@ -78,16 +78,24 @@ function stripWrappingQuotes(raw?: string): string {
 }
 
 export function getGmailSenderEmail(): string {
-  return stripWrappingQuotes(process.env.GMAIL_USER);
+  return stripWrappingQuotes(
+    process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER
+  );
 }
 
 /**
- * Reads `GMAIL_APP_PASSWORD`, strips surrounding quotes, and removes spaces
- * (Google displays 16-char App Passwords in 4-character groups like "abcd efgh ijkl mnop",
- * while Gmail SMTP expects the 16 characters without spaces).
+ * Reads `GMAIL_APP_PASSWORD` (with standard fallback aliases), strips surrounding quotes,
+ * and removes spaces (Google displays 16-char App Passwords in 4-character groups like
+ * "abcd efgh ijkl mnop", while Gmail SMTP expects the 16 characters without spaces).
  */
 export function getNormalizedGmailAppPassword(): string {
-  const cleaned = stripWrappingQuotes(process.env.GMAIL_APP_PASSWORD);
+  const cleaned = stripWrappingQuotes(
+    process.env.GMAIL_APP_PASSWORD ||
+      process.env.GMAIL_PASS ||
+      process.env.GMAIL_PASSWORD ||
+      process.env.SMTP_PASS ||
+      process.env.EMAIL_PASS
+  );
   return cleaned ? cleaned.replace(/\s+/g, '') : '';
 }
 

@@ -1,7 +1,7 @@
 const BRAND_NAME = 'MirrorBook';
 const BRAND_TAGLINE = 'Reflecting Creativity.';
 const BRAND_URL = 'https://mirrorbook.site/';
-const BRAND_LOGO_URL = 'https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png';
+const BRAND_LOGO_URL = 'https://mirrorbook.site/icon.png';
 const SUPPORT_EMAIL = 'mirrorbook.site@gmail.com';
 const MIRRORPOS_USER_GUIDE_URL = 'https://mirrorbook.site/mirrorpos#user-guide';
 const MIRRORPOS_APP_URL = 'https://mirror-pos.vercel.app/';

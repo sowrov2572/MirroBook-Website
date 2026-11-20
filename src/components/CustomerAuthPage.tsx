@@ -136,10 +136,16 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
           {/* Clean Brand Header */}
           <div className="px-5 sm:px-7 py-5 sm:py-6 border-b border-white/[0.09] bg-[#121614]/80 flex items-center gap-3.5">
             <img
-              src="https://i.ibb.co.com/DfSsjc5Z/mirorrbook-logo-png.png"
+              src="/icon.png"
               alt="MirrorBook Official Logo"
               width={42}
               height={42}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.endsWith('/mirrorbook-logo.png')) {
+                  target.src = '/mirrorbook-logo.png';
+                }
+              }}
               className="w-10 h-10 rounded-xl object-contain shrink-0"
             />
             <div className="min-w-0">
