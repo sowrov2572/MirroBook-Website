@@ -14,7 +14,7 @@ const NOINDEX_ROBOTS = 'noindex, nofollow';
 
 export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/': {
-    title: 'MirrorBook | Reflecting Creativity',
+    title: 'MirrorBook | Graphic Design, Video Editing & Motion Graphics',
     description:
       'MirrorBook is a creative agency in Bangladesh offering graphic design, video editing, motion graphics, digital marketing, web development, and modern software solutions. Reflecting Creativity.',
     canonicalUrl: 'https://mirrorbook.site/',

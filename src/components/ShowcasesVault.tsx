@@ -2,7 +2,7 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
 export const PORTFOLIO_EXTERNAL_URL =
-  'https://sowrovhosenstudio.netlify.app/?fbclid=IwY2xjawT_cQFwZG9mBWV4dG4DYWVtAjEwAGJyaWQRMUZLb1JyelFHZjFjTXZkdEJzcnRjBmFwcF9pZBAyMjIwMzkxNzg4MjAwODkyAAEefQrO89VdvwE2c07aR3cz9gATBwysSXe1-9bLYrKOPekyxiVLRWwpag-JVC0_aem_lz_Pwp2R09BO4aB8BeaRAQ';
+  'https://sowrovhosenstudio.netlify.app/';
 
 interface ShowcasesVaultProps {
   onNavigate?: (path: string) => void;
