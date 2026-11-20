@@ -45,7 +45,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
       '@type': 'ProfilePage',
       '@id': 'https://mirrorbook.site/sowrov-hosen#profilepage',
       url: 'https://mirrorbook.site/sowrov-hosen',
-      name: 'MirrorBook Founder & Team | Sowrov Hosen and Team',
+      name: 'Sowrov Hosen | Founder of MirrorBook',
       description: newDesc,
       breadcrumb: {
         '@type': 'BreadcrumbList',
@@ -326,10 +326,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 </div>
 
                 {/* Verified Founder Badge */}
-                <div className="relative z-10 mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#B7F34A]/15 border border-[#B7F34A]/30 text-[11px] font-semibold text-[#B7F34A]">
-                  <CheckCircle2 size={12} className="text-[#B7F34A]" />
-                  <span>Verified Founder</span>
-                </div>
+    
               </div>
 
             {/* Quick Metadata Pill list below photo */}
@@ -372,7 +369,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             </h1>
 
             <p className="text-base sm:text-xl text-[#A1AAA2] font-normal leading-relaxed">
-              Founder &amp; Creative Director of <span className="text-[#F5F7F2] font-semibold">MirrorBook</span>. A multi-disciplinary visual artist and post-production specialist based in Bangladesh, dedicated to elevating brands and creators through cinematic video editing, brand identity systems, and motion design.
+              I lead MirrorBook’s creative direction and work across graphic design, professional video editing, motion graphics, scriptwriting, and visual storytelling. My focus is to help brands communicate clearly through thoughtful creative work.
             </p>
 
             {/* Action CTA Buttons */}
@@ -409,13 +406,13 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             {/* Section 1: Professional Introduction */}
             <div className="pt-6 space-y-4 text-sm text-[#A1AAA2] leading-relaxed border-t border-white/[0.09]">
               <h2 className="text-xl font-bold text-[#F5F7F2] tracking-tight flex items-center gap-2">
-                <span>Professional Background</span>
+                <span>About Sowrov</span>
               </h2>
               <p>
-                Sowrov Hosen is a visionary digital creator and director with a deep focus on the psychology of visual pacing, sound design, and narrative retention. Having worked on hundreds of commercial projects, YouTube masterclasses, and corporate campaigns, he combines technical rigor with an unmistakable cinematic aesthetic.
+                Sowrov Hosen is the founder and creative director of MirrorBook. He works across graphic design, video editing, motion graphics, scriptwriting, and creative production.
               </p>
               <p>
-                His work spans from fine-tuned timeline editing in Adobe Premiere Pro and DaVinci Resolve, to bespoke motion design in After Effects, to high-conversion visual marketing designs crafted in Photoshop. He advocates for the philosophy of <em className="text-[#F5F7F2]">&ldquo;Reflecting Creativity&rdquo;</em> — ensuring every frame produced by MirrorBook mirrors the authentic voice and ambitions of the client.
+                At MirrorBook, the goal is simple: understand the brief, make considered creative decisions, and deliver work that reflects the client’s brand.
               </p>
             </div>
           </div>
@@ -426,11 +423,11 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           <div className="max-w-3xl space-y-4 relative z-10">
             <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A]">
               <Briefcase size={14} />
-              <span>Agency Leadership</span>
+              <span>About the Agency</span>
             </div>
 
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-              Founder of MirrorBook Agency
+              Building MirrorBook
             </h2>
 
             <p className="text-sm sm:text-base text-[#A1AAA2] leading-relaxed">
@@ -440,7 +437,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             </p>
 
             <p className="text-sm text-[#A1AAA2] leading-relaxed">
-              Under Sowrov&apos;s creative leadership, MirrorBook has expanded from a boutique post-production outfit into an integrated digital studio featuring workflow plugins, digital asset libraries, and educational tutorials for the next generation of editors.
+              We also develop practical digital products, plugins, and learning resources that support creative workflows.
             </p>
 
             <div className="pt-4 flex flex-wrap items-center gap-4">
@@ -448,155 +445,88 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 href="https://mirrorbook.site/"
                 className="glossy-btn-secondary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer"
               >
-                <span>Visit MirrorBook Agency Homepage</span>
+                <span>Visit MirrorBook</span>
                 <ExternalLink size={13} className="text-[#B7F34A]" />
               </a>
-              <span className="text-xs text-[#707A72]">Official Portal: mirrorbook.site</span>
+
             </div>
           </div>
         </section>
 
 
-        {/* Section 3: Founder & Team */}
+        {/* Team */}
         <section className="mb-16" aria-labelledby="founder-team-heading">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-            <div>
-              <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
-                <Briefcase size={14} />
-                <span>The People Behind MirrorBook</span>
-              </div>
-              <h2 id="founder-team-heading" className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-                Founder &amp; Team
-              </h2>
-            </div>
-            <p className="text-xs text-[#A1AAA2] max-w-sm">
-              Meet the founders and creative team responsible for shaping, building and delivering MirrorBook projects.
+          <div className="mb-7 border-b border-white/[0.09] pb-5">
+            <p className="text-xs font-medium text-[#B7F34A] mb-2">The People Behind MirrorBook</p>
+            <h2 id="founder-team-heading" className="font-display text-2xl sm:text-3xl font-semibold text-[#F5F7F2] tracking-tight">
+              Our Team
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-[#A1AAA2] leading-relaxed">
+              A focused team bringing together creative production and web development.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
-            <article className="glossy-card rounded-2xl p-5 flex flex-col">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#B7F34A]/35 mb-4">
-                <img src="https://i.pravatar.cc/160?img=12" alt="Sowrov Hosen portrait placeholder" loading="lazy" decoding="async" className="w-full h-full object-cover object-top" />
-              </div>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#B7F34A] mb-1">Founder</p>
-              <h3 className="text-lg font-bold text-[#F5F7F2]">Sowrov Hosen</h3>
-              <p className="text-xs text-[#B7F34A] font-medium mt-1">Creative Director</p>
-              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
-                Leads MirrorBook's creative vision, client relationships and project strategy. Specializes in graphic design, professional video editing, motion graphics, scriptwriting, visual storytelling, brand communication and end-to-end creative production. Oversees creative quality and guides projects from concept to final delivery.
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+            <article className="rounded-xl border border-white/[0.09] bg-[#121614] p-5 flex flex-col">
+              <div className="w-12 h-12 rounded-full bg-[#1B211D] border border-white/[0.10] flex items-center justify-center text-sm font-semibold text-[#B7F34A] mb-4" aria-hidden="true">WS</div>
+              <p className="text-[11px] text-[#B7F34A] font-medium mb-1">Founder</p>
+              <h3 className="text-base font-semibold text-[#F5F7F2]">Walid Ahmed Shraban</h3>
+              <p className="text-xs text-[#A1AAA2] mt-1">Web Developer</p>
+              <p className="text-sm text-[#A1AAA2] leading-relaxed mt-3 flex-1">
+                Builds and maintains MirrorBook’s websites and digital products, focusing on clear user experiences, responsive interfaces, and reliable functionality.
               </p>
-              <a href="https://sowrovhosenstudio.netlify.app" target="_blank" rel="noopener noreferrer" className="glossy-btn min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5">
-                <span>View Portfolio</span><ExternalLink size={13} />
+              <a href="https://srabonx.netlify.app/" target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#F5F7F2] hover:text-[#B7F34A] transition-colors">
+                View Portfolio <ExternalLink size={13} />
               </a>
             </article>
 
-            <article className="glossy-card rounded-2xl p-5 flex flex-col">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#B7F34A]/35 mb-4">
-                <img src="https://i.pravatar.cc/160?img=13" alt="Walid Ahmed Shraban portrait placeholder" loading="lazy" decoding="async" className="w-full h-full object-cover object-top" />
-              </div>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#B7F34A] mb-1">Founder</p>
-              <h3 className="text-lg font-bold text-[#F5F7F2]">Walid Ahmed Shraban</h3>
-              <p className="text-xs text-[#B7F34A] font-medium mt-1">Web Developer</p>
-              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
-                Leads the technical development of MirrorBook's digital products and web experiences. Focuses on planning website structure, translating requirements into responsive and user-friendly interfaces, implementing front-end and back-end functionality, connecting databases and third-party services, and building reliable web-based solutions. Also contributes to performance, usability, troubleshooting, ongoing improvements and the technical direction of the agency's website and software projects.
+            <article className="rounded-xl border border-white/[0.09] bg-[#121614] p-5 flex flex-col">
+              <div className="w-12 h-12 rounded-full bg-[#1B211D] border border-white/[0.10] flex items-center justify-center text-sm font-semibold text-[#B7F34A] mb-4" aria-hidden="true">MA</div>
+              <p className="text-[11px] text-[#707A72] font-medium mb-1">Team Member</p>
+              <h3 className="text-base font-semibold text-[#F5F7F2]">Musabbir Al Said</h3>
+              <p className="text-xs text-[#A1AAA2] mt-1">Graphic Designer &amp; Video Editor</p>
+              <p className="text-sm text-[#A1AAA2] leading-relaxed mt-3 flex-1">
+                Creates brand-focused graphics, social media designs, and edited videos for digital campaigns and everyday content.
               </p>
-              <a href="https://srabonx.netlify.app/" target="_blank" rel="noopener noreferrer" className="glossy-btn min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5">
-                <span>View Portfolio</span><ExternalLink size={13} />
-              </a>
             </article>
 
-            <article className="glossy-card rounded-2xl p-5 flex flex-col">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#B7F34A]/35 mb-4">
-                <img src="https://i.pravatar.cc/160?img=14" alt="Musabbir Al Said portrait placeholder" loading="lazy" decoding="async" className="w-full h-full object-cover object-top" />
-              </div>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#A1AAA2] mb-1">Team Member</p>
-              <h3 className="text-lg font-bold text-[#F5F7F2]">Musabbir Al Said</h3>
-              <p className="text-xs text-[#B7F34A] font-medium mt-1">Graphic Designer &amp; Video Editor</p>
-              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
-                Creates engaging visual content for brands and digital platforms. Works across graphic design, social media creatives, visual layouts, promotional artwork and video editing for short-form and campaign content, helping turn creative ideas into clear and consistent brand visuals.
+            <article className="rounded-xl border border-white/[0.09] bg-[#121614] p-5 flex flex-col">
+              <div className="w-12 h-12 rounded-full bg-[#1B211D] border border-white/[0.10] flex items-center justify-center text-sm font-semibold text-[#B7F34A] mb-4" aria-hidden="true">MH</div>
+              <p className="text-[11px] text-[#707A72] font-medium mb-1">Team Member</p>
+              <h3 className="text-base font-semibold text-[#F5F7F2]">Mehedi Hasan</h3>
+              <p className="text-xs text-[#A1AAA2] mt-1">Visual Artist · Graphic Design &amp; Video Editing</p>
+              <p className="text-sm text-[#A1AAA2] leading-relaxed mt-3 flex-1">
+                Develops visual concepts and produces polished graphic designs and video content for brands and digital platforms.
               </p>
-              <button type="button" disabled aria-disabled="true" title="Portfolio link will be added when provided" className="w-full min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5 bg-white/[0.04] border border-white/[0.09] text-[#707A72] cursor-not-allowed">
-                <span>View Portfolio</span><ExternalLink size={13} />
-              </button>
-            </article>
-
-            <article className="glossy-card rounded-2xl p-5 flex flex-col">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#B7F34A]/35 mb-4">
-                <img src="https://i.pravatar.cc/160?img=15" alt="Mehedi Hasan portrait placeholder" loading="lazy" decoding="async" className="w-full h-full object-cover object-top" />
-              </div>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#A1AAA2] mb-1">Team Member</p>
-              <h3 className="text-lg font-bold text-[#F5F7F2]">Mehedi Hasan</h3>
-              <p className="text-xs text-[#B7F34A] font-medium mt-1">Visual Artist</p>
-              <p className="text-xs text-[#A1AAA2] leading-relaxed mt-3 flex-1">
-                Develops visual concepts and polished creative assets for brands, campaigns and digital platforms. Combines visual artistry with graphic design, social media design, creative composition and video editing to deliver consistent, audience-focused content.
-              </p>
-              <button type="button" disabled aria-disabled="true" title="Portfolio link will be added when provided" className="w-full min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 mt-5 bg-white/[0.04] border border-white/[0.09] text-[#707A72] cursor-not-allowed">
-                <span>View Portfolio</span><ExternalLink size={13} />
-              </button>
             </article>
           </div>
         </section>
 
-        {/* Section 4: Professional Skills */}
+        {/* Skills */}
         <section className="mb-16">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-            <div>
-              <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
-                <Sparkles size={14} />
-                <span>Core Competencies</span>
-              </div>
-              <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-                Professional Skills &amp; Creative Expertise
-              </h2>
-            </div>
-            <p className="text-xs text-[#A1AAA2] max-w-sm">
-              Hands-on mastery across modern post-production pipelines, digital brand architecture, and visual storytelling.
-            </p>
+          <div className="mb-7 border-b border-white/[0.09] pb-5">
+            <p className="text-xs font-medium text-[#B7F34A] mb-2">What We Do</p>
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-[#F5F7F2] tracking-tight">
+              Creative &amp; Technical Skills
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
-            {skillsList.map((skill, index) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+            {skillsList.map((skill) => {
               const IconComponent = skill.icon;
               return (
-                <div
-                  key={skill.title}
-                  className={`p-6 rounded-2xl glossy-card glossy-card-hover flex flex-col justify-between ${
-                    index === 0 ? 'border-[#B7F34A]/35' : ''
-                  }`}
-                >
-                  <div>
-                    <div className="w-10 h-10 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] mb-4">
-                      <IconComponent size={20} />
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                      <h3 className="text-base font-bold text-[#F5F7F2]">{skill.title}</h3>
-                      <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-[#121614] border border-white/[0.09] text-[#A1AAA2]">
-                        {skill.level}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-[#A1AAA2] leading-relaxed mb-4">
-                      {skill.description}
+                <article key={skill.title} className="flex gap-4 border-b border-white/[0.09] py-5">
+                  <div className="w-9 h-9 shrink-0 rounded-lg bg-[#171C19] border border-white/[0.08] flex items-center justify-center text-[#B7F34A]">
+                    <IconComponent size={17} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-[#F5F7F2]">{skill.title}</h3>
+                    <p className="mt-1.5 text-xs leading-relaxed text-[#A1AAA2]">{skill.description}</p>
+                    <p className="mt-2 text-[11px] leading-relaxed text-[#707A72]">
+                      Tools &amp; focus: {skill.toolset.join(' · ')}
                     </p>
                   </div>
-
-                  <div className="space-y-2 pt-3 border-t border-white/[0.09] text-xs">
-                    <div className="flex flex-wrap gap-1.5">
-                      {skill.toolset.map((tool) => (
-                        <span
-                          key={tool}
-                          className="px-2 py-0.5 rounded-md bg-[#121614] border border-white/[0.06] text-[11px] text-[#F5F7F2] font-mono"
-                        >
-                          {tool}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-[#B7F34A] font-medium pt-1">
-                      {skill.highlights}
-                    </p>
-                  </div>
-                </div>
+                </article>
               );
             })}
           </div>
@@ -613,7 +543,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
               Social Media &amp; Verified Portfolios
             </h2>
             <p className="text-xs text-[#A1AAA2] mt-1">
-              Explore official profiles, studio showcases, and community channels.
+              Follow our work and updates across our official channels.
             </p>
           </div>
 
@@ -663,10 +593,10 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         <section className="glossy-card rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden">
           <div className="max-w-xl mx-auto space-y-4">
             <h2 className="font-display text-2xl font-bold text-[#F5F7F2]">
-              Ready to collaborate with Sowrov Hosen?
+              Have a project in mind?
             </h2>
             <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
-              Whether you need high-end commercial video editing, a complete brand identity revamp, or custom motion graphics for your upcoming campaign, reach out directly.
+              Tell us what you are working on. We’d be glad to discuss how MirrorBook can help with design, video, motion graphics, or web development.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3">
               <a
