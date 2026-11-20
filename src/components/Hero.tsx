@@ -32,7 +32,6 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
 
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B0D0C]/80 via-[#0B0D0C]/65 to-[#0B0D0C]" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0B0D0C]/85 via-transparent to-[#0B0D0C]/85" />
-        <div className="absolute inset-0 bg-grid-subtle opacity-30 pointer-events-none" />
       </div>
 
       {/* Centered Content Container */}
