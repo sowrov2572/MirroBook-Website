@@ -30,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
     { name: 'Services', href: '#services' },
     { name: 'Portfolio', href: '#portfolio' },
     { name: 'Founder & Team', href: '/sowrov-hosen' },
+    { name: 'Contact', href: '/contact' },
     { name: 'Packages', href: '#packages' },
     { name: 'Plugins & Software', href: '#plugins-software' },
     { name: 'Courses & Tutorials', href: '#tutorials' },
