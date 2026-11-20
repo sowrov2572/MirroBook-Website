@@ -51,7 +51,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
 
           {/* 3. Description */}
           <p className="text-sm sm:text-lg text-[#A1AAA2] font-normal leading-relaxed max-w-2xl mx-auto">
-            MirrorBook is a creative agency in Bangladesh offering graphic design, video editing, motion graphics, digital marketing, web development, and modern software solutions.
+            A remote creative production partner for brands, businesses and agencies. From graphic design and social media content to video editing, motion graphics, animation and web development.
           </p>
 
           {/* 4. Three Existing Action Buttons */}
@@ -87,38 +87,23 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
           </div>
         </div>
 
-        {/* 5. Four Existing Metric Cards (Unchanged Data) */}
-        <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 items-stretch">
-          <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 flex flex-col justify-between h-full">
-            <p className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Projects Delivered</p>
-            <div>
-              <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tabular-nums">480+</div>
-              <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">High retention commercial cuts</p>
-            </div>
+        {/* Clear service value propositions, without unsupported performance claims */}
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 items-stretch">
+          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full">
+            <p className="text-sm font-semibold text-[#F5F7F2] mb-2">Remote Collaboration</p>
+            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Work with a creative team remotely, wherever your business is based.</p>
           </div>
-
-          <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 flex flex-col justify-between h-full">
-            <p className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Audience Reach</p>
-            <div>
-              <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tabular-nums">4.2M+</div>
-              <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">Organic video viewership</p>
-            </div>
+          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full">
+            <p className="text-sm font-semibold text-[#F5F7F2] mb-2">Design + Video</p>
+            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Graphic design, social content, video editing and motion graphics.</p>
           </div>
-
-          <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 flex flex-col justify-between h-full">
-            <p className="text-[11px] sm:text-xs font-medium text-[#A1AAA2] mb-2">Turnaround Time</p>
-            <div>
-              <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#F5F7F2] tabular-nums">48h</div>
-              <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">Sprint delivery standard</p>
-            </div>
+          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full">
+            <p className="text-sm font-semibold text-[#F5F7F2] mb-2">Flexible Engagement</p>
+            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Discuss a one-time project or ongoing creative production support.</p>
           </div>
-
-          <div className="glossy-card glossy-card-hover p-4 sm:p-6 min-w-0 border-[#B7F34A]/30 flex flex-col justify-between h-full">
-            <p className="text-[11px] sm:text-xs font-semibold text-[#B7F34A] mb-2">Communication</p>
-            <div>
-              <div className="font-display text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-[#B7F34A] tabular-nums">100%</div>
-              <p className="text-[11px] sm:text-xs text-[#A1AAA2] mt-1.5">Direct founder &amp; engineer access</p>
-            </div>
+          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full border-[#B7F34A]/30">
+            <p className="text-sm font-semibold text-[#B7F34A] mb-2">Clear Communication</p>
+            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Start with your goals, required deliverables and project brief.</p>
           </div>
         </div>
       </div>
