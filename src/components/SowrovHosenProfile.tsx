@@ -15,10 +15,6 @@ import {
   Instagram,
   Video,
   Globe,
-  Award,
-  CheckCircle2,
-  Calendar,
-  MapPin,
   Briefcase,
   Share2,
   Check
@@ -184,7 +180,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
       description:
         'Comprehensive creative vision, art direction, production pipeline orchestration, brand tone governance, and quality management.',
       toolset: ['Aesthetic Coherence', 'Team Mentorship', 'Client Strategy'],
-      highlights: 'Guiding projects from initial raw concept to award-worthy final delivery.',
+      highlights: 'Guiding projects from initial concept to final delivery.',
     },
   ];
 
@@ -325,34 +321,9 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                   </p>
                 </div>
 
-                {/* Verified Founder Badge */}
-    
               </div>
 
-            {/* Quick Metadata Pill list below photo */}
-            <div className="w-full max-w-[340px] mt-4 space-y-2">
-              <div className="p-3 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-between text-xs">
-                <span className="text-[#A1AAA2] flex items-center gap-1.5">
-                  <Briefcase size={13} className="text-[#B7F34A]" />
-                  Agency
-                </span>
-                <span className="text-[#F5F7F2] font-medium">MirrorBook</span>
-              </div>
-              <div className="p-3 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-between text-xs">
-                <span className="text-[#A1AAA2] flex items-center gap-1.5">
-                  <Calendar size={13} className="text-[#B7F34A]" />
-                  Experience
-                </span>
-                <span className="text-[#F5F7F2] font-medium">5+ Years Industry</span>
-              </div>
-              <div className="p-3 rounded-xl bg-[#121614] border border-white/[0.09] flex items-center justify-between text-xs">
-                <span className="text-[#A1AAA2] flex items-center gap-1.5">
-                  <Award size={13} className="text-[#B7F34A]" />
-                  Specialty
-                </span>
-                <span className="text-[#F5F7F2] font-medium">Cinematic Post-Production</span>
-              </div>
-            </div>
+
           </div>
 
           {/* Column 2: Introduction & Vision */}
@@ -418,13 +389,10 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           </div>
         </section>
 
-        {/* Section 2: Founder of MirrorBook Agency */}
-        <section className="mb-16 glossy-card rounded-2xl p-6 sm:p-8 md:p-10 relative overflow-hidden">
-          <div className="max-w-3xl space-y-4 relative z-10">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A]">
-              <Briefcase size={14} />
-              <span>About the Agency</span>
-            </div>
+        {/* About MirrorBook */}
+        <section className="mb-16 border-y border-white/[0.09] py-8 sm:py-10">
+          <div className="max-w-3xl space-y-4">
+            <p className="text-xs font-medium tracking-wide text-[#B7F34A]">About the Agency</p>
 
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
               Building MirrorBook
