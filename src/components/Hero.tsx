@@ -41,7 +41,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
         <div className="w-full max-w-3xl mx-auto text-center flex flex-col items-center space-y-4 sm:space-y-5">
           {/* 1. Main Heading */}
           <h1 className="font-display text-4xl min-[375px]:text-5xl sm:text-6xl lg:text-[4.75rem] font-bold tracking-tight text-[#F5F7F2] leading-[1.03] [text-wrap:balance]">
-            Creative Production for Brands &amp; Agencies
+            MirrorBook
           </h1>
 
           {/* 2. Tagline */}
@@ -51,7 +51,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
 
           {/* 3. Description */}
           <p className="text-sm sm:text-lg text-[#A1AAA2] font-normal leading-relaxed max-w-2xl mx-auto">
-            A remote creative production partner for brands, businesses and agencies. From graphic design and social media content to video editing, motion graphics, animation and web development.
+            We are a creative agency and digital production studio helping brands and businesses stand out through thoughtful design, engaging videos, compelling content, and reliable web solutions. From the first idea to the final delivery, we turn your vision into creative work that connects with people.
           </p>
 
           {/* 4. Three Existing Action Buttons */}
