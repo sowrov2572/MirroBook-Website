@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Film,
-  Sparkles,
   Palette,
   Layers,
   FileText,
@@ -505,10 +504,10 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           <div className="mb-8">
             <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
               <Globe size={14} />
-              <span>Connect &amp; Social Media</span>
+              <span>Follow MirrorBook</span>
             </div>
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-              Social Media &amp; Verified Portfolios
+              Our Social Channels
             </h2>
             <p className="text-xs text-[#A1AAA2] mt-1">
               Follow our work and updates across our official channels.
@@ -543,9 +542,6 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-[#A1AAA2] font-medium hidden sm:inline">
-                      {item.status}
-                    </span>
                     <ExternalLink
                       size={13}
                       className="text-[#707A72] group-hover:text-[#F5F7F2] transition-colors"
