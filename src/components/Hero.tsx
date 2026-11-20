@@ -41,7 +41,7 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
         <div className="w-full max-w-3xl mx-auto text-center flex flex-col items-center space-y-4 sm:space-y-5">
           {/* 1. Main Heading */}
           <h1 className="font-display text-4xl min-[375px]:text-5xl sm:text-6xl lg:text-[4.75rem] font-bold tracking-tight text-[#F5F7F2] leading-[1.03] [text-wrap:balance]">
-            MirrorBook
+            Creative Production for Brands &amp; Agencies
           </h1>
 
           {/* 2. Tagline */}
