@@ -73,7 +73,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   onClick={(e) => handleNav(e, '/sowrov-hosen')}
                   className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
                 >
-                  Founder: Sowrov Hosen
+                  Founder & Team
                 </a>
               </li>
               <li>
@@ -111,7 +111,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   onClick={(e) => handleNav(e, '/sowrov-hosen')}
                   className="hover:text-[#B7F34A] transition-colors font-medium text-[#F5F7F2]"
                 >
-                  Sowrov Hosen (Founder) →
+                  Founder & Team →
                 </a>
               </li>
               <li>

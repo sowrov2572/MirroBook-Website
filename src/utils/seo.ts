@@ -34,9 +34,9 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
     ogImageAlt: 'MirrorPOS Official App Icon — Developed by MirrorBook',
   },
   '/sowrov-hosen': {
-    title: 'Sowrov Hosen | Founder of MirrorBook',
+    title: 'Founder & Team | MirrorBook',
     description:
-      'Sowrov Hosen is the Founder of MirrorBook, a creative agency in Bangladesh providing graphic design, video editing, motion graphics, web development, and modern software solutions.',
+      'Meet the founders and creative team behind MirrorBook. Learn about Sowrov Hosen, co-founder Walid Ahmed Shraban, and the team delivering graphic design, video editing and web development.',
     canonicalUrl: 'https://mirrorbook.site/sowrov-hosen',
     robots: INDEX_ROBOTS,
     ogType: 'profile',
