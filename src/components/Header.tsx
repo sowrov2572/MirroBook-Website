@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navLinks = [
     { name: 'Services', href: '#services' },
     { name: 'Portfolio', href: '#portfolio' },
-    { name: 'Founder', href: '/sowrov-hosen' },
+    { name: 'Founder & Team', href: '/sowrov-hosen' },
     { name: 'Packages', href: '#packages' },
     { name: 'Plugins & Software', href: '#plugins-software' },
     { name: 'Courses & Tutorials', href: '#tutorials' },
