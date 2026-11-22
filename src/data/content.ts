@@ -65,6 +65,23 @@ export const CANONICAL_FEATURED_PRODUCTS: ProductItem[] = [
     createdAt: '2026-11-15',
   },
   {
+    id: 'software-mirrorbook-ai-support',
+    type: 'Software',
+    category: 'Web App',
+    title: 'MirrorBook AI Support',
+    description:
+      'A customer support workspace for growing businesses. Add your business details, FAQs, and policies, then test a bilingual AI assistant for customer conversations.',
+    price: 0,
+    isFree: false,
+    priceDisplay: 'Custom pricing',
+    iconUrl: '/mirrorbook-ai-support-icon.svg',
+    thumbnailUrl: '/mirrorbook-ai-support-cover.svg',
+    launchUrl: 'https://mirrorbook-ai-support-sowrovhosenstudio.vercel.app',
+    status: 'active',
+    featured: true,
+    createdAt: '2026-11-22',
+  },
+  {
     id: COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
     type: 'Course',
     category: 'After Effects, Premiere Pro & VFX',
