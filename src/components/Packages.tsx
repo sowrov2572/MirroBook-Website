@@ -81,8 +81,9 @@ export const Packages: React.FC<PackagesProps> = ({
           </div>
 
           <p className="text-sm sm:text-base text-[#A1AAA2] leading-relaxed">
-            Consistent creative production starting from{' '}
+            Monthly creative production plans start from{' '}
             <strong className="text-[#F5F7F2] font-semibold tabular-nums">৳25,000/month</strong>.
+            <span className="block mt-2 text-xs text-[#879188]">Based outside Bangladesh? Ask us for a tailored scope and a quote in your preferred currency.</span>
           </p>
         </div>
 
