@@ -422,51 +422,94 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         </section>
 
 
-        {/* Team */}
+        {/* Founder & Team */}
         <section className="mb-16" aria-labelledby="founder-team-heading">
           <div className="mb-7 border-b border-white/[0.09] pb-5">
             <p className="text-xs font-medium text-[#B7F34A] mb-2">The People Behind MirrorBook</p>
             <h2 id="founder-team-heading" className="font-display text-2xl sm:text-3xl font-semibold text-[#F5F7F2] tracking-tight">
-              Our Team
+              Founders &amp; Team
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-[#A1AAA2] leading-relaxed">
-              A focused team bringing together creative production and web development.
+              Meet the two founders and the team members behind MirrorBook.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-            <article className="rounded-xl border border-white/[0.09] bg-[#121614] p-5 flex flex-col">
-              <div className="w-12 h-12 rounded-full bg-[#1B211D] border border-white/[0.10] flex items-center justify-center text-sm font-semibold text-[#B7F34A] mb-4" aria-hidden="true">WS</div>
-              <p className="text-[11px] text-[#B7F34A] font-medium mb-1">Founder</p>
-              <h3 className="text-base font-semibold text-[#F5F7F2]">Walid Ahmed Shraban</h3>
-              <p className="text-xs text-[#A1AAA2] mt-1">Web Developer</p>
-              <p className="text-sm text-[#A1AAA2] leading-relaxed mt-3 flex-1">
-                Builds and maintains MirrorBook’s websites and digital products, focusing on clear user experiences, responsive interfaces, and reliable functionality.
-              </p>
-              <a href="https://srabonx.netlify.app/" target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#F5F7F2] hover:text-[#B7F34A] transition-colors">
-                View Portfolio <ExternalLink size={13} />
-              </a>
-            </article>
-
-            <article className="rounded-xl border border-white/[0.09] bg-[#121614] p-5 flex flex-col">
-              <div className="w-12 h-12 rounded-full bg-[#1B211D] border border-white/[0.10] flex items-center justify-center text-sm font-semibold text-[#B7F34A] mb-4" aria-hidden="true">MA</div>
-              <p className="text-[11px] text-[#707A72] font-medium mb-1">Team Member</p>
-              <h3 className="text-base font-semibold text-[#F5F7F2]">Musabbir Al Said</h3>
-              <p className="text-xs text-[#A1AAA2] mt-1">Graphic Designer &amp; Video Editor</p>
-              <p className="text-sm text-[#A1AAA2] leading-relaxed mt-3 flex-1">
-                Creates brand-focused graphics, social media designs, and edited videos for digital campaigns and everyday content.
-              </p>
-            </article>
-
-            <article className="rounded-xl border border-white/[0.09] bg-[#121614] p-5 flex flex-col">
-              <div className="w-12 h-12 rounded-full bg-[#1B211D] border border-white/[0.10] flex items-center justify-center text-sm font-semibold text-[#B7F34A] mb-4" aria-hidden="true">MH</div>
-              <p className="text-[11px] text-[#707A72] font-medium mb-1">Team Member</p>
-              <h3 className="text-base font-semibold text-[#F5F7F2]">Mehedi Hasan</h3>
-              <p className="text-xs text-[#A1AAA2] mt-1">Visual Artist · Graphic Design &amp; Video Editing</p>
-              <p className="text-sm text-[#A1AAA2] leading-relaxed mt-3 flex-1">
-                Develops visual concepts and produces polished graphic designs and video content for brands and digital platforms.
-              </p>
-            </article>
+          {/*
+            Add each person's Imgbb image URL to photoUrl below when available.
+            Keep the same image dimensions and card layout for all four profiles.
+          */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+            {[
+              {
+                name: 'Sowrov Hosen',
+                role: 'Founder',
+                title: 'Creative Director',
+                initials: 'SH',
+                photoUrl: 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg',
+                bio: 'Leads MirrorBook’s creative direction, visual storytelling, and creative production.',
+                portfolio: 'https://sowrovhosenstudio.netlify.app',
+              },
+              {
+                name: 'Walid Ahmed Shraban',
+                role: 'Founder',
+                title: 'Web Developer',
+                initials: 'WS',
+                photoUrl: '',
+                bio: 'Builds and maintains MirrorBook’s websites and digital products, focusing on clear user experiences and reliable functionality.',
+                portfolio: 'https://srabonx.netlify.app/',
+              },
+              {
+                name: 'Musabbir Al Said',
+                role: 'Team Member',
+                title: 'Graphic Designer & Video Editor',
+                initials: 'MA',
+                photoUrl: '',
+                bio: 'Creates brand-focused graphics, social media designs, and edited videos for digital campaigns and everyday content.',
+                portfolio: '',
+              },
+              {
+                name: 'Mehedi Hasan',
+                role: 'Team Member',
+                title: 'Visual Artist · Graphic Design & Video Editing',
+                initials: 'MH',
+                photoUrl: '',
+                bio: 'Develops visual concepts and produces polished graphic designs and video content for brands and digital platforms.',
+                portfolio: '',
+              },
+            ].map((member) => (
+              <article key={member.name} className="rounded-xl border border-white/[0.09] bg-[#121614] p-4 sm:p-5 flex flex-col">
+                <div className="w-full aspect-square rounded-xl overflow-hidden border border-white/[0.10] bg-[#1B211D] mb-4">
+                  {member.photoUrl ? (
+                    <img
+                      src={member.photoUrl}
+                      alt={`${member.name}, ${member.role} at MirrorBook`}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl font-semibold text-[#B7F34A]" aria-label={`Photo placeholder for ${member.name}`}>
+                      {member.initials}
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-[#B7F34A] font-medium mb-1">{member.role}</p>
+                <h3 className="text-base font-semibold text-[#F5F7F2]">{member.name}</h3>
+                <p className="text-xs text-[#A1AAA2] mt-1">{member.title}</p>
+                <p className="text-sm text-[#A1AAA2] leading-relaxed mt-3 flex-1">{member.bio}</p>
+                {member.portfolio && (
+                  <a
+                    href={member.portfolio}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="glossy-btn mt-5 min-h-[42px] px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide inline-flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    View Portfolio <ExternalLink size={13} />
+                  </a>
+                )}
+              </article>
+            ))}
           </div>
         </section>
 
@@ -495,60 +538,6 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                     </p>
                   </div>
                 </article>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Section 4: Social Media Profile Links */}
-        <section className="mb-16">
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide text-[#B7F34A] mb-2">
-              <Globe size={14} />
-              <span>Follow MirrorBook</span>
-            </div>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F5F7F2] tracking-tight">
-              Our Social Channels
-            </h2>
-            <p className="text-xs text-[#A1AAA2] mt-1">
-              Follow our work and updates across our official channels.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {socialLinks.map((item) => {
-              const IconComp = item.icon;
-              return (
-                <a
-                  key={item.name}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-2 group min-w-0 ${
-                    item.isPrimary
-                      ? 'bg-[#B7F34A]/10 border-[#B7F34A]/35 hover:bg-[#B7F34A]/15'
-                      : 'bg-[#171C19] border-white/[0.09] hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-[#121614] border border-white/[0.09] flex items-center justify-center text-[#B7F34A] shrink-0">
-                      <IconComp size={18} />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-xs font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors">
-                        {item.name}
-                      </h3>
-                      <p className="text-[11px] text-[#707A72] font-mono truncate">{item.handle}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <ExternalLink
-                      size={13}
-                      className="text-[#707A72] group-hover:text-[#F5F7F2] transition-colors"
-                    />
-                  </div>
-                </a>
               );
             })}
           </div>
