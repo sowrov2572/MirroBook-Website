@@ -8,13 +8,6 @@ import {
   ArrowLeft,
   ExternalLink,
   Mail,
-  Youtube,
-  Linkedin,
-  Facebook,
-  Instagram,
-  Video,
-  Globe,
-  Briefcase,
   Share2,
   Check,
   MapPin
@@ -181,57 +174,6 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
         'Comprehensive creative vision, art direction, production pipeline orchestration, brand tone governance, and quality management.',
       toolset: ['Aesthetic Coherence', 'Team Mentorship', 'Client Strategy'],
       highlights: 'Guiding projects from initial concept to final delivery.',
-    },
-  ];
-
-  const socialLinks = [
-    {
-      name: 'Portfolio Studio',
-      handle: 'sowrovhosenstudio.netlify.app',
-      url: 'https://sowrovhosenstudio.netlify.app',
-      icon: Globe,
-      status: 'Live & Active',
-      isPrimary: true,
-    },
-    {
-      name: 'YouTube',
-      handle: '@MirrorBook_Offical',
-      url: 'https://www.youtube.com/@MirrorBook_Offical',
-      icon: Youtube,
-      status: 'Official Channel',
-      isPrimary: false,
-    },
-    {
-      name: 'Facebook',
-      handle: 'MirrorBook Official',
-      url: 'https://www.facebook.com/profile.php?id=61557704393608',
-      icon: Facebook,
-      status: 'Official Page',
-      isPrimary: false,
-    },
-    {
-      name: 'Instagram',
-      handle: '@mirror.book',
-      url: 'https://www.instagram.com/mirror.book/',
-      icon: Instagram,
-      status: 'Official Instagram',
-      isPrimary: false,
-    },
-    {
-      name: 'TikTok',
-      handle: '@mirror__book',
-      url: 'https://www.tiktok.com/@mirror__book',
-      icon: Video,
-      status: 'Short-Form Reels',
-      isPrimary: false,
-    },
-    {
-      name: 'LinkedIn',
-      handle: 'company/mirrorbook',
-      url: 'https://www.linkedin.com/company/mirrorbook/',
-      icon: Linkedin,
-      status: 'Company Profile',
-      isPrimary: false,
     },
   ];
 
