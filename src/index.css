@@ -203,3 +203,30 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+
+/* Unslop visual pass: quiet surfaces, sharper hierarchy, restrained motion */
+:root {
+  --bg-primary: #101110;
+  --bg-secondary: #171817;
+  --bg-card: #1b1c1a;
+  --brand-green: #b9ed62;
+  --text-primary: #f2f2ed;
+  --text-secondary: #a5a7a1;
+  --border-subtle: rgba(255,255,255,.12);
+}
+html, body { background: #101110 !important; }
+.glossy-card, .glass-panel {
+  background: #191a18 !important; border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: none !important; border-radius: 14px !important;
+}
+.glossy-card-hover:hover { background: #20211f !important; border-color: rgba(255,255,255,.2) !important; box-shadow: none !important; transform: translateY(-2px) !important; }
+.glossy-btn { background: #b9ed62 !important; box-shadow: none !important; border-radius: 8px !important; }
+.glossy-btn:hover { background: #c9f58a !important; box-shadow: none !important; }
+.glossy-btn-secondary { background: transparent !important; backdrop-filter: none !important; border: 1px solid rgba(255,255,255,.18) !important; box-shadow: none !important; border-radius: 8px !important; }
+.glossy-btn-secondary:hover { background: rgba(255,255,255,.06) !important; border-color: rgba(255,255,255,.35) !important; color: #f2f2ed !important; }
+.glossy-glass-dock { background: rgba(20,21,20,.96) !important; backdrop-filter: blur(12px) !important; box-shadow: none !important; border-radius: 16px !important; }
+.glass-pill, .glass-tab-bar { backdrop-filter: none !important; box-shadow: none !important; }
+.bg-grid-subtle { background-image: none !important; }
+::selection { background: #b9ed62; color: #101110; }
+@media (prefers-reduced-motion: no-preference) { .glossy-card-hover, .glossy-btn, .glossy-btn-secondary { transition-duration: 180ms !important; } }

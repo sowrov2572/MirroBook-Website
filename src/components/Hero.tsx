@@ -1,111 +1,29 @@
 import React from 'react';
 import { ArrowDownRight, ArrowRight, Play } from 'lucide-react';
 
-interface HeroProps {
-  onViewPackages: () => void;
-  onBrowseStore: () => void;
-  onPlayShowreel: () => void;
-}
-
-export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPlayShowreel }) => {
-  return (
-    <section className="relative min-h-[calc(100svh-4rem)] lg:min-h-[86vh] flex flex-col justify-center items-center py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 overflow-x-clip bg-[#0B0D0C] border-b border-white/[0.09]">
-      {/* Full-Bleed Hero Banner with Balanced Matte Dark Scrim */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src="https://i.ibb.co/dsxmjMSP/mirrorbook.jpg"
-          alt="MirrorBook – Creative Agency and Digital Solutions Brand in Bangladesh"
-          width={1920}
-          height={1080}
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            const target = e.currentTarget;
-            if (!target.src.includes('WNjVG5Qk')) {
-              target.src = 'https://i.ibb.co/WNjVG5Qk/mirrorbook.jpg';
-            }
-          }}
-          className="w-full h-full object-cover object-center opacity-40"
-        />
-
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0B0D0C]/80 via-[#0B0D0C]/65 to-[#0B0D0C]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0B0D0C]/85 via-transparent to-[#0B0D0C]/85" />
-      </div>
-
-      {/* Centered Content Container */}
-      <div className="max-w-7xl mx-auto w-full relative z-10 flex flex-col items-center justify-center gap-10 sm:gap-12">
-        {/* Top Centered Brand Lockup */}
-        <div className="w-full max-w-3xl mx-auto text-center flex flex-col items-center space-y-4 sm:space-y-5">
-          {/* 1. Main Heading */}
-          <h1 className="font-display text-4xl min-[375px]:text-5xl sm:text-6xl lg:text-[4.75rem] font-bold tracking-tight text-[#F5F7F2] leading-[1.03] [text-wrap:balance]">
-            MirrorBook
-          </h1>
-
-          {/* 2. Tagline */}
-          <p className="text-sm sm:text-base font-semibold text-[#B7F34A] tracking-wide">
-            Reflecting Creativity
-          </p>
-
-          {/* 3. Description */}
-          <p className="text-sm sm:text-lg text-[#A1AAA2] font-normal leading-relaxed max-w-2xl mx-auto">
-            We are a creative agency and digital production studio helping brands and businesses stand out through thoughtful design, engaging videos, compelling content, and reliable web solutions. From the first idea to the final delivery, we turn your vision into creative work that connects with people.
-          </p>
-
-          {/* 4. Three Existing Action Buttons */}
-          <div className="w-full flex flex-col min-[420px]:flex-row flex-wrap items-stretch min-[420px]:items-center justify-center gap-2.5 sm:gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onViewPackages}
-              className="min-h-[44px] px-5 sm:px-6 py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-            >
-              <span>View Packages</span>
-              <ArrowDownRight size={15} />
-            </button>
-
-            <button
-              type="button"
-              onClick={onBrowseStore}
-              className="min-h-[44px] px-5 sm:px-6 py-3 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-            >
-              <span>Browse Plugins</span>
-              <ArrowRight size={15} />
-            </button>
-
-            <button
-              type="button"
-              onClick={onPlayShowreel}
-              className="min-h-[44px] px-4 sm:px-5 py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer group whitespace-nowrap"
-            >
-              <span className="w-6 h-6 rounded-lg bg-[#B7F34A] text-[#0B0D0C] flex items-center justify-center transition-transform duration-150 group-hover:scale-105 shrink-0">
-                <Play size={11} className="fill-[#0B0D0C] ml-0.5" />
-              </span>
-              <span>Show Reel</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Clear service value propositions, without unsupported performance claims */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 items-stretch">
-          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full">
-            <p className="text-sm font-semibold text-[#F5F7F2] mb-2">Remote Collaboration</p>
-            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Work with a creative team remotely, wherever your business is based.</p>
-          </div>
-          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full">
-            <p className="text-sm font-semibold text-[#F5F7F2] mb-2">Design + Video</p>
-            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Graphic design, social content, video editing and motion graphics.</p>
-          </div>
-          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full">
-            <p className="text-sm font-semibold text-[#F5F7F2] mb-2">Flexible Engagement</p>
-            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Discuss a one-time project or ongoing creative production support.</p>
-          </div>
-          <div className="glossy-card glossy-card-hover p-4 sm:p-5 min-w-0 flex flex-col justify-between h-full border-[#B7F34A]/30">
-            <p className="text-sm font-semibold text-[#B7F34A] mb-2">Clear Communication</p>
-            <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">Start with your goals, required deliverables and project brief.</p>
-          </div>
+interface HeroProps { onViewPackages: () => void; onBrowseStore: () => void; onPlayShowreel: () => void; }
+export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPlayShowreel }) => (
+  <section className="relative min-h-[78vh] flex flex-col justify-center py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-x-clip bg-[#101110] border-b border-white/10">
+    <div className="absolute inset-0 pointer-events-none">
+      <img src="https://i.ibb.co/dsxmjMSP/mirrorbook.jpg" alt="MirrorBook creative production" width={1920} height={1080} loading="eager" fetchPriority="high" decoding="async" referrerPolicy="no-referrer" onError={(e)=>{if(!e.currentTarget.src.includes('WNjVG5Qk')) e.currentTarget.src='https://i.ibb.co/WNjVG5Qk/mirrorbook.jpg';}} className="h-full w-full object-cover object-center opacity-20" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#101110] via-[#101110]/90 to-[#101110]/55" />
+    </div>
+    <div className="max-w-7xl w-full mx-auto relative z-10">
+      <div className="max-w-4xl space-y-7">
+        <p className="text-xs sm:text-sm tracking-[.16em] uppercase text-[#b9ed62] font-semibold">Independent creative studio · Bangladesh & worldwide</p>
+        <h1 className="font-display text-5xl min-[375px]:text-6xl sm:text-7xl lg:text-[6.5rem] font-semibold tracking-[-.055em] leading-[.95] text-[#f2f2ed]">MirrorBook<span className="text-[#b9ed62]">.</span></h1>
+        <p className="text-[#b9ed62] text-lg sm:text-xl font-medium">Reflecting Creativity</p>
+        <p className="max-w-2xl text-base sm:text-lg text-[#b5b6b0] leading-relaxed">We help brands communicate through thoughtful design, engaging video, compelling content and practical digital solutions, from the first idea to final delivery.</p>
+        <div className="flex flex-col min-[420px]:flex-row flex-wrap items-stretch min-[420px]:items-center gap-3 pt-2">
+          <button type="button" onClick={onViewPackages} className="min-h-[48px] px-6 py-3 text-sm glossy-btn flex items-center justify-center gap-2 cursor-pointer"><span>View Packages</span><ArrowDownRight size={16}/></button>
+          <button type="button" onClick={onBrowseStore} className="min-h-[48px] px-6 py-3 text-sm font-semibold glossy-btn-secondary flex items-center justify-center gap-2 cursor-pointer"><span>Browse Plugins</span><ArrowRight size={16}/></button>
+          <button type="button" onClick={onPlayShowreel} className="min-h-[48px] px-5 py-3 text-sm font-semibold glossy-btn-secondary flex items-center justify-center gap-2 cursor-pointer"><Play size={15}/><span>Show Reel</span></button>
         </div>
       </div>
-    </section>
-  );
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-16 max-w-5xl">
+        {[['01','Remote collaboration','A creative team for businesses, wherever they work.'],['02','Design & video','Graphic design, social content and motion.'],['03','Flexible projects','One-off work or ongoing creative support.'],['04','Clear process','Scope, brief and deliverables agreed upfront.']].map(([n,t,d])=><div key={n} className="border-t border-white/20 pt-4"><span className="text-xs text-[#b9ed62] tracking-widest">{n}</span><h2 className="mt-3 text-sm sm:text-base font-semibold text-[#f2f2ed]">{t}</h2><p className="mt-2 text-xs sm:text-sm text-[#a5a7a1] leading-relaxed">{d}</p></div>)}
+      </div>
+    </div>
+  </section>
+);
 };
