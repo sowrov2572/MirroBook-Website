@@ -33,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
     { name: 'Contact', href: '/contact' },
     { name: 'Packages', href: '#packages' },
     { name: 'Plugins & Software', href: '#plugins-software' },
+    { name: 'MirrorPOS', href: '/mirrorpos' },
     { name: 'Courses & Tutorials', href: '#tutorials' },
   ];
 
