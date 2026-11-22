@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title id="title">MirrorBook AI Support</title>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#202722"/><stop offset="1" stop-color="#0B0D0C"/></linearGradient><linearGradient id="lime" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#D1FF78"/><stop offset="1" stop-color="#A8E83D"/></linearGradient></defs>
+<rect width="512" height="512" rx="116" fill="url(#bg)"/>
+<rect x="42" y="42" width="428" height="428" rx="92" fill="none" stroke="#FFFFFF" stroke-opacity=".09" stroke-width="2"/>
+<path d="M112 330V174c0-17 20-26 33-14l111 103 111-103c13-12 33-3 33 14v156" fill="none" stroke="url(#lime)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M256 264v94" stroke="#F5F7F2" stroke-opacity=".85" stroke-width="18" stroke-linecap="round"/>
+<circle cx="383" cy="126" r="66" fill="url(#lime)"/>
+<path d="M383 92v68M349 126h68" stroke="#0B0D0C" stroke-width="17" stroke-linecap="round"/>
+</svg>
