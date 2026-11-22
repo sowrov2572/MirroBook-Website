@@ -378,19 +378,10 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
 
           {/*
             Add each person's Imgbb image URL to photoUrl below when available.
-            Keep the same image dimensions and card layout for all four profiles.
+            Keep the same image dimensions and card layout for all three team profiles.
           */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
             {[
-              {
-                name: 'Sowrov Hosen',
-                role: 'Founder',
-                title: 'Creative Director',
-                initials: 'SH',
-                photoUrl: 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg',
-                bio: 'Leads MirrorBook’s creative direction, visual storytelling, and creative production.',
-                portfolio: 'https://sowrovhosenstudio.netlify.app',
-              },
               {
                 name: 'Walid Ahmed Shraban',
                 role: 'Founder',
