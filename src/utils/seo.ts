@@ -16,9 +16,9 @@ const NOINDEX_ROBOTS = 'noindex, nofollow';
 
 export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/': {
-    title: 'MirrorBook | Reflecting Creativity',
+    title: 'MirrorBook',
     description:
-      'Reflecting Creativity. MirrorBook is a Bangladesh-based creative agency and digital studio for graphic design, video editing, motion graphics, branding, web development, and digital products.',
+      'MirrorBook is a Bangladesh-based creative agency and digital studio for graphic design, video editing, motion graphics, branding, web development, and digital products.',
     keywords:
       'MirrorBook, MirrorBook Agency, Reflecting Creativity, creative agency Bangladesh, graphic design, video editing, motion graphics, branding, web development, digital products, MirrorPOS',
     canonicalUrl: `${SITE}/`,
@@ -40,7 +40,7 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
     ogImageAlt: 'MirrorPOS software by MirrorBook',
   },
   '/sowrov-hosen': {
-    title: 'Founders & Team | MirrorBook',
+    title: 'Team & Founder | MirrorBook',
     description:
       'Meet MirrorBook founders Sowrov Hosen and Walid Ahmed Shraban, and team members Musabbir Al Said and Mehedi Hasan. Learn about the people behind the creative studio.',
     keywords:
