@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Globe } from 'lucide-react';
 
 interface SowrovHosenProfileProps {
   onNavigateHome: () => void;
@@ -33,9 +33,7 @@ const teamMembers = [
   },
 ];
 
-export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
-  onNavigateHome,
-}) => {
+export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = () => {
   useEffect(() => {
     const profileSchema = {
       '@context': 'https://schema.org',
@@ -116,9 +114,12 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                       href={member.portfolio}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-4 inline-flex min-h-[40px] items-center gap-2 text-sm font-medium text-[#B7F34A] hover:underline"
+                      aria-label={`View ${member.name}'s portfolio`}
+                      className="mt-4 inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg border border-[#B7F34A]/40 bg-[#B7F34A]/[0.08] px-4 py-2 text-sm font-semibold text-[#B7F34A] transition-colors hover:bg-[#B7F34A] hover:text-[#0B0D0C]"
                     >
-                      Portfolio <ExternalLink size={14} />
+                      <Globe size={15} />
+                      Portfolio
+                      <ExternalLink size={13} />
                     </a>
                   )}
                 </div>
@@ -127,25 +128,21 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           </div>
         </section>
 
-        <section className="mt-16 border-t border-white/[0.09] pt-8" aria-labelledby="about-mirrorbook-heading">
+        <section className="mt-12 rounded-xl border border-white/[0.09] bg-[#121614] px-6 py-8 text-center sm:px-10" aria-labelledby="contact-mirrorbook-heading">
           <h2
-            id="about-mirrorbook-heading"
+            id="contact-mirrorbook-heading"
             className="font-display text-2xl sm:text-3xl font-semibold tracking-tight"
           >
-            MirrorBook
+            Contact MirrorBook
           </h2>
-          <p className="mt-3 max-w-3xl text-sm sm:text-base leading-relaxed text-[#A1AAA2]">
-            MirrorBook is a creative agency and digital studio offering graphic design, video editing, motion graphics, branding, and web development.
+          <p className="mx-auto mt-3 max-w-xl text-sm sm:text-base leading-relaxed text-[#A1AAA2]">
+            Have a project or need a creative service? Get in touch with MirrorBook.
           </p>
           <a
-            href="https://mirrorbook.site/"
-            onClick={(event) => {
-              event.preventDefault();
-              onNavigateHome();
-            }}
-            className="mt-5 inline-flex min-h-[40px] items-center gap-2 text-sm font-medium text-[#B7F34A] hover:underline"
+            href="/contact"
+            className="mt-6 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[#B7F34A] px-6 py-3 text-sm font-bold text-[#0B0D0C] transition-opacity hover:opacity-90"
           >
-            Visit MirrorBook <ExternalLink size={14} />
+            Contact Us <ExternalLink size={15} />
           </a>
         </section>
       </div>
