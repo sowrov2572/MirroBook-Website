@@ -36,7 +36,7 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/sowrov-hosen': {
     title: 'Founder & Team | MirrorBook',
     description:
-      'Meet Sowrov Hosen and Walid Ahmed Shraban, the founders of MirrorBook, alongside the creative team behind graphic design, video editing, motion graphics, and web development.'
+      'Meet Sowrov Hosen and Walid Ahmed Shraban, the founders of MirrorBook, alongside the creative team behind graphic design, video editing, motion graphics, and web development.',
     canonicalUrl: 'https://mirrorbook.site/sowrov-hosen',
     robots: INDEX_ROBOTS,
     ogType: 'profile',
