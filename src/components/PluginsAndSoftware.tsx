@@ -294,72 +294,47 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
               }
 
 
-              // MirrorBook AI Support: early-access product card
+              // Mirror Bot: icon-first Software Library card
               if (isSoftware && item.id === 'software-mirrorbook-ai-support') {
                 return (
                   <div
                     key={item.id}
-                    className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col justify-between h-full group border-[#B7F34A]/25 relative"
+                    className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col h-full group border-[#B7F34A]/25 relative"
                   >
-                    <div className="aspect-video rounded-xl overflow-hidden bg-[#101411] border border-white/[0.08] mb-5 relative flex items-center justify-center">
-                      <img
-                        src={item.thumbnailUrl || '/mirrorbook-ai-support-cover.svg'}
-                        alt="MirrorBook AI Support workspace preview"
-                        width={1200}
-                        height={675}
-                        loading="lazy"
-                        decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-[#B7F34A] text-[#0B0D0C] text-[10px] font-bold tracking-wide">
-                        EARLY ACCESS
-                      </span>
-                    </div>
-
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#0B0D0C] border border-white/[0.12] p-2 shrink-0">
+                    <div className="flex items-start gap-3.5 mb-4">
+                      <div className="w-14 h-14 rounded-2xl bg-[#0B0D0C] border border-white/[0.12] p-2.5 shrink-0 flex items-center justify-center">
                         <img
                           src={item.iconUrl || '/mirrorbook-ai-support-icon.svg'}
-                          alt="MirrorBook AI Support icon"
+                          alt="Mirror Bot icon"
                           className="w-full h-full object-contain"
-                          width={48}
-                          height={48}
+                          width={56}
+                          height={56}
                         />
                       </div>
-                      <div className="min-w-0">
-                        <span className="text-[11px] font-semibold text-[#B7F34A] block mb-1">
+                      <div className="min-w-0 pt-0.5">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#B7F34A] block mb-1">
                           MirrorBook Software
                         </span>
-                        <h3 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight">
-                          {item.title}
+                        <h3 className="font-display text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight">
+                          Mirror Bot
                         </h3>
+                        <span className="inline-flex mt-2 px-2 py-1 rounded-md bg-[#B7F34A]/10 border border-[#B7F34A]/20 text-[10px] font-semibold text-[#B7F34A]">
+                          EARLY ACCESS
+                        </span>
                       </div>
                     </div>
-
                     <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-5">
                       {item.description}
                     </p>
-
-                    <div className="pt-4 border-t border-white/[0.09]">
-                      <div className="flex items-center justify-between gap-2 text-xs mb-3">
-                        <span className="text-[#A1AAA2]">Plans for your business</span>
-                        <span className="font-semibold text-[#F5F7F2]">Custom pricing</span>
-                      </div>
+                    <div className="mt-auto pt-4 border-t border-white/[0.09]">
                       <a
                         href={item.launchUrl || 'https://mirrorbook-ai-support-sowrovhosenstudio.vercel.app'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full min-h-[44px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full min-h-[46px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <span>Explore AI Support</span>
-                        <ExternalLink size={14} />
-                      </a>
-                      <a
-                        href="mailto:mirrorbook.site@gmail.com?subject=MirrorBook%20AI%20Support%20Pricing"
-                        className="mt-2 w-full min-h-[40px] py-2.5 text-xs glossy-btn-secondary rounded-xl flex items-center justify-center gap-2"
-                      >
-                        Contact for pricing
-                        <ArrowRight size={13} />
+                        <span>Get Access</span>
+                        <ArrowRight size={14} />
                       </a>
                     </div>
                   </div>
