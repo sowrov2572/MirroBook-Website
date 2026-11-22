@@ -1,11 +1,11 @@
 {
   "name": "MirrorBook",
   "short_name": "MirrorBook",
-  "description": "MirrorBook is a creative agency in Bangladesh offering graphic design, video editing, motion graphics, digital marketing, web development, and modern software solutions. Reflecting Creativity.",
+  "description": "Reflecting Creativity. MirrorBook is a Bangladesh-based creative agency and digital studio for graphic design, video editing, motion graphics, branding, web development, and digital products.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#070707",
-  "theme_color": "#070707",
+  "background_color": "#0B0D0C",
+  "theme_color": "#0B0D0C",
   "icons": [
     {
       "src": "/favicon-48x48.png",
