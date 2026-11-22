@@ -16,7 +16,8 @@ import {
   Globe,
   Briefcase,
   Share2,
-  Check
+  Check,
+  MapPin
 } from 'lucide-react';
 
 interface SowrovHosenProfileProps {
