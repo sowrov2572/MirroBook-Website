@@ -18,6 +18,7 @@ interface PluginsAndSoftwareProps {
   loading?: boolean;
   onBuyItem: (item: CheckoutItem) => void;
   onOpenMirrorPOS: () => void;
+  onOpenMirrorBot?: () => void;
   user?: AppUser | null;
   onOpenSignIn?: () => void;
   onNotify?: (message: string, type?: 'success' | 'info' | 'error') => void;
@@ -31,6 +32,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
   loading = false,
   onBuyItem,
   onOpenMirrorPOS,
+  onOpenMirrorBot,
 }) => {
   const [libraryFilter, setLibraryFilter] = useState<UnifiedLibraryFilter>('all');
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
@@ -294,48 +296,62 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
               }
 
 
-              // Mirror Bot: icon-first Software Library card
+              // Mirror Bot: icon-first card matching MirrorPOS layout
               if (isSoftware && item.id === 'software-mirrorbook-ai-support') {
                 return (
                   <div
                     key={item.id}
-                    className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col h-full group border-[#B7F34A]/25 relative"
+                    className="glossy-card glossy-card-hover p-5 sm:p-6 min-w-0 flex flex-col justify-between h-full group border-[#B7F34A]/25 relative"
                   >
-                    <div className="flex items-start gap-3.5 mb-4">
-                      <div className="w-14 h-14 rounded-2xl bg-[#0B0D0C] border border-white/[0.12] p-2.5 shrink-0 flex items-center justify-center">
-                        <img
-                          src={item.iconUrl || '/mirrorbook-ai-support-icon.svg'}
-                          alt="Mirror Bot icon"
-                          className="w-full h-full object-contain"
-                          width={56}
-                          height={56}
-                        />
-                      </div>
-                      <div className="min-w-0 pt-0.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#B7F34A] block mb-1">
-                          MirrorBook Software
+                    <div>
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-12 h-12 rounded-xl bg-[#0B0D0C] border border-white/[0.12] p-2 flex items-center justify-center shrink-0 overflow-hidden">
+                            <img
+                              src={item.iconUrl || '/mirrorbook-ai-support-icon.svg'}
+                              alt="Mirror Bot Logo"
+                              width={48}
+                              height={48}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-semibold text-[#B7F34A] block truncate">
+                              MirrorBook · AI Support
+                            </span>
+                            <h3 className="font-display text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight truncate">
+                              Mirror Bot
+                            </h3>
+                          </div>
+                        </div>
+
+                        <span className="px-2.5 py-1 rounded-md bg-[#0B0D0C]/90 border border-[#B7F34A]/45 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A] whitespace-nowrap shrink-0">
+                          AI BOT
                         </span>
-                        <h3 className="font-display text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight">
-                          Mirror Bot
-                        </h3>
-                        <span className="inline-flex mt-2 px-2 py-1 rounded-md bg-[#B7F34A]/10 border border-[#B7F34A]/20 text-[10px] font-semibold text-[#B7F34A]">
-                          EARLY ACCESS
-                        </span>
                       </div>
+
+                      <p className="text-xs sm:text-sm text-[#D4DBD5] leading-relaxed">
+                        Gemini-powered AI agent that learns your business, inspects product photos, replies naturally in Bangla &amp; English, and confirms orders on Messenger &amp; WhatsApp.
+                      </p>
                     </div>
-                    <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed mb-5">
-                      {item.description}
-                    </p>
-                    <div className="mt-auto pt-4 border-t border-white/[0.09]">
-                      <a
-                        href={item.launchUrl || 'https://mirrorbook-ai-support-sowrovhosenstudio.vercel.app'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full min-h-[46px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+
+                    <div className="pt-4 mt-5 border-t border-white/[0.09]">
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-[#A1AAA2] mb-3">
+                        <span>Powered by Gemini AI Agent</span>
+                        <span className="font-semibold text-[#F5F7F2]">
+                          Messenger &amp; WhatsApp
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onOpenMirrorBot?.()}
+                        className="w-full min-h-[44px] py-2.5 px-5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <span>Get Access</span>
                         <ArrowRight size={14} />
-                      </a>
+                      </button>
                     </div>
                   </div>
                 );

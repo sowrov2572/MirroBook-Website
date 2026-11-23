@@ -16,17 +16,39 @@ import {
   processGetCourseLessons,
   processGetCourseLessonThumbnail,
 } from './api/courses/lessons';
+import { processMirrorBotChat } from './api/mirrorbot/chat';
+import { processSuggestBotNames } from './api/mirrorbot/suggest-names';
+import { processMetaStatus } from './api/mirrorbot/meta-status';
+import {
+  processMetaWebhookGet,
+  processMetaWebhookPost,
+} from './api/mirrorbot/meta-webhook';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
-function readRequestBody(req: any): Promise<string> {
-  return new Promise((resolve) => {
+function readRequestBody(req: any, maxBytes = 6 * 1024 * 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
     let bodyStr = '';
-    req.on('data', (chunk: any) => {
-      bodyStr += chunk;
+    let receivedBytes = 0;
+    let exceeded = false;
+    req.on('data', (chunk: Buffer | string) => {
+      const byteLen = Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(chunk);
+      receivedBytes += byteLen;
+      if (receivedBytes > maxBytes) {
+        exceeded = true;
+        return;
+      }
+      bodyStr += chunk.toString();
     });
-    req.on('end', () => resolve(bodyStr));
+    req.on('end', () => {
+      if (exceeded) {
+        reject(new Error('PAYLOAD_TOO_LARGE'));
+      } else {
+        resolve(bodyStr);
+      }
+    });
+    req.on('error', reject);
   });
 }
 
@@ -330,6 +352,106 @@ function apiDevServerPlugin(): Plugin {
           } catch (err: any) {
             sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
           }
+          return;
+        }
+
+        if (url === '/api/mirrorbot/suggest-names') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+            return;
+          }
+
+          try {
+            const bodyStr = await readRequestBody(req, 256 * 1024);
+            let body = {};
+            try {
+              body = JSON.parse(bodyStr || '{}');
+            } catch {
+              sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+              return;
+            }
+            const result = await processSuggestBotNames(body, clientIp);
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            if (err?.message === 'PAYLOAD_TOO_LARGE') {
+              sendJson(res, 413, { success: false, error: 'Request payload is too large.' });
+              return;
+            }
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/mirrorbot/chat') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+            return;
+          }
+
+          try {
+            const bodyStr = await readRequestBody(req, 6 * 1024 * 1024);
+            let body = {};
+            try {
+              body = JSON.parse(bodyStr || '{}');
+            } catch {
+              sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+              return;
+            }
+            const result = await processMirrorBotChat(body, clientIp);
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            if (err?.message === 'PAYLOAD_TOO_LARGE') {
+              sendJson(res, 413, {
+                success: false,
+                error: 'Uploaded photo is too large. Please upload a photo under 4 MB.',
+              });
+              return;
+            }
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/mirrorbot/meta-status') {
+          if (req.method !== 'GET') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use GET.' });
+            return;
+          }
+          const hostHeader = typeof req.headers['host'] === 'string' ? req.headers['host'] : 'localhost:3000';
+          const originHeader = typeof req.headers['origin'] === 'string' ? req.headers['origin'] : `http://${hostHeader}`;
+          const result = processMetaStatus(originHeader);
+          sendJson(res, result.status, result.data);
+          return;
+        }
+
+        if (url === '/api/mirrorbot/meta-webhook') {
+          if (req.method === 'GET') {
+            const params = new URLSearchParams(queryStr || '');
+            const result = await processMetaWebhookGet(params);
+            res.statusCode = result.status;
+            res.setHeader('Content-Type', result.contentType);
+            res.end(result.body);
+            return;
+          }
+          if (req.method === 'POST') {
+            try {
+              const rawBody = await readRequestBody(req, 1024 * 1024);
+              const sig =
+                typeof req.headers['x-hub-signature-256'] === 'string'
+                  ? req.headers['x-hub-signature-256']
+                  : undefined;
+              const result = await processMetaWebhookPost({
+                rawBody,
+                signatureHeader: sig,
+                clientIp,
+              });
+              sendJson(res, result.status, result.data);
+            } catch (err: any) {
+              sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+            }
+            return;
+          }
+          sendJson(res, 405, { success: false, error: 'Method not allowed.' });
           return;
         }
         next();

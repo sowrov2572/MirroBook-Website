@@ -17,6 +17,7 @@ import { Footer } from './components/Footer';
 import { SowrovHosenProfile } from './components/SowrovHosenProfile';
 import { ContactPage } from './components/ContactPage';
 import { MirrorPOSPage } from './components/MirrorPOSPage';
+import { MirrorBotPage } from './components/MirrorBotPage';
 import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CustomerAuthPage } from './components/CustomerAuthPage';
@@ -98,6 +99,7 @@ const KNOWN_ROUTES = new Set([
   '/sowrov-hosen',
   '/contact',
   '/mirrorpos',
+  '/mirrorbot',
   '/login',
   '/signup',
   '/account',
@@ -115,6 +117,7 @@ function resolveRouteFromLocation(): string {
   if (hash === '#/sowrov-hosen') return '/sowrov-hosen';
   if (hash === '#/contact') return '/contact';
   if (hash === '#/mirrorpos') return '/mirrorpos';
+  if (hash === '#/mirrorbot') return '/mirrorbot';
   if (hash === '#/login') return '/login';
   if (hash === '#/signup') return '/signup';
   if (hash === '#/account') return '/account';
@@ -1107,6 +1110,11 @@ export default function App() {
             isAdminVerified={isAdminVerified}
             onGoogleSignIn={handleMirrorPOSGoogleSignIn}
           />
+        ) : currentPath === '/mirrorbot' ? (
+          <MirrorBotPage
+            onNavigateHome={() => navigateTo('/')}
+            onStartProject={() => setIsStartProjectOpen(true)}
+          />
         ) : (
           <>
             {/* 2. Hero with Interactive Agency Showreel Video Player */}
@@ -1147,6 +1155,7 @@ export default function App() {
               loading={productsLoading}
               onBuyItem={(item) => setCheckoutItem(item)}
               onOpenMirrorPOS={() => navigateTo('/mirrorpos')}
+              onOpenMirrorBot={() => navigateTo('/mirrorbot')}
               user={user}
               onOpenSignIn={() => setIsAuthModalOpen(true)}
               onNotify={showToast}

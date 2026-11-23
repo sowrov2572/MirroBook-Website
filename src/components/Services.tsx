@@ -14,15 +14,10 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
     >
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Aligned Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 pb-5 border-b border-white/[0.09]">
-          <div>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight uppercase">
-              SERVICES
-            </h2>
-          </div>
-          <p className="text-xs sm:text-sm text-[#A1AAA2] max-w-xl leading-relaxed">
-            MirrorBook Creative Agency services in Bangladesh — from cinematic video editing, motion graphics, and graphic design to digital marketing, web development, and modern software solutions.
-          </p>
+        <div className="mb-10 pb-5 border-b border-white/[0.09]">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight uppercase">
+            SERVICES
+          </h2>
         </div>
 
         {/* Equal-Height Elevated Dark Cards */}

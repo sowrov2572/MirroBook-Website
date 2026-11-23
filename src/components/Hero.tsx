@@ -1,13 +1,13 @@
 import React from 'react';
-import { ArrowDownRight, ArrowRight, Play } from 'lucide-react';
+import { ArrowDownRight, ArrowRight } from 'lucide-react';
 
 interface HeroProps {
   onViewPackages: () => void;
   onBrowseStore: () => void;
-  onPlayShowreel: () => void;
+  onPlayShowreel?: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPlayShowreel }) => {
+export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore }) => {
   return (
     <section className="relative min-h-[calc(100svh-4rem)] lg:min-h-[86vh] flex flex-col justify-center items-center py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 overflow-x-clip bg-[#0B0D0C] border-b border-white/[0.09]">
       {/* Full-Bleed Hero Banner with Balanced Matte Dark Scrim */}
@@ -71,17 +71,6 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
             >
               <span>Browse Plugins</span>
               <ArrowRight size={15} />
-            </button>
-
-            <button
-              type="button"
-              onClick={onPlayShowreel}
-              className="min-h-[44px] px-4 sm:px-5 py-2.5 text-xs font-semibold glossy-btn-secondary rounded-xl flex items-center justify-center gap-2 cursor-pointer group whitespace-nowrap"
-            >
-              <span className="w-6 h-6 rounded-lg bg-[#B7F34A] text-[#0B0D0C] flex items-center justify-center transition-transform duration-150 group-hover:scale-105 shrink-0">
-                <Play size={11} className="fill-[#0B0D0C] ml-0.5" />
-              </span>
-              <span>Show Reel</span>
             </button>
           </div>
         </div>

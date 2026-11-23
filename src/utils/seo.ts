@@ -16,7 +16,7 @@ const NOINDEX_ROBOTS = 'noindex, nofollow';
 
 export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/': {
-    title: 'MirrorBook',
+    title: 'MirrorBook – Reflecting Creativity',
     description:
       'MirrorBook is a Bangladesh-based creative agency and digital studio for graphic design, video editing, motion graphics, branding, web development, and digital products.',
     keywords:
@@ -39,12 +39,24 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
     ogImage: `${SITE}/mirror-pos-icon.png`,
     ogImageAlt: 'MirrorPOS software by MirrorBook',
   },
+  '/mirrorbot': {
+    title: 'Mirror Bot | MirrorBook AI Support Auto-Reply Agent',
+    description:
+      'Explore Mirror Bot by MirrorBook AI Support: configure channel access permissions, add auto-reply categories, set FAQs and policies, and test automated customer replies in Bangla and English.',
+    keywords:
+      'Mirror Bot, MirrorBook AI Support, AI support agent, auto reply bot Bangladesh, customer support automation, Bangla English AI bot, MirrorBook',
+    canonicalUrl: `${SITE}/mirrorbot`,
+    robots: INDEX_ROBOTS,
+    ogType: 'product',
+    ogImage: `${SITE}/mirrorbook-ai-support-icon.svg`,
+    ogImageAlt: 'Mirror Bot AI Support by MirrorBook',
+  },
   '/sowrov-hosen': {
     title: 'Team & Founder | MirrorBook',
     description:
-      'Meet MirrorBook founders Sowrov Hosen and Walid Ahmed Shraban, and team members Musabbir Al Said and Mehedi Hasan. Learn about the people behind the creative studio.',
+      'Meet MirrorBook founders Sowrov Hosen and Walid Ahmed Shraban, and team members Musabbir Al Sayed and Mehedi Hasan. Learn about the people behind the creative studio.',
     keywords:
-      'MirrorBook founders, MirrorBook team, Sowrov Hosen, Walid Ahmed Shraban, Musabbir Al Said, Mehedi Hasan, creative team Bangladesh',
+      'MirrorBook founders, MirrorBook team, Sowrov Hosen, Walid Ahmed Shraban, Musabbir Al Sayed, Mehedi Hasan, creative team Bangladesh',
     canonicalUrl: `${SITE}/sowrov-hosen`,
     robots: INDEX_ROBOTS,
     ogType: 'profile',

@@ -28,9 +28,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   return (
     <footer className="bg-[#121614] border-t border-white/[0.09] py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 sm:gap-10 pb-10 sm:pb-12 border-b border-white/[0.09]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 sm:gap-10 pb-10 sm:pb-12 border-b border-white/[0.09]">
           {/* Brand lockup */}
-          <div className="md:col-span-2 space-y-3">
+          <div className="md:col-span-5 space-y-3">
             <span className="font-display text-2xl font-bold tracking-tight text-[#F5F7F2] block">
               MirrorBook
             </span>
@@ -43,10 +43,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <a href="/contact" onClick={(e) => handleNav(e, '/contact')} className="inline-flex items-center text-xs font-semibold text-[#B7F34A] hover:text-[#F5F7F2] transition-colors">Let’s discuss your project →</a>
           </div>
 
-          {/* Direct Navigation */}
-          <div className="space-y-3">
-            <span className="text-xs text-[#F5F7F2] font-bold block">
-              Index
+          {/* Agency & Studio Links */}
+          <div className="md:col-span-2 space-y-3">
+            <span className="text-xs text-[#F5F7F2] font-bold uppercase tracking-wider block">
+              Agency
             </span>
             <ul className="space-y-2.5 text-xs text-[#A1AAA2]">
               <li>
@@ -60,12 +60,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 </a>
               </li>
               <li>
-                <a
-                  href="/mirrorpos"
-                  onClick={(e) => handleNav(e, '/mirrorpos')}
-                  className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
-                >
-                  MirrorPOS Software
+                <a href="#packages" onClick={(e) => handleNav(e, '#packages')} className="hover:text-[#B7F34A] transition-colors">
+                  Packages
                 </a>
               </li>
               <li>
@@ -74,22 +70,39 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   onClick={(e) => handleNav(e, '/sowrov-hosen')}
                   className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
                 >
-                  Founder & Team
+                  Founder &amp; Team
                 </a>
               </li>
               <li>
                 <a href="/contact" onClick={(e) => handleNav(e, '/contact')} className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium">
-                  Contact &amp; Project Enquiry
+                  Contact Us
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Software, Library & Courses */}
+          <div className="md:col-span-3 space-y-3">
+            <span className="text-xs text-[#F5F7F2] font-bold uppercase tracking-wider block">
+              Software, Library &amp; Courses
+            </span>
+            <ul className="space-y-2.5 text-xs text-[#A1AAA2]">
+              <li>
+                <a
+                  href="/mirrorpos"
+                  onClick={(e) => handleNav(e, '/mirrorpos')}
+                  className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
+                >
+                  MirrorPOS · Smart POS Software
                 </a>
               </li>
               <li>
-                <a href="#packages" onClick={(e) => handleNav(e, '#packages')} className="hover:text-[#B7F34A] transition-colors">
-                  Agency Packages
-                </a>
-              </li>
-              <li>
-                <a href="#plugins" onClick={(e) => handleNav(e, '#plugins')} className="hover:text-[#B7F34A] transition-colors">
-                  Plugin Library
+                <a
+                  href="/mirrorbot"
+                  onClick={(e) => handleNav(e, '/mirrorbot')}
+                  className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
+                >
+                  Mirror Bot · AI Support Agent
                 </a>
               </li>
               <li>
@@ -98,28 +111,24 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 </a>
               </li>
               <li>
+                <a href="#plugins" onClick={(e) => handleNav(e, '#plugins')} className="hover:text-[#B7F34A] transition-colors">
+                  Plugin Library
+                </a>
+              </li>
+              <li>
                 <a href="#tutorials" onClick={(e) => handleNav(e, '#tutorials')} className="hover:text-[#B7F34A] transition-colors">
-                  Courses &amp; Tutorials
+                  Courses &amp; Free Tutorials
                 </a>
               </li>
             </ul>
           </div>
 
           {/* Studio Network / Social Links */}
-          <div className="space-y-3">
-            <span className="text-xs text-[#F5F7F2] font-bold block">
+          <div className="md:col-span-2 space-y-3">
+            <span className="text-xs text-[#F5F7F2] font-bold uppercase tracking-wider block">
               Network
             </span>
             <ul className="space-y-2.5 text-xs text-[#A1AAA2]">
-              <li>
-                <a
-                  href="/sowrov-hosen"
-                  onClick={(e) => handleNav(e, '/sowrov-hosen')}
-                  className="hover:text-[#B7F34A] transition-colors font-medium text-[#F5F7F2]"
-                >
-                  Founder & Team →
-                </a>
-              </li>
               <li>
                 <a
                   href="https://sowrovhosenstudio.netlify.app"

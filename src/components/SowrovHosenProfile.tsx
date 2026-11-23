@@ -16,19 +16,19 @@ const teamMembers = [
   {
     name: 'Walid Ahmed Shraban',
     role: 'Founder & Web Developer',
-    photoUrl: '',
+    photoUrl: 'https://i.ibb.co/BVtvZBg4/668652154-2513163962481178-6668835466422179627-n.jpg',
     portfolio: 'https://srabonx.netlify.app/',
   },
   {
-    name: 'Musabbir Al Said',
+    name: 'Musabbir Al Sayed',
     role: 'Team Member',
-    photoUrl: '',
+    photoUrl: 'https://i.ibb.co/67yR2bfy/Screenshot-2026-11-23-234418.png',
     portfolio: '',
   },
   {
     name: 'Mehedi Hasan',
     role: 'Team Member',
-    photoUrl: '',
+    photoUrl: 'https://i.ibb.co/FqNDq5v5/Mehedi-Hasan.jpg',
     portfolio: '',
   },
 ];

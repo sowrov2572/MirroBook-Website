@@ -106,7 +106,8 @@ export const Header: React.FC<HeaderProps> = ({
           {navLinks.map((link) => {
             const isCurrent =
               link.href === currentPath ||
-              (currentPath === '/mirrorpos' && link.href === '#plugins-software');
+              ((currentPath === '/mirrorpos' || currentPath === '/mirrorbot') &&
+                link.href === '#plugins-software');
             return (
               <a
                 key={link.name}
@@ -228,7 +229,8 @@ export const Header: React.FC<HeaderProps> = ({
             {navLinks.map((link) => {
               const isCurrent =
                 link.href === currentPath ||
-                (currentPath === '/mirrorpos' && link.href === '#plugins-software');
+                ((currentPath === '/mirrorpos' || currentPath === '/mirrorbot') &&
+                  link.href === '#plugins-software');
               return (
                 <a
                   key={link.name}

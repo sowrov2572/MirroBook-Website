@@ -30,6 +30,17 @@
     </image:image>
   </url>
   <url>
+    <loc>https://mirrorbook.site/mirrorbot</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://mirrorbook.site/mirrorbook-ai-support-icon.svg</image:loc>
+      <image:title>Mirror Bot Official Icon</image:title>
+      <image:caption>Mirror Bot Automated AI Support Agent by MirrorBook</image:caption>
+    </image:image>
+  </url>
+  <url>
     <loc>https://mirrorbook.site/sowrov-hosen</loc>
     <lastmod>2026-11-22</lastmod>
     <changefreq>monthly</changefreq>
