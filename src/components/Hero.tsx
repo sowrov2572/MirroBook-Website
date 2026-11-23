@@ -26,4 +26,3 @@ export const Hero: React.FC<HeroProps> = ({ onViewPackages, onBrowseStore, onPla
     </div>
   </section>
 );
-};
