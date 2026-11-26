@@ -1,12 +1,12 @@
 import { verifyFirebaseIdToken, VerifiedFirebaseToken } from '../auth/session.js';
-import { normalizeTrxId } from '../_lib/bkashSmsParser.js';
+import { normalizeTrxId } from '../../_lib/bkashSmsParser.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   generateServerLicenseKey,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin.js';
-import { getServerProductFallback } from '../_lib/courseCatalog.js';
+} from '../../_lib/firebaseAdmin.js';
+import { getServerProductFallback } from '../../_lib/courseCatalog.js';
 import {
   SendEmailOptions,
   SendEmailResult,
@@ -15,11 +15,11 @@ import {
   isSmtpConfigured,
   sanitizeLogMessage,
   sendEmailBatch,
-} from '../_lib/mailer.js';
+} from '../../_lib/mailer.js';
 import {
   buildOrderVerifiedAccessEmails,
   formatDhakaDateTime,
-} from '../_lib/emailTemplates.js';
+} from '../../_lib/emailTemplates.js';
 
 export interface AdminApproveInput {
   authorizationHeader?: string;

@@ -7,19 +7,19 @@ import {
   isSmtpConfigured,
   sanitizeLogMessage,
   sendEmailBatch,
-} from '../_lib/mailer.js';
+} from '../../_lib/mailer.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin.js';
-import { checkRateLimitBucket } from '../_lib/security.js';
-import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../_lib/courseCatalog.js';
+} from '../../_lib/firebaseAdmin.js';
+import { checkRateLimitBucket } from '../../_lib/security.js';
+import { getServerProductFallback, SOFTWARE_MIRRORPOS_ID } from '../../_lib/courseCatalog.js';
 import {
   issueFreeAccessToken,
   resetFreeAccessTokensForTests,
-} from '../_lib/freeAccessToken.js';
-import { buildFreeSoftwareAccessEmails } from '../_lib/emailTemplates.js';
+} from '../../_lib/freeAccessToken.js';
+import { buildFreeSoftwareAccessEmails } from '../../_lib/emailTemplates.js';
 
 const recentDeliveries = new Map<string, number>();
 const inFlightRequests = new Set<string>();

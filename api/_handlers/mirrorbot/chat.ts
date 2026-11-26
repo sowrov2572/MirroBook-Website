@@ -4,7 +4,7 @@ import {
   checkMirrorBotRateLimit,
   extractFriendlyGeminiError,
   generateMirrorBotContent,
-} from '../_lib/gemini.js';
+} from '../../_lib/gemini.js';
 
 export interface MirrorBotCatalogItem {
   id?: string;

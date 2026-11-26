@@ -3,9 +3,9 @@ import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin.js';
-import { checkRateLimitBucket } from '../_lib/security.js';
-import { getServerProductFallback } from '../_lib/courseCatalog.js';
+} from '../../_lib/firebaseAdmin.js';
+import { checkRateLimitBucket } from '../../_lib/security.js';
+import { getServerProductFallback } from '../../_lib/courseCatalog.js';
 
 function cleanId(val: unknown): string {
   if (typeof val !== 'string') return '';

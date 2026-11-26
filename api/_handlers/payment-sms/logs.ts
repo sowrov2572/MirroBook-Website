@@ -3,7 +3,7 @@ import {
   AdminStore,
   createFirebaseAdminStore,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin.js';
+} from '../../_lib/firebaseAdmin.js';
 
 export async function processGetPaymentSmsLogs(
   authorizationHeader?: string,
