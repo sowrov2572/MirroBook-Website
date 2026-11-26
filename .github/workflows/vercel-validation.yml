@@ -1,0 +1,26 @@
+name: Validate Vercel deployment
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - fix/vercel-serverless-function-limit
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Enforce single Vercel API entrypoint
+        run: bun run check:vercel-api
+      - name: Type-check
+        run: bun run lint
+      - name: Production build
+        run: bun run build
