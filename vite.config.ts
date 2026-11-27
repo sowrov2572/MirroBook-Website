@@ -19,9 +19,9 @@ import {
 import { processMirrorBotChat } from './api/_handlers/mirrorbot/chat';
 import { processSuggestBotNames } from './api/_handlers/mirrorbot/suggest-names';
 import { processMetaStatus } from './api/_handlers/mirrorbot/meta-status';
-import { processMetaOAuthUrl } from './api/_handlers/mirrorbot/meta-oauth-url';
-import { processMetaCallback } from './api/_handlers/mirrorbot/meta-callback';
-import { processMetaConnect } from './api/_handlers/mirrorbot/meta-connect';
+import { processMetaOAuthUrl } from './api/mirrorbot/meta-oauth-url';
+import { processMetaCallback } from './api/mirrorbot/meta-callback';
+import { processMetaConnect } from './api/mirrorbot/meta-connect';
 import {
   processMetaWebhookGet,
   processMetaWebhookPost,
