@@ -7,12 +7,12 @@ import {
   isSmtpConfigured,
   sanitizeLogMessage,
   sendEmailBatch,
-} from './_lib/mailer.js';
+} from '../_lib/mailer.js';
 import {
   buildInquiryEmails,
   cleanText as cleanPlainText,
   formatDhakaDateTime,
-} from './_lib/emailTemplates.js';
+} from '../_lib/emailTemplates.js';
 
 // In-memory rate limiting map: IP -> array of timestamps
 const rateLimitMap = new Map<string, number[]>();

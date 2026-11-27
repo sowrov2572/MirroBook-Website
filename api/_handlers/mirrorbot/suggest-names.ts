@@ -4,7 +4,7 @@ import {
   checkMirrorBotRateLimit,
   extractFriendlyGeminiError,
   generateMirrorBotContent,
-} from '../_lib/gemini.js';
+} from '../../_lib/gemini.js';
 
 export interface SuggestNamesInput {
   businessName?: string;

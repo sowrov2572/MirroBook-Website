@@ -1,4 +1,4 @@
-import { getGeminiApiKey } from '../_lib/gemini.js';
+import { getGeminiApiKey } from '../../_lib/gemini.js';
 
 export interface MetaStatusResult {
   status: number;

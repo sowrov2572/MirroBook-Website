@@ -4,15 +4,15 @@ import {
   isValidTrxIdFormat,
   normalizeBdPhone,
   normalizeTrxId,
-} from '../_lib/bkashSmsParser.js';
+} from '../../_lib/bkashSmsParser.js';
 import {
   AdminStore,
   createFirebaseAdminStore,
   generateServerLicenseKey,
   isFirebaseAdminConfigured,
-} from '../_lib/firebaseAdmin.js';
-import { checkRateLimitBucket } from '../_lib/security.js';
-import { getServerProductFallback } from '../_lib/courseCatalog.js';
+} from '../../_lib/firebaseAdmin.js';
+import { checkRateLimitBucket } from '../../_lib/security.js';
+import { getServerProductFallback } from '../../_lib/courseCatalog.js';
 import {
   SendEmailOptions,
   SendEmailResult,
@@ -21,12 +21,12 @@ import {
   isSmtpConfigured,
   sanitizeLogMessage,
   sendEmailBatch,
-} from '../_lib/mailer.js';
+} from '../../_lib/mailer.js';
 import {
   buildOrderVerifiedAccessEmails,
   buildPaymentSubmissionEmails,
   formatDhakaDateTime,
-} from '../_lib/emailTemplates.js';
+} from '../../_lib/emailTemplates.js';
 
 const ALLOWED_METHODS = new Set(['bKash', 'Nagad', 'Rocket', 'Upay', 'Bank Transfer']);
 
