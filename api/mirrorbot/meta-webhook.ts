@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { processMirrorBotChat, type MirrorBotBusinessContext } from './chat.js';
+import { processMirrorBotChat, type MirrorBotBusinessContext } from '../_handlers/mirrorbot/chat.js';
 import {
   resolveWorkspaceByPageId,
   resolveWorkspaceByWhatsAppPhoneId,
