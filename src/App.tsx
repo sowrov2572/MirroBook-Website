@@ -19,6 +19,7 @@ import { ContactPage } from './components/ContactPage';
 import { MirrorPOSPage } from './components/MirrorPOSPage';
 import { MirrorBotPage } from './components/MirrorBotPage';
 import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
+import { EmailComposeModal } from './components/EmailComposeModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CustomerAuthPage } from './components/CustomerAuthPage';
 import { CustomerDashboard } from './components/CustomerDashboard';
@@ -130,6 +131,8 @@ export default function App() {
   const [checkoutItem, setCheckoutItem] = useState<CheckoutItem | null>(null);
   const [activeVideo, setActiveVideo] = useState<PlayableVideo | null>(null);
   const [isStartProjectOpen, setIsStartProjectOpen] = useState(false);
+  const [isEmailSheetOpen, setIsEmailSheetOpen] = useState(false);
+  const [emailSheetSubject, setEmailSheetSubject] = useState('Project Enquiry');
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isPackageInquiryOpen, setIsPackageInquiryOpen] = useState(false);
@@ -1087,9 +1090,20 @@ export default function App() {
           <SowrovHosenProfile
             onNavigateHome={() => navigateTo('/')}
             onStartProject={() => setIsStartProjectOpen(true)}
+            onNavigate={navigateTo}
+            onOpenEmailSheet={(subject) => {
+              setEmailSheetSubject(subject || 'Project Enquiry');
+              setIsEmailSheetOpen(true);
+            }}
           />
         ) : currentPath === '/contact' ? (
-          <ContactPage onNavigateHome={() => navigateTo('/')} />
+          <ContactPage
+            onNavigateHome={() => navigateTo('/')}
+            onOpenEmailSheet={(subject) => {
+              setEmailSheetSubject(subject || 'Project Enquiry');
+              setIsEmailSheetOpen(true);
+            }}
+          />
         ) : currentPath === '/mirrorpos' ? (
           <MirrorPOSPage
             onNavigateHome={() => navigateTo('/')}
@@ -1185,7 +1199,13 @@ export default function App() {
       </main>
 
       {/* 8. Footer with Founder Profile and Index links */}
-      <Footer onNavigate={navigateTo} />
+      <Footer
+        onNavigate={navigateTo}
+        onOpenEmailSheet={(subject) => {
+          setEmailSheetSubject(subject || 'Project Enquiry');
+          setIsEmailSheetOpen(true);
+        }}
+      />
 
       {/* Customer Authentication Quick Modal (used during checkout or download unlock) */}
       <AuthModal
@@ -1259,6 +1279,16 @@ export default function App() {
         isOpen={isStartProjectOpen}
         onClose={() => setIsStartProjectOpen(false)}
         onSelectCheckout={(item) => setCheckoutItem(item)}
+      />
+
+      {/* Direct Email Compose Sheet Modal */}
+      <EmailComposeModal
+        isOpen={isEmailSheetOpen}
+        onClose={() => setIsEmailSheetOpen(false)}
+        defaultSubject={emailSheetSubject}
+        defaultName={user?.displayName || ''}
+        defaultEmail={user?.email || ''}
+        onSuccessToast={(msg) => showToast(msg, 'success')}
       />
 
       {/* Monthly Package Inquiry & Customizer Modal */}

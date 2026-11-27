@@ -2,9 +2,12 @@ import React from 'react';
 
 interface FooterProps {
   onNavigate?: (path: string) => void;
+  onOpenEmailSheet?: (defaultSubject?: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+const FOOTER_WHATSAPP_URL = 'https://wa.me/8801767079837?text=' + encodeURIComponent('Hello');
+
+export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) => {
   const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (href.startsWith('/')) {
       e.preventDefault();
@@ -196,8 +199,25 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <a
+                  href={FOOTER_WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Chat with MirrorBook on WhatsApp"
+                  className="hover:text-[#B7F34A] transition-colors font-medium text-[#F5F7F2]"
+                >
+                  Chat on WhatsApp
+                </a>
+              </li>
+              <li>
+                <a
                   href="mailto:mirrorbook.site@gmail.com"
-                  className="hover:text-[#B7F34A] transition-colors break-all"
+                  onClick={(e) => {
+                    if (onOpenEmailSheet) {
+                      e.preventDefault();
+                      onOpenEmailSheet('Project Enquiry');
+                    }
+                  }}
+                  className="hover:text-[#B7F34A] transition-colors break-all cursor-pointer"
                 >
                   mirrorbook.site@gmail.com
                 </a>

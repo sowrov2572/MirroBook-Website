@@ -1310,6 +1310,9 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                           <p className="text-[11px] text-[#A1AAA2] leading-relaxed">
                             Open the single-use verification link inside your email inbox to launch MirrorPOS directly.
                           </p>
+                          <p className="text-[11px] text-[#B7F34A]/90 leading-relaxed">
+                            Please also check your Spam folder if you don&apos;t see it in your inbox. (স্প্যাম ফোল্ডারও চেক করুন।)
+                          </p>
                           <p className="text-[11px] font-mono text-[#B7F34A]">
                             Reference ID: {accessConfirmed.referenceId}
                           </p>
@@ -1970,6 +1973,9 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                       </h3>
                       <p className="text-xs text-[#D4DBD5] leading-relaxed">
                         {bkashSuccessMessage}
+                      </p>
+                      <p className="text-[11px] text-[#B7F34A]/90 leading-relaxed">
+                        Please also check your Spam folder if you don&apos;t see the confirmation email in your inbox. (স্প্যাম ফোল্ডারও চেক করুন।)
                       </p>
                     </div>
                   </div>

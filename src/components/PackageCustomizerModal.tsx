@@ -282,9 +282,14 @@ Sent via https://mirrorbook.site/`;
                 {/* Email Confirmation Notice */}
                 <div className="p-3.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/30 text-xs text-[#A1AAA2] max-w-md mx-auto flex items-start gap-2.5 text-left">
                   <Mail size={16} className="text-[#B7F34A] shrink-0 mt-0.5" />
-                  <p className="leading-relaxed text-[11px] break-words">
-                    A confirmation email has been dispatched to <strong className="text-[#F5F7F2] break-all">{email}</strong>. Our team has received your order request and will contact you shortly to discuss next steps, payment details, and project requirements.
-                  </p>
+                  <div className="space-y-1">
+                    <p className="leading-relaxed text-[11px] break-words">
+                      A confirmation email has been dispatched to <strong className="text-[#F5F7F2] break-all">{email}</strong>. Our team has received your order request and will contact you shortly to discuss next steps, payment details, and project requirements.
+                    </p>
+                    <p className="text-[11px] text-[#B7F34A]/90">
+                      Please also check your Spam folder. (স্প্যাম ফোল্ডারও চেক করুন।)
+                    </p>
+                  </div>
                 </div>
 
                 <p className="text-[11px] text-[#707A72] max-w-sm mx-auto">

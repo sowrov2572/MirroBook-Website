@@ -256,9 +256,14 @@ Sent via https://mirrorbook.site/`;
 
                 <div className="p-3 bg-[#B7F34A]/10 border border-[#B7F34A]/30 rounded-xl text-left flex items-start gap-2 text-xs text-[#A1AAA2]">
                   <Mail size={15} className="text-[#B7F34A] shrink-0 mt-0.5" />
-                  <p className="text-[11px] leading-relaxed break-words">
-                    Confirmation email sent to <strong className="text-[#F5F7F2] break-all">{submittedInfo?.email || clientEmail}</strong>. Our team will review your project brief and follow up shortly.
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-[11px] leading-relaxed break-words">
+                      Confirmation email sent to <strong className="text-[#F5F7F2] break-all">{submittedInfo?.email || clientEmail}</strong>. Our team will review your project brief and follow up shortly.
+                    </p>
+                    <p className="text-[11px] text-[#B7F34A]/90">
+                      Please also check your Spam folder. (স্প্যাম ফোল্ডারও চেক করুন।)
+                    </p>
+                  </div>
                 </div>
 
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">

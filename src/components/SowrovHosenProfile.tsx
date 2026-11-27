@@ -1,10 +1,14 @@
 import React, { useEffect } from 'react';
-import { ExternalLink, Globe } from 'lucide-react';
+import { ExternalLink, Globe, Mail, MessageCircle } from 'lucide-react';
 
 interface SowrovHosenProfileProps {
   onNavigateHome: () => void;
   onStartProject?: () => void;
+  onNavigate?: (path: string) => void;
+  onOpenEmailSheet?: (defaultSubject?: string) => void;
 }
+
+const WHATSAPP_DIRECT_URL = 'https://wa.me/8801767079837?text=' + encodeURIComponent('Hello');
 
 const teamMembers = [
   {
@@ -33,7 +37,10 @@ const teamMembers = [
   },
 ];
 
-export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = () => {
+export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
+  onNavigate,
+  onOpenEmailSheet,
+}) => {
   useEffect(() => {
     const profileSchema = {
       '@context': 'https://schema.org',
@@ -138,12 +145,47 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = () => {
           <p className="mx-auto mt-3 max-w-xl text-sm sm:text-base leading-relaxed text-[#A1AAA2]">
             Have a project or need a creative service? Get in touch with MirrorBook.
           </p>
-          <a
-            href="/contact"
-            className="mt-6 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[#B7F34A] px-6 py-3 text-sm font-bold text-[#0B0D0C] transition-opacity hover:opacity-90"
-          >
-            Contact Us <ExternalLink size={15} />
-          </a>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href={WHATSAPP_DIRECT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[#B7F34A] px-5 py-3 text-sm font-bold text-[#0B0D0C] transition-opacity hover:opacity-90"
+            >
+              <MessageCircle size={15} />
+              Chat on WhatsApp
+            </a>
+            {onOpenEmailSheet ? (
+              <button
+                type="button"
+                onClick={() => onOpenEmailSheet('Project Enquiry')}
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/[0.14] bg-[#171C19] px-5 py-3 text-sm font-semibold text-[#F5F7F2] transition-colors hover:border-[#B7F34A]/50 hover:text-[#B7F34A] cursor-pointer"
+              >
+                <Mail size={15} />
+                Send us an Email
+              </button>
+            ) : (
+              <a
+                href="mailto:mirrorbook.site@gmail.com?subject=Project%20Enquiry%20%7C%20MirrorBook"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/[0.14] bg-[#171C19] px-5 py-3 text-sm font-semibold text-[#F5F7F2] transition-colors hover:border-[#B7F34A]/50 hover:text-[#B7F34A]"
+              >
+                <Mail size={15} />
+                Send us an Email
+              </a>
+            )}
+            <a
+              href="/contact"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('/contact');
+                }
+              }}
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/[0.1] px-5 py-3 text-sm font-medium text-[#A1AAA2] transition-colors hover:border-white/25 hover:text-[#F5F7F2]"
+            >
+              Contact Us <ExternalLink size={14} />
+            </a>
+          </div>
         </section>
       </div>
     </main>
