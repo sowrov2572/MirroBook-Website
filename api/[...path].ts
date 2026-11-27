@@ -12,6 +12,9 @@ import handler10 from './_handlers/payment-sms/receive.js';
 import handler11 from './_handlers/software/access.js';
 import handler12 from './_handlers/software/free-access.js';
 import handler13 from './_handlers/software/verify-free-access.js';
+import handler14 from './_handlers/mirrorbot/meta-oauth-url.js';
+import handler15 from './_handlers/mirrorbot/meta-callback.js';
+import handler16 from './_handlers/mirrorbot/meta-connect.js';
 
 const handlers: Record<string, (req: any, res: any) => any> = {
   'auth/session': handler0,
@@ -20,6 +23,9 @@ const handlers: Record<string, (req: any, res: any) => any> = {
   'mirrorbot/meta-status': handler3,
   'mirrorbot/meta-webhook': handler4,
   'mirrorbot/suggest-names': handler5,
+  'mirrorbot/meta-oauth-url': handler14,
+  'mirrorbot/meta-callback': handler15,
+  'mirrorbot/meta-connect': handler16,
   'orders/admin-approve': handler6,
   'orders/submit-and-verify': handler7,
   'package-order': handler8,

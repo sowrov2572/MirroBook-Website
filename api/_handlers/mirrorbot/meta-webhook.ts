@@ -1,5 +1,19 @@
 import crypto from 'crypto';
 import { processMirrorBotChat, type MirrorBotBusinessContext } from './chat.js';
+import {
+  resolveWorkspaceByPageId,
+  resolveWorkspaceByWhatsAppPhoneId,
+  type MirrorBotWorkspaceRecord,
+} from '../../_lib/metaStore.js';
+
+const MAX_WEBHOOK_IMAGE_BYTES = 4 * 1024 * 1024;
+const ALLOWED_IMAGE_MIMES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
 
 function safeEquals(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -10,7 +24,7 @@ function safeEquals(a: string, b: string): boolean {
 
 function verifyMetaSignature(rawBody: string, signatureHeader?: string): boolean {
   const appSecret = (process.env.META_APP_SECRET || '').trim();
-  if (!appSecret) return true; // Optional when META_APP_SECRET is not set
+  if (!appSecret) return false;
   if (!signatureHeader || !signatureHeader.startsWith('sha256=')) return false;
 
   const expected =
@@ -18,27 +32,115 @@ function verifyMetaSignature(rawBody: string, signatureHeader?: string): boolean
   return safeEquals(expected, signatureHeader);
 }
 
-function getDefaultWebhookBusiness(): MirrorBotBusinessContext {
+function isAllowedMetaMediaHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '169.254.169.254' ||
+    /^\d+\.\d+\.\d+\.\d+$/.test(host) ||
+    host.includes(':')
+  ) {
+    return false;
+  }
+
+  return (
+    host === 'graph.facebook.com' ||
+    host === 'lookaside.fbsbx.com' ||
+    host.endsWith('.fbcdn.net') ||
+    host.endsWith('.fbsbx.com') ||
+    host.endsWith('.facebook.com') ||
+    host.endsWith('.whatsapp.net') ||
+    host.endsWith('.cdninstagram.com')
+  );
+}
+
+async function fetchMetaImageAsBase64(
+  rawUrl: string,
+  bearerToken?: string
+): Promise<{ mimeType: string; base64Data: string } | null> {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:' || !isAllowedMetaMediaHost(parsed.hostname)) {
+      return null;
+    }
+
+    const headers: Record<string, string> = {};
+    if (bearerToken) {
+      headers.Authorization = `Bearer ${bearerToken}`;
+    }
+
+    const res = await fetch(parsed.toString(), { headers });
+    if (!res.ok) return null;
+
+    const rawMime = (res.headers.get('content-type') || 'image/jpeg').split(';')[0].trim().toLowerCase();
+    const mimeType = ALLOWED_IMAGE_MIMES.has(rawMime) ? rawMime : 'image/jpeg';
+
+    const arrayBuf = await res.arrayBuffer();
+    if (!arrayBuf || arrayBuf.byteLength === 0 || arrayBuf.byteLength > MAX_WEBHOOK_IMAGE_BYTES) {
+      return null;
+    }
+
+    return {
+      mimeType,
+      base64Data: Buffer.from(arrayBuf).toString('base64'),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchWhatsAppMediaImage(
+  mediaId: string,
+  waToken: string
+): Promise<{ mimeType: string; base64Data: string } | null> {
+  if (!mediaId || !waToken) return null;
+  try {
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(mediaId)}`,
+      { headers: { Authorization: `Bearer ${waToken}` } }
+    );
+    if (!metaRes.ok) return null;
+    const metaJson: any = await metaRes.json().catch(() => null);
+    const mediaUrl = typeof metaJson?.url === 'string' ? metaJson.url : '';
+    if (!mediaUrl) return null;
+    return await fetchMetaImageAsBase64(mediaUrl, waToken);
+  } catch {
+    return null;
+  }
+}
+
+function buildBusinessContextFromWorkspace(
+  workspace: MirrorBotWorkspaceRecord
+): MirrorBotBusinessContext {
+  const summary =
+    workspace.workPoints.length > 0
+      ? workspace.workPoints.map((pt) => `• ${pt}`).join('\n')
+      : 'Products and services provided by the business.';
+
   return {
-    businessName: (process.env.MIRRORBOT_BUSINESS_NAME || 'MirrorBook').trim(),
-    businessCategory: (process.env.MIRRORBOT_BUSINESS_CATEGORY || 'Creative Studio & Business').trim(),
-    whatYouWorkWith: (
-      process.env.MIRRORBOT_BUSINESS_SUMMARY ||
-      'Graphic design, video editing, web development, MirrorPOS, and Mirror Bot AI support solutions.'
-    ).trim(),
-    openingHours: (process.env.MIRRORBOT_OPENING_HOURS || '10:00 AM – 10:00 PM (Sat–Thu)').trim(),
-    deliveryInfo: (
-      process.env.MIRRORBOT_DELIVERY_INFO ||
-      'Nationwide Cash on Delivery and digital service delivery across Bangladesh.'
-    ).trim(),
+    businessName: workspace.businessName || 'MirrorBook Business',
+    businessCategory: workspace.facebookPage.pageCategory || 'Business',
+    whatYouWorkWith: summary,
+    openingHours: '',
+    deliveryInfo: '',
     codAvailable: true,
-    supportPhone: (process.env.MIRRORBOT_SUPPORT_PHONE || '+8801767079837').trim(),
-    botName: (process.env.MIRRORBOT_AGENT_NAME || 'Mirror Bot').trim(),
+    supportPhone: workspace.whatsapp.displayPhone || '',
+    botName: workspace.botName || 'Mirror Bot',
+    connectedChannels: {
+      facebookPage: workspace.facebookPage.connected ? workspace.facebookPage.pageName : undefined,
+      messengerConnected: workspace.messenger.connected,
+      whatsappConnected: workspace.whatsapp.connected,
+      whatsappNumber: workspace.whatsapp.displayPhone || undefined,
+    },
   };
 }
 
-async function sendMessengerReply(recipientId: string, text: string): Promise<void> {
-  const pageToken = (process.env.META_PAGE_ACCESS_TOKEN || '').trim();
+async function sendMessengerReply(
+  recipientId: string,
+  text: string,
+  pageToken: string
+): Promise<void> {
   if (!pageToken || !recipientId || !text) return;
 
   await fetch('https://graph.facebook.com/v21.0/me/messages', {
@@ -55,9 +157,32 @@ async function sendMessengerReply(recipientId: string, text: string): Promise<vo
   });
 }
 
-async function sendWhatsAppReply(toNumber: string, text: string): Promise<void> {
-  const waToken = (process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
-  const phoneNumberId = (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
+async function sendFacebookCommentReply(
+  commentId: string,
+  text: string,
+  pageToken: string
+): Promise<void> {
+  if (!pageToken || !commentId || !text) return;
+
+  await fetch(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}/comments`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${pageToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: text }),
+    }
+  );
+}
+
+async function sendWhatsAppReply(
+  toNumber: string,
+  text: string,
+  waToken: string,
+  phoneNumberId: string
+): Promise<void> {
   if (!waToken || !phoneNumberId || !toNumber || !text) return;
 
   await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneNumberId)}/messages`, {
@@ -84,6 +209,23 @@ export async function processMetaWebhookGet(query: URLSearchParams): Promise<{
   const token = query.get('hub.verify_token') || '';
   const challenge = query.get('hub.challenge') || '';
   const expectedToken = (process.env.META_WEBHOOK_VERIFY_TOKEN || '').trim();
+  const appSecretSet = Boolean((process.env.META_APP_SECRET || '').trim());
+
+  // Direct browser health check (no Meta hub.mode handshake query)
+  if (!mode) {
+    return {
+      status: 200,
+      body: JSON.stringify({
+        success: true,
+        endpoint: 'Mirror Bot Meta Webhook',
+        status: 'active',
+        verifyTokenConfigured: Boolean(expectedToken),
+        appSecretConfigured: appSecretSet,
+        note: 'Paste this URL into Meta App Dashboard -> Webhooks (Page, Messenger, WhatsApp) and use your META_WEBHOOK_VERIFY_TOKEN.',
+      }),
+      contentType: 'application/json',
+    };
+  }
 
   if (!expectedToken) {
     return {
@@ -127,50 +269,148 @@ export async function processMetaWebhookPost(params: {
     return { status: 400, data: { success: false, error: 'Invalid JSON payload.' } };
   }
 
-  const business = getDefaultWebhookBusiness();
   let handled = 0;
 
-  // 1. Facebook Page / Messenger incoming messages
+  // 1. Multi-Tenant Facebook Page Comments & Messenger DMs (Text + Photos)
   if (payload?.object === 'page' && Array.isArray(payload.entry)) {
     for (const entry of payload.entry) {
-      const events = Array.isArray(entry?.messaging) ? entry.messaging : [];
-      for (const event of events) {
-        const senderId = event?.sender?.id;
-        const msgText = event?.message?.text;
-        if (!senderId || !msgText || event?.message?.is_echo) continue;
+      const pageId = String(entry?.id || '').trim();
+      if (!pageId) continue;
 
-        const aiResult = await processMirrorBotChat(
-          { business, message: String(msgText), history: [] },
-          params.clientIp
-        );
-        if (aiResult.status === 200 && Array.isArray(aiResult.data.replies)) {
-          for (const replyText of aiResult.data.replies) {
-            await sendMessengerReply(String(senderId), replyText);
+      const workspace = await resolveWorkspaceByPageId(pageId);
+      if (!workspace || !workspace.autoReplyEnabled) continue;
+
+      const pageToken = workspace.facebookPage.pageAccessToken || '';
+      if (!pageToken) continue;
+
+      const business = buildBusinessContextFromWorkspace(workspace);
+
+      // 1a. Messenger direct messages (supports text + customer photos)
+      if (workspace.messenger.connected) {
+        const events = Array.isArray(entry?.messaging) ? entry.messaging : [];
+        for (const event of events) {
+          const senderId = event?.sender?.id;
+          if (!senderId || event?.message?.is_echo || senderId === pageId) continue;
+
+          const msgText = typeof event?.message?.text === 'string' ? event.message.text.trim() : '';
+          const attachments = Array.isArray(event?.message?.attachments)
+            ? event.message.attachments
+            : [];
+          const imageAttachment = attachments.find(
+            (att: any) => att?.type === 'image' && typeof att?.payload?.url === 'string'
+          );
+
+          if (!msgText && !imageAttachment) continue;
+
+          const image = imageAttachment
+            ? await fetchMetaImageAsBase64(imageAttachment.payload.url)
+            : null;
+
+          if (!msgText && !image) continue;
+
+          const aiResult = await processMirrorBotChat(
+            {
+              business,
+              message: msgText,
+              image,
+              history: [],
+            },
+            params.clientIp
+          );
+          if (aiResult.status === 200 && Array.isArray(aiResult.data.replies)) {
+            for (const replyText of aiResult.data.replies) {
+              await sendMessengerReply(String(senderId), replyText, pageToken);
+            }
+            handled += 1;
           }
-          handled += 1;
+        }
+      }
+
+      // 1b. Facebook Page post comments (supports text + photo comments)
+      if (workspace.facebookPage.connected) {
+        const changes = Array.isArray(entry?.changes) ? entry.changes : [];
+        for (const change of changes) {
+          if (change?.field !== 'feed') continue;
+          const val = change?.value || {};
+          if (val.item !== 'comment' || val.verb !== 'add') continue;
+
+          const commentId = val.comment_id;
+          const messageText = typeof val.message === 'string' ? val.message.trim() : '';
+          const photoUrl = typeof val.photo === 'string' ? val.photo.trim() : '';
+          const fromId = val.from?.id;
+
+          if (!commentId || (fromId && fromId === workspace.facebookPage.pageId)) {
+            continue;
+          }
+          if (!messageText && !photoUrl) continue;
+
+          const image = photoUrl ? await fetchMetaImageAsBase64(photoUrl) : null;
+          if (!messageText && !image) continue;
+
+          const aiResult = await processMirrorBotChat(
+            {
+              business,
+              message: messageText,
+              image,
+              history: [],
+            },
+            params.clientIp
+          );
+          if (aiResult.status === 200 && Array.isArray(aiResult.data.replies)) {
+            const combined = aiResult.data.replies.join(' ');
+            await sendFacebookCommentReply(String(commentId), combined, pageToken);
+            handled += 1;
+          }
         }
       }
     }
   }
 
-  // 2. WhatsApp Business Cloud API incoming messages
+  // 2. Multi-Tenant WhatsApp Business Cloud API (Text + Customer Photos)
   if (payload?.object === 'whatsapp_business_account' && Array.isArray(payload.entry)) {
     for (const entry of payload.entry) {
       const changes = Array.isArray(entry?.changes) ? entry.changes : [];
       for (const change of changes) {
+        const incomingPhoneId = String(change?.value?.metadata?.phone_number_id || '').trim();
+        if (!incomingPhoneId) continue;
+
+        const workspace = await resolveWorkspaceByWhatsAppPhoneId(incomingPhoneId);
+        if (!workspace || !workspace.autoReplyEnabled || !workspace.whatsapp.connected) continue;
+
+        const waToken = workspace.whatsapp.accessToken || '';
+        if (!waToken) continue;
+
+        const business = buildBusinessContextFromWorkspace(workspace);
         const incoming = Array.isArray(change?.value?.messages) ? change.value.messages : [];
+
         for (const msg of incoming) {
           const from = msg?.from;
-          const textBody = msg?.text?.body;
-          if (!from || !textBody) continue;
+          if (!from) continue;
+
+          let textBody = '';
+          let image: { mimeType: string; base64Data: string } | null = null;
+
+          if (msg?.type === 'image' && msg?.image?.id) {
+            textBody = typeof msg.image.caption === 'string' ? msg.image.caption.trim() : '';
+            image = await fetchWhatsAppMediaImage(String(msg.image.id), waToken);
+          } else if (typeof msg?.text?.body === 'string') {
+            textBody = msg.text.body.trim();
+          }
+
+          if (!textBody && !image) continue;
 
           const aiResult = await processMirrorBotChat(
-            { business, message: String(textBody), history: [] },
+            {
+              business,
+              message: textBody,
+              image,
+              history: [],
+            },
             params.clientIp
           );
           if (aiResult.status === 200 && Array.isArray(aiResult.data.replies)) {
             for (const replyText of aiResult.data.replies) {
-              await sendWhatsAppReply(String(from), replyText);
+              await sendWhatsAppReply(String(from), replyText, waToken, incomingPhoneId);
             }
             handled += 1;
           }

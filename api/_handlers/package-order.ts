@@ -35,9 +35,15 @@ const CANONICAL_PACKAGES: Record<string, { name: string; price: string; descript
     description:
       'Professional short-form video editing (2 reels/day, ~60 reels/month, sound design & captions).',
   },
+  'master-pack': {
+    name: 'Master Pack (Graphic Design + Video Editing)',
+    price: '৳45,000/month',
+    description:
+      'Complete monthly graphic design and video editing bundle covering daily custom graphics and daily edited reels.',
+  },
   'both-monthly-packages': {
-    name: 'Both Monthly Packages (Design + Reels)',
-    price: 'Starting From ৳50,000/month',
+    name: 'Master Pack (Graphic Design + Video Editing)',
+    price: '৳45,000/month',
     description:
       'Complete digital agency presence covering daily custom graphics and daily edited reels.',
   },
@@ -196,10 +202,10 @@ export async function processPackageOrder(
   // 4. Resolve package details from website catalog
   let matchedPackage = CANONICAL_PACKAGES['monthly-graphic-design'];
   const lowerPkg = plainService.toLowerCase();
-  if (lowerPkg.includes('video') || lowerPkg.includes('reel')) {
+  if (lowerPkg.includes('master') || lowerPkg.includes('both')) {
+    matchedPackage = CANONICAL_PACKAGES['master-pack'];
+  } else if (lowerPkg.includes('video') || lowerPkg.includes('reel')) {
     matchedPackage = CANONICAL_PACKAGES['monthly-video-editing-reels'];
-  } else if (lowerPkg.includes('both')) {
-    matchedPackage = CANONICAL_PACKAGES['both-monthly-packages'];
   } else if (lowerPkg.includes('custom')) {
     matchedPackage = CANONICAL_PACKAGES['custom-scope'];
   } else if (lowerPkg.includes('design')) {

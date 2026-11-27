@@ -1,44 +1,55 @@
 import { getGeminiApiKey } from '../../_lib/gemini.js';
+import {
+  getWorkspaceByUid,
+  toSafeWorkspace,
+  verifyCallerAuth,
+  type SafeMirrorBotWorkspace,
+} from '../../_lib/metaStore.js';
 
 export interface MetaStatusResult {
   status: number;
   data: {
     success: boolean;
+    authenticated: boolean;
     geminiReady: boolean;
-    webhookUrl: string;
-    metaVerifyTokenConfigured: boolean;
-    facebookMessengerConfigured: boolean;
-    whatsappCloudConfigured: boolean;
-    metaAppId: string;
+    metaOAuthConfigured: boolean;
+    workspace: SafeMirrorBotWorkspace | null;
   };
 }
 
-export function processMetaStatus(requestOrigin?: string): MetaStatusResult {
-  const origin =
-    requestOrigin && /^https?:\/\//i.test(requestOrigin)
-      ? requestOrigin.replace(/\/+$/, '')
-      : 'https://mirrorbook.site';
-
+export async function processMetaStatus(
+  authorizationHeader?: string
+): Promise<MetaStatusResult> {
   const geminiKey = getGeminiApiKey();
   const geminiReady = Boolean(geminiKey && geminiKey !== 'MY_GEMINI_API_KEY');
-  const metaVerifyTokenConfigured = Boolean((process.env.META_WEBHOOK_VERIFY_TOKEN || '').trim());
-  const facebookMessengerConfigured = Boolean((process.env.META_PAGE_ACCESS_TOKEN || '').trim());
-  const whatsappCloudConfigured = Boolean(
-    (process.env.WHATSAPP_ACCESS_TOKEN || '').trim() &&
-      (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim()
-  );
   const metaAppId = (process.env.META_APP_ID || '').trim();
+  const metaAppSecret = (process.env.META_APP_SECRET || '').trim();
+  const metaOAuthConfigured = Boolean(metaAppId && metaAppSecret);
+
+  const caller = await verifyCallerAuth(authorizationHeader);
+  if (!caller) {
+    return {
+      status: 200,
+      data: {
+        success: true,
+        authenticated: false,
+        geminiReady,
+        metaOAuthConfigured,
+        workspace: null,
+      },
+    };
+  }
+
+  const workspace = await getWorkspaceByUid(caller.uid);
 
   return {
     status: 200,
     data: {
       success: true,
+      authenticated: true,
       geminiReady,
-      webhookUrl: `${origin}/api/mirrorbot/meta-webhook`,
-      metaVerifyTokenConfigured,
-      facebookMessengerConfigured,
-      whatsappCloudConfigured,
-      metaAppId,
+      metaOAuthConfigured,
+      workspace: toSafeWorkspace(workspace),
     },
   };
 }
@@ -49,11 +60,10 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  const proto = (req.headers?.['x-forwarded-proto'] as string) || 'https';
-  const host = (req.headers?.['x-forwarded-host'] as string) || (req.headers?.host as string) || '';
-  const origin = host ? `${proto}://${host}` : 'https://mirrorbook.site';
+  const authHeader =
+    typeof req.headers?.authorization === 'string' ? req.headers.authorization : undefined;
 
-  const result = processMetaStatus(origin);
+  const result = await processMetaStatus(authHeader);
   res.setHeader('Cache-Control', 'no-store');
   res.status(result.status).json(result.data);
 }
