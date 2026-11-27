@@ -3,29 +3,29 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
-import { processPackageOrder } from './api/package-order';
-import { processAuthSession } from './api/auth/session';
-import { processPaymentSmsWebhook } from './api/payment-sms/receive';
-import { processGetPaymentSmsLogs } from './api/payment-sms/logs';
-import { processSubmitAndVerifyOrder } from './api/orders/submit-and-verify';
-import { processAdminApproveOrder } from './api/orders/admin-approve';
-import { processFreeSoftwareAccess } from './api/software/free-access';
-import { processVerifyFreeAccess } from './api/software/verify-free-access';
-import { processSoftwareAccess } from './api/software/access';
+import { processPackageOrder } from './api/_handlers/package-order';
+import { processAuthSession } from './api/_handlers/auth/session';
+import { processPaymentSmsWebhook } from './api/_handlers/payment-sms/receive';
+import { processGetPaymentSmsLogs } from './api/_handlers/payment-sms/logs';
+import { processSubmitAndVerifyOrder } from './api/_handlers/orders/submit-and-verify';
+import { processAdminApproveOrder } from './api/_handlers/orders/admin-approve';
+import { processFreeSoftwareAccess } from './api/_handlers/software/free-access';
+import { processVerifyFreeAccess } from './api/_handlers/software/verify-free-access';
+import { processSoftwareAccess } from './api/_handlers/software/access';
 import {
   processGetCourseLessons,
   processGetCourseLessonThumbnail,
-} from './api/courses/lessons';
-import { processMirrorBotChat } from './api/mirrorbot/chat';
-import { processSuggestBotNames } from './api/mirrorbot/suggest-names';
-import { processMetaStatus } from './api/mirrorbot/meta-status';
-import { processMetaOAuthUrl } from './api/mirrorbot/meta-oauth-url';
-import { processMetaCallback } from './api/mirrorbot/meta-callback';
-import { processMetaConnect } from './api/mirrorbot/meta-connect';
+} from './api/_handlers/courses/lessons';
+import { processMirrorBotChat } from './api/_handlers/mirrorbot/chat';
+import { processSuggestBotNames } from './api/_handlers/mirrorbot/suggest-names';
+import { processMetaStatus } from './api/_handlers/mirrorbot/meta-status';
+import { processMetaOAuthUrl } from './api/_handlers/mirrorbot/meta-oauth-url';
+import { processMetaCallback } from './api/_handlers/mirrorbot/meta-callback';
+import { processMetaConnect } from './api/_handlers/mirrorbot/meta-connect';
 import {
   processMetaWebhookGet,
   processMetaWebhookPost,
-} from './api/mirrorbot/meta-webhook';
+} from './api/_handlers/mirrorbot/meta-webhook';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
