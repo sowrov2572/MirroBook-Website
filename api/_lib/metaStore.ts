@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { createFirebaseAdminStore, isFirebaseAdminConfigured } from './firebaseAdmin.js';
-import { verifyFirebaseIdToken, type VerifiedFirebaseToken } from '../auth/session.js';
+import { verifyFirebaseIdToken, type VerifiedFirebaseToken } from '../_handlers/auth/session.js';
 
 export type MetaChannelType = 'facebook' | 'messenger' | 'whatsapp';
 
