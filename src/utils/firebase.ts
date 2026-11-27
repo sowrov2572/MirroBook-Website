@@ -44,6 +44,7 @@ import {
   MirrorPOSPaymentStatus,
   MirrorPOSLicenseStatus,
   AdminActivityLog,
+  MirrorBotVaultWorkspace,
   generateDeterministicLicenseKey,
 } from '../types';
 import { DEFAULT_PAYMENT_CONFIG } from './paymentService';
@@ -140,6 +141,7 @@ const MIRRORPOS_TRX_LOCKS_COLLECTION = 'mirrorpos_trx_locks';
 const MIRRORPOS_USER_LICENSES_COLLECTION = 'mirrorpos_user_licenses';
 const MIRRORPOS_FREE_ACCESS_COLLECTION = 'mirrorpos_free_access';
 const ADMIN_ACTIVITY_LOGS_COLLECTION = 'admin_activity_logs';
+const MIRRORBOT_WORKSPACES_COLLECTION = 'mirrorbot_workspaces';
 
 function stripPublicSecretUrl(product: ProductItem): ProductItem {
   if ((Number(product.price) > 0 || product.type !== 'Free Tutorial') && 'protectedUrl' in product) {
@@ -1613,4 +1615,233 @@ export async function recordMirrorPOSFreeAccessInFirestore(entry: {
     handleFirestoreError(err, OperationType.CREATE, docPath);
   }
 }
+
+// ==================== MIRROR BOT VAULT WORKSPACE HELPERS ====================
+
+function mapMirrorBotWorkspaceDoc(uid: string, raw: Record<string, any>): MirrorBotVaultWorkspace {
+  return {
+    uid: String(raw.uid || uid),
+    activatedInVault: Boolean(raw.activatedInVault),
+    businessName: String(raw.businessName || 'My Business').slice(0, 100),
+    botName: String(raw.botName || 'Mirror Bot').slice(0, 50),
+    workPoints: Array.isArray(raw.workPoints)
+      ? raw.workPoints.map((p: unknown) => String(p || '').trim()).filter(Boolean).slice(0, 15)
+      : [],
+    autoReplyEnabled: raw.autoReplyEnabled !== false,
+    facebookPageConnected: Boolean(raw.facebookPageConnected),
+    facebookPageId: String(raw.facebookPageId || '').slice(0, 64),
+    facebookPageName: String(raw.facebookPageName || '').slice(0, 120),
+    messengerConnected: Boolean(raw.messengerConnected),
+    whatsappConnected: Boolean(raw.whatsappConnected),
+    whatsappPhoneId: String(raw.whatsappPhoneId || '').slice(0, 64),
+    whatsappDisplayPhone: String(raw.whatsappDisplayPhone || '').slice(0, 60),
+    createdAt: formatTimestampField(raw.createdAt),
+    updatedAt: formatTimestampField(raw.updatedAt),
+  };
+}
+
+export function subscribeToUserMirrorBotWorkspace(
+  uid: string,
+  onUpdate: (workspace: MirrorBotVaultWorkspace | null) => void
+): () => void {
+  if (!uid) {
+    onUpdate(null);
+    return () => {};
+  }
+  const ref = doc(db, MIRRORBOT_WORKSPACES_COLLECTION, uid);
+  return onSnapshot(
+    ref,
+    (snap) => {
+      if (!snap.exists()) {
+        onUpdate(null);
+        return;
+      }
+      onUpdate(mapMirrorBotWorkspaceDoc(uid, snap.data() as Record<string, any>));
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, `${MIRRORBOT_WORKSPACES_COLLECTION}/${uid}`);
+      onUpdate(null);
+    }
+  );
+}
+
+/**
+ * Adds Mirror Bot to the authenticated customer's personal Vault if not already added.
+ */
+export async function activateMirrorBotInVault(
+  uid: string,
+  defaultBusinessName?: string | null
+): Promise<MirrorBotVaultWorkspace | null> {
+  if (!uid || !auth.currentUser || auth.currentUser.uid !== uid) return null;
+  const docPath = `${MIRRORBOT_WORKSPACES_COLLECTION}/${uid}`;
+  const ref = doc(db, MIRRORBOT_WORKSPACES_COLLECTION, uid);
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() as Record<string, any>;
+      if (!data.activatedInVault) {
+        await updateDoc(ref, {
+          activatedInVault: true,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      return mapMirrorBotWorkspaceDoc(uid, { ...data, activatedInVault: true });
+    }
+
+    const cleanBiz =
+      (defaultBusinessName || '').trim().slice(0, 100) || 'My Business';
+
+    await setDoc(ref, {
+      uid,
+      activatedInVault: true,
+      businessName: cleanBiz,
+      botName: 'Mirror Bot',
+      workPoints: [],
+      autoReplyEnabled: true,
+      facebookPageConnected: false,
+      facebookPageId: '',
+      facebookPageName: '',
+      messengerConnected: false,
+      whatsappConnected: false,
+      whatsappPhoneId: '',
+      whatsappDisplayPhone: '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    const createdSnap = await getDoc(ref);
+    if (createdSnap.exists()) {
+      return mapMirrorBotWorkspaceDoc(uid, createdSnap.data() as Record<string, any>);
+    }
+    return null;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, docPath);
+    return null;
+  }
+}
+
+/**
+ * Updates the customer's Mirror Bot business info from inside the Customer Vault.
+ */
+export async function saveMirrorBotWorkspaceToVault(
+  uid: string,
+  updates: {
+    businessName: string;
+    botName: string;
+    workPoints: string[];
+    autoReplyEnabled?: boolean;
+  }
+): Promise<void> {
+  if (!uid || !auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error('You must be signed in to update your Mirror Bot Vault settings.');
+  }
+  const cleanBusinessName = updates.businessName.trim().slice(0, 100);
+  if (!cleanBusinessName) {
+    throw new Error('Please enter your business name.');
+  }
+  const cleanBotName = updates.botName.trim().slice(0, 50) || 'Mirror Bot';
+  const cleanPoints = updates.workPoints
+    .map((pt) => String(pt || '').trim().slice(0, 140))
+    .filter(Boolean)
+    .slice(0, 15);
+
+  const docPath = `${MIRRORBOT_WORKSPACES_COLLECTION}/${uid}`;
+  const ref = doc(db, MIRRORBOT_WORKSPACES_COLLECTION, uid);
+
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        uid,
+        activatedInVault: true,
+        businessName: cleanBusinessName,
+        botName: cleanBotName,
+        workPoints: cleanPoints,
+        autoReplyEnabled: updates.autoReplyEnabled !== false,
+        facebookPageConnected: false,
+        facebookPageId: '',
+        facebookPageName: '',
+        messengerConnected: false,
+        whatsappConnected: false,
+        whatsappPhoneId: '',
+        whatsappDisplayPhone: '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return;
+    }
+
+    const patch: Record<string, any> = {
+      activatedInVault: true,
+      businessName: cleanBusinessName,
+      botName: cleanBotName,
+      workPoints: cleanPoints,
+      updatedAt: serverTimestamp(),
+    };
+    if (typeof updates.autoReplyEnabled === 'boolean') {
+      patch.autoReplyEnabled = updates.autoReplyEnabled;
+    }
+    await updateDoc(ref, patch);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, docPath);
+    throw err;
+  }
+}
+
+/**
+ * Syncs non-secret channel connection status (Page name/ID, WhatsApp phone/ID, Auto-Reply toggle)
+ * into the customer's Firestore Vault workspace. Never writes OAuth tokens to Firestore.
+ */
+export async function syncMirrorBotChannelStatusToVault(
+  uid: string,
+  status: {
+    autoReplyEnabled?: boolean;
+    facebookPageConnected?: boolean;
+    facebookPageId?: string;
+    facebookPageName?: string;
+    messengerConnected?: boolean;
+    whatsappConnected?: boolean;
+    whatsappPhoneId?: string;
+    whatsappDisplayPhone?: string;
+  }
+): Promise<void> {
+  if (!uid || !auth.currentUser || auth.currentUser.uid !== uid) return;
+  const docPath = `${MIRRORBOT_WORKSPACES_COLLECTION}/${uid}`;
+  const ref = doc(db, MIRRORBOT_WORKSPACES_COLLECTION, uid);
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await activateMirrorBotInVault(uid);
+    }
+    const patch: Record<string, any> = { updatedAt: serverTimestamp() };
+    if (typeof status.autoReplyEnabled === 'boolean') {
+      patch.autoReplyEnabled = status.autoReplyEnabled;
+    }
+    if (typeof status.facebookPageConnected === 'boolean') {
+      patch.facebookPageConnected = status.facebookPageConnected;
+    }
+    if (typeof status.facebookPageId === 'string') {
+      patch.facebookPageId = status.facebookPageId.slice(0, 64);
+    }
+    if (typeof status.facebookPageName === 'string') {
+      patch.facebookPageName = status.facebookPageName.slice(0, 120);
+    }
+    if (typeof status.messengerConnected === 'boolean') {
+      patch.messengerConnected = status.messengerConnected;
+    }
+    if (typeof status.whatsappConnected === 'boolean') {
+      patch.whatsappConnected = status.whatsappConnected;
+    }
+    if (typeof status.whatsappPhoneId === 'string') {
+      patch.whatsappPhoneId = status.whatsappPhoneId.slice(0, 64);
+    }
+    if (typeof status.whatsappDisplayPhone === 'string') {
+      patch.whatsappDisplayPhone = status.whatsappDisplayPhone.slice(0, 60);
+    }
+    await updateDoc(ref, patch);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, docPath);
+  }
+}
+
 

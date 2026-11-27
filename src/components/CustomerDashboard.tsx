@@ -22,20 +22,31 @@ import {
   ExternalLink,
   ArrowLeft,
   Save,
+  Plus,
+  Trash2,
+  Power,
+  Facebook,
+  MessageCircle,
+  MessageSquare,
+  Loader2,
+  Wand2,
 } from 'lucide-react';
 import {
   AppUser,
   CustomerProfile,
   DownloadHistoryItem,
+  MirrorBotVaultWorkspace,
   Order,
   UserPurchase,
   generateDeterministicLicenseKey,
   isVerifiedAdminUser,
 } from '../types';
 import { SecureDownloadTarget } from './SecureDownloadModal';
+import { useLanguage } from '../utils/i18n';
 
-type DashboardTab =
+export type DashboardTab =
   | 'overview'
+  | 'mirrorbot'
   | 'purchases'
   | 'plugins'
   | 'licenses'
@@ -52,6 +63,16 @@ interface CustomerDashboardProps {
   purchases: UserPurchase[];
   orders: Order[];
   downloadHistory: DownloadHistoryItem[];
+  initialTab?: DashboardTab;
+  mirrorBotWorkspace?: MirrorBotVaultWorkspace | null;
+  onActivateMirrorBot?: () => Promise<void>;
+  onSaveMirrorBotInfo?: (updates: {
+    businessName: string;
+    botName: string;
+    workPoints: string[];
+    autoReplyEnabled: boolean;
+  }) => Promise<void>;
+  onOpenMirrorBotChannels?: () => void;
   onNavigate: (path: string) => void;
   onSignOut: () => Promise<void>;
   onSelectDownload: (target: SecureDownloadTarget) => void;
@@ -68,6 +89,11 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   purchases,
   orders,
   downloadHistory,
+  initialTab = 'overview',
+  mirrorBotWorkspace = null,
+  onActivateMirrorBot,
+  onSaveMirrorBotInfo,
+  onOpenMirrorBotChannels,
   onNavigate,
   onSignOut,
   onSelectDownload,
@@ -77,7 +103,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   onBrowseStore,
   onOpenCourse,
 }) => {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Profile Settings form state
@@ -88,15 +115,53 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   const [profileNotice, setProfileNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
 
+  // Mirror Bot Vault Business Info form state
+  const [botBusinessName, setBotBusinessName] = useState(mirrorBotWorkspace?.businessName || '');
+  const [botAiName, setBotAiName] = useState(mirrorBotWorkspace?.botName || 'Mirror Bot');
+  const [botWorkPoints, setBotWorkPoints] = useState<string[]>(
+    mirrorBotWorkspace?.workPoints?.length ? mirrorBotWorkspace.workPoints : ['']
+  );
+  const [botAutoReply, setBotAutoReply] = useState<boolean>(
+    mirrorBotWorkspace?.autoReplyEnabled !== false
+  );
+  const [isSavingBotInfo, setIsSavingBotInfo] = useState(false);
+  const [isActivatingBot, setIsActivatingBot] = useState(false);
+  const [isSuggestingBotNames, setIsSuggestingBotNames] = useState(false);
+  const [suggestedBotNames, setSuggestedBotNames] = useState<string[]>([]);
+  const [botNotice, setBotNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   useEffect(() => {
     document.title = 'My Account & Dashboard | MirrorBook';
   }, []);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     setEditName(profile?.displayName || user?.displayName || '');
     setEditPhone(profile?.phone || user?.phone || '');
     setEditCompany(profile?.company || user?.company || '');
   }, [profile, user]);
+
+  useEffect(() => {
+    if (!mirrorBotWorkspace) return;
+    setBotBusinessName(mirrorBotWorkspace.businessName || '');
+    setBotAiName(mirrorBotWorkspace.botName || 'Mirror Bot');
+    setBotWorkPoints(
+      mirrorBotWorkspace.workPoints && mirrorBotWorkspace.workPoints.length > 0
+        ? mirrorBotWorkspace.workPoints
+        : ['']
+    );
+    setBotAutoReply(mirrorBotWorkspace.autoReplyEnabled !== false);
+  }, [
+    mirrorBotWorkspace?.businessName,
+    mirrorBotWorkspace?.botName,
+    mirrorBotWorkspace?.autoReplyEnabled,
+    JSON.stringify(mirrorBotWorkspace?.workPoints || []),
+  ]);
 
   const pluginsList = useMemo(
     () =>
@@ -211,17 +276,110 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     }
   };
 
+  const handleSaveMirrorBotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onSaveMirrorBotInfo) return;
+    setBotNotice(null);
+    const cleanedBusiness = botBusinessName.trim();
+    const cleanedBot = botAiName.trim() || 'Mirror Bot';
+    const cleanedPoints = botWorkPoints.map((p) => p.trim()).filter(Boolean).slice(0, 8);
+    if (!cleanedBusiness) {
+      setBotNotice({ type: 'error', text: 'Please enter your business name.' });
+      return;
+    }
+    setIsSavingBotInfo(true);
+    try {
+      await onSaveMirrorBotInfo({
+        businessName: cleanedBusiness,
+        botName: cleanedBot,
+        workPoints: cleanedPoints,
+        autoReplyEnabled: botAutoReply,
+      });
+      setBotNotice({
+        type: 'success',
+        text: 'Business info saved and synced to your live Mirror Bot channels.',
+      });
+    } catch (err: unknown) {
+      setBotNotice({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Unable to save Mirror Bot business info.',
+      });
+    } finally {
+      setIsSavingBotInfo(false);
+    }
+  };
+
+  const handleSuggestBotNames = async () => {
+    setIsSuggestingBotNames(true);
+    setBotNotice(null);
+    try {
+      const cleanedPoints = botWorkPoints.map((p) => p.trim()).filter(Boolean);
+      const res = await fetch('/api/mirrorbot/suggest-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: botBusinessName.trim() || profile?.company || 'My Business',
+          whatYouSell: cleanedPoints.join(', '),
+          language: 'en',
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(data?.suggestions) && data.suggestions.length > 0) {
+        const names = data.suggestions
+          .map((item: unknown) =>
+            typeof item === 'string'
+              ? item.trim()
+              : item && typeof item === 'object' && 'name' in item
+              ? String((item as { name?: unknown }).name || '').trim()
+              : ''
+          )
+          .filter(Boolean)
+          .slice(0, 4);
+        setSuggestedBotNames(
+          names.length > 0 ? names : ['Mirror AI', 'Smart Desk', 'Quick Reply', 'Brand Helper']
+        );
+      } else {
+        setSuggestedBotNames(['Mirror AI', 'Smart Desk', 'Quick Reply', 'Brand Helper']);
+      }
+    } catch {
+      setSuggestedBotNames(['Mirror AI', 'Smart Desk', 'Quick Reply', 'Brand Helper']);
+    } finally {
+      setIsSuggestingBotNames(false);
+    }
+  };
+
+  const connectedChannelCount =
+    (mirrorBotWorkspace?.facebookPageConnected ? 1 : 0) +
+    (mirrorBotWorkspace?.messengerConnected ? 1 : 0) +
+    (mirrorBotWorkspace?.whatsappConnected ? 1 : 0);
+
   const navItems: { id: DashboardTab; label: string; icon: React.ReactNode; count?: number }[] = [
-    { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={15} /> },
-    { id: 'purchases', label: 'My Purchases', icon: <ShoppingBag size={15} />, count: purchases.length },
-    { id: 'plugins', label: 'My Plugins', icon: <Puzzle size={15} />, count: pluginsList.length },
-    { id: 'licenses', label: 'Plugin License Keys', icon: <KeyRound size={15} />, count: licenseEntries.length },
-    { id: 'courses', label: 'My Courses', icon: <GraduationCap size={15} />, count: coursesList.length },
-    { id: 'assets', label: 'Digital Assets', icon: <FolderArchive size={15} />, count: digitalAssetsList.length },
-    { id: 'downloads', label: 'Download History', icon: <History size={15} />, count: downloadHistory.length },
-    { id: 'orders', label: 'Order History', icon: <Receipt size={15} />, count: orders.length },
-    { id: 'account', label: 'Account Information', icon: <UserCheck size={15} /> },
-    { id: 'settings', label: 'Profile Settings', icon: <Settings size={15} /> },
+    { id: 'overview', label: t('Overview', 'ওভারভিউ'), icon: <LayoutDashboard size={15} /> },
+    {
+      id: 'mirrorbot',
+      label: t('Mirror Bot AI', 'মিরর বট এআই'),
+      icon: (
+        <img
+          src="/mirrorbot-icon.png"
+          alt="Mirror Bot"
+          width={16}
+          height={16}
+          loading="eager"
+          decoding="async"
+          className="w-4 h-4 rounded object-contain shrink-0"
+        />
+      ),
+      count: mirrorBotWorkspace?.activatedInVault ? connectedChannelCount : undefined,
+    },
+    { id: 'purchases', label: t('My Purchases', 'আমার পারচেজ'), icon: <ShoppingBag size={15} />, count: purchases.length },
+    { id: 'plugins', label: t('My Plugins', 'আমার প্লাগইন'), icon: <Puzzle size={15} />, count: pluginsList.length },
+    { id: 'licenses', label: t('Plugin License Keys', 'প্লাগইন লাইসেন্স কী'), icon: <KeyRound size={15} />, count: licenseEntries.length },
+    { id: 'courses', label: t('My Courses', 'আমার কোর্স'), icon: <GraduationCap size={15} />, count: coursesList.length },
+    { id: 'assets', label: t('Digital Assets', 'ডিজিটাল অ্যাসেট'), icon: <FolderArchive size={15} />, count: digitalAssetsList.length },
+    { id: 'downloads', label: t('Download History', 'ডাউনলোড হিস্ট্রি'), icon: <History size={15} />, count: downloadHistory.length },
+    { id: 'orders', label: t('Order History', 'অর্ডার হিস্ট্রি'), icon: <Receipt size={15} />, count: orders.length },
+    { id: 'account', label: t('Account Information', 'অ্যাকাউন্ট তথ্য'), icon: <UserCheck size={15} /> },
+    { id: 'settings', label: t('Profile Settings', 'প্রোফাইল সেটিংস'), icon: <Settings size={15} /> },
   ];
 
   const renderPurchaseCards = (items: UserPurchase[], emptyTitle: string, emptyDesc: string) => {
@@ -339,10 +497,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] break-words">
-                  {profile?.displayName || user.displayName || 'Customer Account'}
+                  {profile?.displayName || user.displayName || t('Customer Account', 'কাস্টমার অ্যাকাউন্ট')}
                 </h1>
                 <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-lg bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30 shrink-0">
-                  Customer Portal
+                  {t('Customer Portal', 'কাস্টমার পোর্টাল')}
                 </span>
               </div>
               <p className="text-xs text-[#A1AAA2] font-mono break-all mt-0.5">{user.email}</p>
@@ -356,7 +514,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 onClick={() => onNavigate('/admin')}
                 className="min-h-[44px] px-4 py-2 text-xs font-semibold bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-yellow-300 rounded-xl cursor-pointer transition-colors"
               >
-                Open Admin Console
+                {t('Open Admin Console', 'অ্যাডমিন কনসোল')}
               </button>
             )}
             <button
@@ -365,7 +523,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               className="glossy-btn-secondary flex-1 sm:flex-none min-h-[44px] px-4 py-2 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <ArrowLeft size={13} />
-              <span>Storefront</span>
+              <span>{t('Storefront', 'স্টোরফ্রন্ট')}</span>
             </button>
             <button
               type="button"
@@ -376,7 +534,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               className="flex-1 sm:flex-none min-h-[44px] px-4 py-2 text-xs font-medium bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
               <LogOut size={13} />
-              <span>Logout</span>
+              <span>{t('Logout', 'লগআউট')}</span>
             </button>
           </div>
         </div>
@@ -481,50 +639,516 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <div className="space-y-6">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
-                    <span className="text-[11px] text-[#A1AAA2] block">My Purchases</span>
+                    <span className="text-[11px] text-[#A1AAA2] block">{t('My Purchases', 'আমার পারচেজ')}</span>
                     <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
                       {purchases.length}
                     </span>
                   </div>
                   <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
-                    <span className="text-[11px] text-[#A1AAA2] block">Active Licenses</span>
+                    <span className="text-[11px] text-[#A1AAA2] block">{t('Active Licenses', 'সক্রিয় লাইসেন্স')}</span>
                     <span className="text-xl sm:text-2xl font-display font-bold text-[#B7F34A] tabular-nums mt-1 block">
                       {licenseEntries.length}
                     </span>
                   </div>
                   <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
-                    <span className="text-[11px] text-[#A1AAA2] block">Total Orders</span>
+                    <span className="text-[11px] text-[#A1AAA2] block">{t('Total Orders', 'মোট অর্ডার')}</span>
                     <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
                       {orders.length}
                     </span>
                   </div>
                   <div className="glossy-card rounded-2xl p-3.5 sm:p-4">
-                    <span className="text-[11px] text-[#A1AAA2] block">Downloads</span>
+                    <span className="text-[11px] text-[#A1AAA2] block">{t('Downloads', 'ডাউনলোড')}</span>
                     <span className="text-xl sm:text-2xl font-display font-bold text-[#F5F7F2] tabular-nums mt-1 block">
                       {downloadHistory.length}
                     </span>
                   </div>
                 </div>
 
+                {mirrorBotWorkspace?.activatedInVault && (
+                  <div className="glossy-card rounded-2xl p-5 border border-[#B7F34A]/25 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-2 text-xs font-bold text-[#F5F7F2]">
+                          <img
+                            src="/mirrorbot-icon.png"
+                            alt="Mirror Bot"
+                            width={20}
+                            height={20}
+                            loading="eager"
+                            decoding="async"
+                            className="w-5 h-5 rounded object-contain shrink-0"
+                          />
+                          <span>{t('Mirror Bot AI', 'মিরর বট এআই')}</span>
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-mono uppercase ${
+                            mirrorBotWorkspace.autoReplyEnabled
+                              ? 'bg-[#B7F34A]/15 text-[#B7F34A] border border-[#B7F34A]/30'
+                              : 'bg-white/[0.06] text-[#A1AAA2] border border-white/[0.1]'
+                          }`}
+                        >
+                          {mirrorBotWorkspace.autoReplyEnabled
+                            ? t('Auto-Reply ON', 'অটো-রিপ্লাই চালু')
+                            : t('Auto-Reply Paused', 'অটো-রিপ্লাই বন্ধ')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#A1AAA2] truncate">
+                        {mirrorBotWorkspace.businessName
+                          ? `${mirrorBotWorkspace.businessName} • ${t('Bot', 'বট')}: ${mirrorBotWorkspace.botName || 'Mirror Bot'}`
+                          : t(
+                              'Add your business name and short work points so your AI bot replies accurately.',
+                              'আপনার ব্যবসার নাম ও কাজের সংক্ষিপ্ত পয়েন্ট যোগ করুন যাতে এআই বট সঠিকভাবে রিপ্লাই দিতে পারে।'
+                            )}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <span
+                          className={`px-2.5 py-1 rounded-lg border ${
+                            mirrorBotWorkspace.facebookPageConnected
+                              ? 'bg-[#B7F34A]/10 border-[#B7F34A]/30 text-[#D0FC7A]'
+                              : 'bg-[#121614] border-white/[0.08] text-[#707A72]'
+                          }`}
+                        >
+                          {t('Facebook Page', 'ফেসবুক পেজ')}:{' '}
+                          {mirrorBotWorkspace.facebookPageConnected
+                            ? t('Connected', 'কানেক্টেড')
+                            : t('Not connected', 'কানেক্ট নয়')}
+                        </span>
+                        <span
+                          className={`px-2.5 py-1 rounded-lg border ${
+                            mirrorBotWorkspace.messengerConnected
+                              ? 'bg-[#B7F34A]/10 border-[#B7F34A]/30 text-[#D0FC7A]'
+                              : 'bg-[#121614] border-white/[0.08] text-[#707A72]'
+                          }`}
+                        >
+                          {t('Messenger', 'মেসেঞ্জার')}:{' '}
+                          {mirrorBotWorkspace.messengerConnected
+                            ? t('Connected', 'কানেক্টেড')
+                            : t('Not connected', 'কানেক্ট নয়')}
+                        </span>
+                        <span
+                          className={`px-2.5 py-1 rounded-lg border ${
+                            mirrorBotWorkspace.whatsappConnected
+                              ? 'bg-[#B7F34A]/10 border-[#B7F34A]/30 text-[#D0FC7A]'
+                              : 'bg-[#121614] border-white/[0.08] text-[#707A72]'
+                          }`}
+                        >
+                          {t('WhatsApp', 'হোয়াটসঅ্যাপ')}:{' '}
+                          {mirrorBotWorkspace.whatsappConnected
+                            ? t('Connected', 'কানেক্টেড')
+                            : t('Not connected', 'কানেক্ট নয়')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('mirrorbot')}
+                        className="glossy-btn min-h-[42px] px-4 py-2 text-xs font-bold rounded-xl cursor-pointer whitespace-nowrap"
+                      >
+                        {t('Edit Business Info', 'ব্যবসার তথ্য এডিট')}
+                      </button>
+                      {onOpenMirrorBotChannels && (
+                        <button
+                          type="button"
+                          onClick={onOpenMirrorBotChannels}
+                          className="glossy-btn-secondary min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl cursor-pointer whitespace-nowrap"
+                        >
+                          {t('Connect Channels', 'চ্যানেল কানেক্ট')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h2 className="font-display text-base font-bold text-[#F5F7F2]">
-                      Recent Unlocked Products
+                      {t('Recent Unlocked Products', 'সাম্প্রতিক আনলক করা প্রোডাক্ট')}
                     </h2>
                     <button
                       type="button"
                       onClick={() => setActiveTab('purchases')}
                       className="text-xs text-[#B7F34A] hover:underline cursor-pointer"
                     >
-                      View all →
+                      {t('View all →', 'সব দেখুন →')}
                     </button>
                   </div>
                   {renderPurchaseCards(
                     purchases.slice(0, 4),
-                    'Welcome to Your MirrorBook Dashboard',
-                    'Your purchased plugins, courses, software, and single-seat license keys will appear here as soon as your order is verified.'
+                    t('Welcome to Your MirrorBook Dashboard', 'আপনার মিরর বুক ড্যাশবোর্ডে স্বাগতম'),
+                    t(
+                      'Your purchased plugins, courses, software, and single-seat license keys will appear here as soon as your order is verified.',
+                      'আপনার অর্ডার ভেরিফাই হওয়ার সাথে সাথে কেনা প্লাগইন, কোর্স, সফটওয়্যার ও লাইসেন্স কী এখানে দেখা যাবে।'
+                    )
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* 1B. MIRROR BOT AI (VAULT BUSINESS INFO EDITOR) */}
+            {activeTab === 'mirrorbot' && (
+              <div className="space-y-6">
+                {!mirrorBotWorkspace?.activatedInVault ? (
+                  <div className="glossy-card rounded-2xl p-6 sm:p-10 text-center space-y-5">
+                    <div className="w-16 h-16 rounded-2xl bg-[#0B0D0C] border border-[#B7F34A]/35 p-2 mx-auto flex items-center justify-center">
+                      <img
+                        src="/mirrorbot-icon.png"
+                        alt="Mirror Bot"
+                        width={48}
+                        height={48}
+                        loading="eager"
+                        decoding="async"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1.5 max-w-md mx-auto">
+                      <h2 className="font-display text-lg font-bold text-[#F5F7F2]">
+                        {t('Add Mirror Bot AI to Your Vault', 'আপনার ভল্টে মিরর বট এআই যোগ করুন')}
+                      </h2>
+                      <p className="text-xs text-[#A1AAA2] leading-relaxed">
+                        {t(
+                          'Activate Mirror Bot inside your Vault to manage your business info and connect Facebook Page, Messenger, and WhatsApp for automatic text and photo replies.',
+                          'আপনার ব্যবসার তথ্য সংরক্ষণ করতে এবং ফেসবুক পেজ, মেসেঞ্জার ও হোয়াটসঅ্যাপে অটোমেটিক মেসেজ ও ছবির রিপ্লাই চালু করতে মিরর বট অ্যাক্টিভ করুন।'
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isActivatingBot}
+                      onClick={async () => {
+                        if (!onActivateMirrorBot) return;
+                        setIsActivatingBot(true);
+                        try {
+                          await onActivateMirrorBot();
+                        } finally {
+                          setIsActivatingBot(false);
+                        }
+                      }}
+                      className="glossy-btn min-h-[44px] px-6 py-2.5 text-xs font-bold rounded-xl inline-flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                    >
+                      {isActivatingBot ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                      <span>
+                        {isActivatingBot
+                          ? t('Adding to Vault...', 'ভল্টে যোগ হচ্ছে...')
+                          : t('Add Mirror Bot to Vault', 'ভল্টে মিরর বট যোগ করুন')}
+                      </span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Business Info Editor Card */}
+                    <div className="glossy-card rounded-2xl p-5 sm:p-6 space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.09] pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#0B0D0C] border border-[#B7F34A]/30 p-1.5 flex items-center justify-center shrink-0">
+                            <img
+                              src="/mirrorbot-icon.png"
+                              alt="Mirror Bot"
+                              width={32}
+                              height={32}
+                              loading="eager"
+                              decoding="async"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div>
+                            <h2 className="font-display text-lg font-bold text-[#F5F7F2]">
+                              {t('Mirror Bot Business Info', 'মিরর বট ব্যবসার তথ্য')}
+                            </h2>
+                            <p className="text-xs text-[#A1AAA2]">
+                              {t(
+                                'Keep it short. Your AI bot reads this to reply automatically on your connected channels.',
+                                'সংক্ষেপে লিখুন। আপনার কানেক্টেড চ্যানেলে অটোমেটিক রিপ্লাই দিতে এআই বট এই তথ্য ব্যবহার করবে।'
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setBotAutoReply((prev) => !prev)}
+                          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-2 border cursor-pointer transition-colors shrink-0 ${
+                            botAutoReply
+                              ? 'bg-[#B7F34A]/15 border-[#B7F34A]/40 text-[#B7F34A]'
+                              : 'bg-[#121614] border-white/[0.1] text-[#A1AAA2]'
+                          }`}
+                        >
+                          <Power size={13} />
+                          <span>
+                            {t('Auto-Reply', 'অটো-রিপ্লাই')}: {botAutoReply ? t('ON', 'চালু') : t('OFF', 'বন্ধ')}
+                          </span>
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleSaveMirrorBotSubmit} className="space-y-5 max-w-2xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] text-[#A1AAA2] mb-1.5 font-medium">
+                              {t('What is your business? *', 'আপনার ব্যবসা কী? *')}
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              maxLength={120}
+                              value={botBusinessName}
+                              onChange={(e) => setBotBusinessName(e.target.value)}
+                              placeholder="e.g. Dhaka Sneaker House"
+                              className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="text-[11px] text-[#A1AAA2] font-medium">
+                                {t('AI Bot Name', 'এআই বটের নাম')}
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleSuggestBotNames}
+                                disabled={isSuggestingBotNames}
+                                className="text-[11px] text-[#B7F34A] hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-60"
+                              >
+                                {isSuggestingBotNames ? (
+                                  <Loader2 size={11} className="animate-spin" />
+                                ) : (
+                                  <Wand2 size={11} />
+                                )}
+                                <span>{t('Suggest', 'সাজেশন')}</span>
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              maxLength={60}
+                              value={botAiName}
+                              onChange={(e) => setBotAiName(e.target.value)}
+                              placeholder="e.g. Mirror Bot"
+                              className="w-full bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
+                            />
+                          </div>
+                        </div>
+
+                        {suggestedBotNames.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] text-[#707A72]">
+                              {t('Suggestions:', 'সাজেশনসমূহ:')}
+                            </span>
+                            {suggestedBotNames.map((name) => (
+                              <button
+                                key={name}
+                                type="button"
+                                onClick={() => setBotAiName(name)}
+                                className="px-2.5 py-1 rounded-lg bg-[#121614] hover:bg-[#B7F34A]/15 border border-white/[0.09] hover:border-[#B7F34A]/40 text-[11px] text-[#F5F7F2] cursor-pointer transition-colors"
+                              >
+                                {name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] text-[#A1AAA2] font-medium">
+                              {t('What you work with (short points)', 'আপনি কী নিয়ে কাজ করেন (সংক্ষিপ্ত পয়েন্ট)')}
+                            </label>
+                            {botWorkPoints.length < 8 && (
+                              <button
+                                type="button"
+                                onClick={() => setBotWorkPoints((prev) => [...prev, ''])}
+                                className="text-[11px] text-[#B7F34A] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Plus size={12} />
+                                <span>{t('Add Point', 'পয়েন্ট যোগ করুন')}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            {botWorkPoints.map((point, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-[#B7F34A] shrink-0" />
+                                <input
+                                  type="text"
+                                  maxLength={140}
+                                  value={point}
+                                  onChange={(e) => {
+                                    const next = [...botWorkPoints];
+                                    next[idx] = e.target.value;
+                                    setBotWorkPoints(next);
+                                  }}
+                                  placeholder={
+                                    idx === 0
+                                      ? 'e.g. Men & women sneakers (৳1,500 – ৳4,500)'
+                                      : idx === 1
+                                      ? 'e.g. Cash on delivery all over Bangladesh'
+                                      : 'e.g. Delivery takes 24–48 hours'
+                                  }
+                                  className="flex-1 bg-[#121614] border border-white/[0.09] focus:border-[#B7F34A] rounded-xl px-3.5 py-2 text-base sm:text-xs text-[#F5F7F2] placeholder:text-[#707A72] focus:outline-none transition-colors"
+                                />
+                                {botWorkPoints.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setBotWorkPoints((prev) => prev.filter((_, i) => i !== idx))
+                                    }
+                                    className="p-2 text-[#707A72] hover:text-red-400 cursor-pointer"
+                                    title="Remove point"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {botNotice && (
+                          <div
+                            className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                              botNotice.type === 'success'
+                                ? 'bg-[#B7F34A]/15 border border-[#B7F34A]/40 text-[#D0FC7A]'
+                                : 'bg-red-950/40 border border-red-800 text-red-200'
+                            }`}
+                          >
+                            {botNotice.type === 'success' ? (
+                              <CheckCircle2 size={14} className="text-[#B7F34A] shrink-0" />
+                            ) : (
+                              <AlertCircle size={14} className="text-red-400 shrink-0" />
+                            )}
+                            <span>{botNotice.text}</span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-3 pt-1">
+                          <button
+                            type="submit"
+                            disabled={isSavingBotInfo}
+                            className="glossy-btn min-h-[44px] px-5 py-2.5 text-xs font-bold rounded-xl inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                          >
+                            {isSavingBotInfo ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Save size={14} />
+                            )}
+                              <span>
+                                {isSavingBotInfo
+                                  ? t('Saving...', 'সংরক্ষণ হচ্ছে...')
+                                  : t('Save Business Info', 'ব্যবসার তথ্য সংরক্ষণ করুন')}
+                              </span>
+                            </button>
+
+                            {onOpenMirrorBotChannels && (
+                              <button
+                                type="button"
+                                onClick={onOpenMirrorBotChannels}
+                                className="glossy-btn-secondary min-h-[44px] px-5 py-2.5 text-xs font-semibold rounded-xl inline-flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <ExternalLink size={14} className="text-[#B7F34A]" />
+                                <span>{t('Connect / Manage Channels', 'চ্যানেল কানেক্ট / ম্যানেজ করুন')}</span>
+                              </button>
+                            )}
+                          </div>
+                        </form>
+                      </div>
+
+                      {/* Connected Channels Summary */}
+                      <div className="glossy-card rounded-2xl p-5 sm:p-6 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <h3 className="font-display text-base font-bold text-[#F5F7F2]">
+                              {t('Connected Live Channels', 'কানেক্টেড লাইভ চ্যানেল')}
+                            </h3>
+                            <p className="text-xs text-[#A1AAA2]">
+                              {t(
+                                'One-click login auto-connects comments, DMs, WhatsApp messages, and customer photos.',
+                                '১-ক্লিক লগইনে কমেন্ট, ইনবক্স, হোয়াটসঅ্যাপ মেসেজ ও কাস্টমারের ছবির অটো-রিপ্লাই চালু হয়।'
+                              )}
+                            </p>
+                          </div>
+                          {onOpenMirrorBotChannels && (
+                            <button
+                              type="button"
+                              onClick={onOpenMirrorBotChannels}
+                              className="text-xs font-semibold text-[#B7F34A] hover:underline inline-flex items-center gap-1 cursor-pointer shrink-0"
+                            >
+                              <span>{t('Open Channel Setup', 'চ্যানেল সেটআপ খুলুন')}</span>
+                              <ExternalLink size={12} />
+                            </button>
+                          )}
+                        </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09] space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#F5F7F2]">
+                              <Facebook size={14} className="text-[#B7F34A]" />
+                              <span>Facebook Page</span>
+                            </span>
+                            <span
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+                                mirrorBotWorkspace.facebookPageConnected
+                                  ? 'bg-[#B7F34A]/15 text-[#B7F34A]'
+                                  : 'bg-white/[0.06] text-[#707A72]'
+                              }`}
+                            >
+                              {mirrorBotWorkspace.facebookPageConnected ? 'LIVE' : 'OFF'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#A1AAA2] truncate">
+                            {mirrorBotWorkspace.facebookPageConnected
+                              ? mirrorBotWorkspace.facebookPageName || 'Connected Page'
+                              : 'Not connected yet'}
+                          </p>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09] space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#F5F7F2]">
+                              <MessageSquare size={14} className="text-[#B7F34A]" />
+                              <span>Messenger</span>
+                            </span>
+                            <span
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+                                mirrorBotWorkspace.messengerConnected
+                                  ? 'bg-[#B7F34A]/15 text-[#B7F34A]'
+                                  : 'bg-white/[0.06] text-[#707A72]'
+                              }`}
+                            >
+                              {mirrorBotWorkspace.messengerConnected ? 'LIVE' : 'OFF'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#A1AAA2] truncate">
+                            {mirrorBotWorkspace.messengerConnected
+                              ? mirrorBotWorkspace.facebookPageName || 'Messenger Inbox Active'
+                              : 'Not connected yet'}
+                          </p>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-[#121614] border border-white/[0.09] space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#F5F7F2]">
+                              <MessageCircle size={14} className="text-[#B7F34A]" />
+                              <span>WhatsApp</span>
+                            </span>
+                            <span
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+                                mirrorBotWorkspace.whatsappConnected
+                                  ? 'bg-[#B7F34A]/15 text-[#B7F34A]'
+                                  : 'bg-white/[0.06] text-[#707A72]'
+                              }`}
+                            >
+                              {mirrorBotWorkspace.whatsappConnected ? 'LIVE' : 'OFF'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#A1AAA2] truncate">
+                            {mirrorBotWorkspace.whatsappConnected
+                              ? mirrorBotWorkspace.whatsappDisplayPhone || 'WhatsApp Business Active'
+                              : 'Not connected yet'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

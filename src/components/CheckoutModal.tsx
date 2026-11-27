@@ -122,7 +122,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     const customerEmail = (user?.email || email || '').trim().toLowerCase();
     if (!customerEmail || !customerEmail.includes('@')) {
-      setErrorMsg('সঠিক ইমেইল এড্রেস দিন (লাইসেন্স ও গুগল ড্রাইভ এক্সেসের জন্য)।');
+      setErrorMsg('Please enter a valid email address for license and download access.');
       return;
     }
 
@@ -130,12 +130,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     const cleanTrx = trxId.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     if (!cleanPhone || !cleanTrx) {
-      setErrorMsg('আপনার ফোন নম্বর এবং বিকাশ/ব্যাংক ট্রানজিশন আইডি (TrxID) দিন।');
+      setErrorMsg('Please enter your phone number and payment Transaction ID (TrxID).');
       return;
     }
 
     if (cleanTrx.length < 6) {
-      setErrorMsg('সঠিক ট্রানজিশন আইডি লিখুন (কমপক্ষে ৬–২০ অক্ষর)।');
+      setErrorMsg('Please enter a valid Transaction ID (at least 6–20 characters).');
       return;
     }
 
@@ -165,16 +165,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         setVerificationFailed(true);
         setVerificationMessage(
           result.message ||
-            `এই Transaction ID (${cleanTrx}) টি ইতিমধ্যে ব্যবহৃত হয়েছে। একটি TrxID দিয়ে শুধুমাত্র একবার প্রোডাক্ট আনলক করা যাবে।`
+            `This Transaction ID (${cleanTrx}) has already been used. Each TrxID can only unlock a product once.`
         );
         setErrorMsg(
-          `Transaction ID (${cleanTrx}) ইতিমধ্যে ব্যবহার করা হয়েছে। ডুপ্লিকেট TrxID গ্রহণযোগ্য নয়।`
+          `Transaction ID (${cleanTrx}) has already been used. Duplicate TrxIDs are not accepted.`
         );
         return;
       }
 
       if (!result.success || !result.order) {
-        setErrorMsg(result.error || result.message || 'অর্ডার সাবমিট করা যায়নি।');
+        setErrorMsg(result.error || result.message || 'Could not submit your order.');
         return;
       }
 
@@ -194,7 +194,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       }
     } catch (err: unknown) {
       console.error('Order verification error:', err);
-      setErrorMsg('ভেরিফিকেশন সার্ভারে সংযোগ করা সম্ভব হয়নি। অনুগ্রহ করে ইন্টারনেট কানেকশন চেক করুন।');
+      setErrorMsg('Unable to reach the verification server. Please check your internet connection.');
     } finally {
       setIsVerifying(false);
     }
@@ -379,11 +379,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <div className="p-3.5 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left space-y-1.5">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
                       <AlertCircle size={14} className="shrink-0" />
-                      <span>অর্ডার Pending — এডমিন যাচাইয়ের অপেক্ষায়</span>
+                      <span>Order Pending — Awaiting Admin Verification</span>
                     </div>
                     <p className="text-[11px] text-[#A1AAA2] leading-relaxed">
                       {verificationMessage ||
-                        'আপনার TrxID এবং পেমেন্ট এডমিন দ্বারা যাচাই করার পর লাইসেন্স ও গুগল ড্রাইভ এক্সেস সক্রিয় করা হবে। দ্রুত অ্যাক্টিভেশনের জন্য নিচের বাটনে ক্লিক করে সরাসরি WhatsApp-এ মেসেজ দিন।'}
+                        'Your license and access will be activated once an admin verifies your TrxID and payment. For faster activation, click below to message us directly on WhatsApp.'}
                     </p>
                   </div>
                 )}

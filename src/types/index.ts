@@ -284,6 +284,24 @@ export interface AdminActivityLog {
   timestamp: string;
 }
 
+export interface MirrorBotVaultWorkspace {
+  uid: string;
+  activatedInVault: boolean;
+  businessName: string;
+  botName: string;
+  workPoints: string[];
+  autoReplyEnabled: boolean;
+  facebookPageConnected: boolean;
+  facebookPageId: string;
+  facebookPageName: string;
+  messengerConnected: boolean;
+  whatsappConnected: boolean;
+  whatsappPhoneId: string;
+  whatsappDisplayPhone: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Strict Studio Owner identity — verified server-side via Firebase ID token & Firestore rules
 export const OWNER_EMAILS: string[] = [
   'khansaheb2572@gmail.com',

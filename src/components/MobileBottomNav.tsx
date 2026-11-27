@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, ShoppingBag, FolderDown, User, Sparkles } from 'lucide-react';
 import { AppUser } from '../types';
+import { useLanguage } from '../utils/i18n';
 
 interface MobileBottomNavProps {
   activeTab: string;
@@ -23,6 +24,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onSignIn,
   onOpenCartOrStore,
 }) => {
+  const { t } = useLanguage();
+
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 pointer-events-none px-2.5 sm:px-3 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
       <nav
@@ -46,7 +49,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }`}
         >
           <Home size={18} />
-          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Home</span>
+          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">
+            {t('Home', 'হোম')}
+          </span>
         </button>
 
         {/* Plugin Store */}
@@ -60,7 +65,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }`}
         >
           <Sparkles size={18} />
-          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Plugins</span>
+          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">
+            {t('Plugins', 'প্লাগইন')}
+          </span>
         </button>
 
         {/* Store / Cart Action */}
@@ -70,7 +77,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           className="relative flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1.5 sm:px-2.5 py-1 rounded-xl glossy-btn cursor-pointer"
         >
           <ShoppingBag size={17} className="text-[#0B0D0C]" />
-          <span className="text-[10px] font-bold text-[#0B0D0C] mt-0.5 truncate max-w-full">Store</span>
+          <span className="text-[10px] font-bold text-[#0B0D0C] mt-0.5 truncate max-w-full">
+            {t('Store', 'স্টোর')}
+          </span>
           {cartCount > 0 && (
             <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0B0D0C] text-[#B7F34A] border border-[#B7F34A] text-[9px] font-bold flex items-center justify-center tabular-nums">
               {cartCount}
@@ -95,7 +104,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }`}
         >
           <FolderDown size={18} />
-          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Vault</span>
+          <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">
+            {t('Vault', 'ভল্ট')}
+          </span>
         </button>
 
         {/* User Account / Profile */}
@@ -117,7 +128,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               </div>
             )}
             <span className="text-[10px] font-medium text-[#B7F34A] mt-0.5 truncate max-w-full">
-              Account
+              {t('Account', 'অ্যাকাউন্ট')}
             </span>
           </button>
         ) : (
@@ -127,7 +138,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             className="flex flex-col items-center justify-center min-h-[44px] min-w-0 flex-1 px-1 sm:px-2 rounded-xl text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer"
           >
             <User size={18} />
-            <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">Login</span>
+            <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">
+              {t('Login', 'লগইন')}
+            </span>
           </button>
         )}
       </nav>

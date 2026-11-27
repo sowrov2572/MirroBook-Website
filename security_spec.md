@@ -26,4 +26,6 @@
 15. **MirrorPOS Duplicate TrxID Replay (`create /mirrorpos_trx_locks/{trxId}`):** Reusing an already submitted Transaction ID.
 16. **MirrorPOS License Request Scraping (`list /mirrorpos_license_requests`):** Customer attempting to list another user's payment submissions.
 17. **Admin Audit Log Forgery or Deletion (`create /admin_activity_logs` as customer, or `delete/update` as anyone):** Tampering with audit logs.
-
+18. **Cross-Tenant Mirror Bot Access (`get /mirrorbot_workspaces/{otherUid}` or `list /mirrorbot_workspaces` without owner filter):** Customer A attempting to read or modify Customer B's Mirror Bot business profile.
+19. **Mirror Bot Shadow Token Injection (`update /mirrorbot_workspaces/{uid}` with `pageAccessToken` or `accessToken`):** Attempting to inject unlisted or secret token fields into client-readable workspace documents.
+20. **Server-Only OAuth Token Theft (`get /mirrorbot_channel_secrets/{uid}` or `get /mirrorbot_channel_routes/page_123`):** Any client SDK attempting to read or write backend Meta OAuth tokens or webhook route mappings.

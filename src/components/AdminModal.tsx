@@ -2160,7 +2160,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           2. Google Sheet &amp; Automated Verification Endpoint
                         </h5>
                         <p className="text-[11px] text-[#A1AAA2]">
-                          গুগল শিট ডাটাবেজ, আইফোন অটোমেশন ও ড্রাইভ অটো-লাইসেন্স এক্সেস
+                          Google Sheet database, SMS automation, and Drive auto-license access
                         </p>
                       </div>
                     </div>
@@ -2226,7 +2226,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       )}
                     </div>
                     <span className="text-[10px] text-[#707A72] block mt-1">
-                      আপনার গুগল শিটের লিঙ্কটি এখানে পেস্ট করে Save Settings দিন। তাহলে উপরে থাকা &apos;Open Sheet in Drive&apos; বাটনে ক্লিক করলেই সরাসরি আপনার গুগল শিট ওপেন হবে।
+                      Paste your Google Sheet link here and click Save Settings to open your spreadsheet directly from the &apos;Open Sheet in Drive&apos; button above.
                     </span>
                   </div>
 
@@ -2249,11 +2249,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                   {/* Quick Setup Instructions Box */}
                   <div className="p-3.5 bg-[#171C19] border border-white/[0.09] rounded-xl space-y-2 text-xs">
-                    <span className="font-semibold text-[#F5F7F2] block">গুগল শিট সেটআপ করার সহজ ৩ ধাপ:</span>
+                    <span className="font-semibold text-[#F5F7F2] block">3 Easy Steps to Set Up Google Sheets:</span>
                     <ol className="list-decimal list-inside space-y-1 text-[#A1AAA2] text-[11px] leading-relaxed">
-                      <li>উপরের <span className="text-[#F5F7F2] font-mono">Create New Sheet</span> বাটনে ক্লিক করে একটি নতুন গুগল শিট খুলুন এবং এর লিঙ্কটি উপরের বক্সে পেস্ট করুন।</li>
-                      <li>গুগল শিটের মেনু থেকে <span className="text-[#F5F7F2] font-mono">Extensions &gt; Apps Script</span> এ যান এবং পুরো কোড মুছে <span className="text-[#F5F7F2] font-mono">Copy Apps Script Code</span> বাটনের কোডটি পেস্ট করুন।</li>
-                      <li>উপরে <span className="text-[#F5F7F2] font-mono">Deploy &gt; New deployment &gt; Web app</span> সিলেক্ট করে <span className="text-[#F5F7F2] font-mono">Who has access: Anyone</span> দিয়ে Deploy করুন এবং পাওয়া Web App URL টি উপরের বক্সে বসিয়ে <span className="text-[#B7F34A] font-semibold">Save Settings</span> বাটনে চাপ দিন।</li>
+                      <li>Click <span className="text-[#F5F7F2] font-mono">Create New Sheet</span> above to open a new Google Sheet and paste its URL into the box above.</li>
+                      <li>From the sheet menu, open <span className="text-[#F5F7F2] font-mono">Extensions &gt; Apps Script</span>, replace the existing code, and paste the code from <span className="text-[#F5F7F2] font-mono">Copy Apps Script Code</span>.</li>
+                      <li>Select <span className="text-[#F5F7F2] font-mono">Deploy &gt; New deployment &gt; Web app</span> with <span className="text-[#F5F7F2] font-mono">Who has access: Anyone</span>, paste the Web App URL above, and click <span className="text-[#B7F34A] font-semibold">Save Settings</span>.</li>
                     </ol>
                   </div>
                 </div>

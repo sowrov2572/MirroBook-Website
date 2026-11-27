@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../utils/i18n';
 
 interface FooterProps {
   onNavigate?: (path: string) => void;
@@ -8,6 +9,8 @@ interface FooterProps {
 const FOOTER_WHATSAPP_URL = 'https://wa.me/8801767079837?text=' + encodeURIComponent('Hello');
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) => {
+  const { t } = useLanguage();
+
   const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (href.startsWith('/')) {
       e.preventDefault();
@@ -35,36 +38,41 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
           {/* Brand lockup */}
           <div className="md:col-span-5 space-y-3">
             <span className="font-display text-2xl font-bold tracking-tight text-[#F5F7F2] block">
-              MirrorBook
+              {t('MirrorBook', 'মিরর বুক')}
             </span>
             <p className="text-xs text-[#B7F34A] font-semibold">
-              Reflecting Creativity
+              {t('Reflecting Creativity', 'রিফ্লেক্টিং ক্রিয়েটিভিটি')}
             </p>
             <p className="text-sm text-[#A1AAA2] max-w-sm leading-relaxed pt-1 font-normal">
-              MirrorBook is a creative agency and digital production studio in Bangladesh. We help brands bring ideas to life through graphic design, video editing, motion graphics, branding, digital marketing, web development, and practical digital solutions.
+              {t(
+                'MirrorBook is a creative agency and digital production studio in Bangladesh. We help brands bring ideas to life through graphic design, video editing, motion graphics, branding, digital marketing, web development, and practical digital solutions.',
+                'মিরর বুক বাংলাদেশের একটি ক্রিয়েটিভ এজেন্সি ও ডিজিটাল প্রোডাকশন স্টুডিও। গ্রাফিক ডিজাইন, ভিডিও এডিটিং, মোশন গ্রাফিক্স, ব্র্যান্ডিং, ডিজিটাল মার্কেটিং, ওয়েব ডেভেলপমেন্ট এবং আধুনিক এআই সফটওয়্যার সলিউশনের মাধ্যমে আমরা ব্র্যান্ডগুলোকে এগিয়ে নিই।'
+              )}
             </p>
-            <a href="/contact" onClick={(e) => handleNav(e, '/contact')} className="inline-flex items-center text-xs font-semibold text-[#B7F34A] hover:text-[#F5F7F2] transition-colors">Let’s discuss your project →</a>
+            <a href="/contact" onClick={(e) => handleNav(e, '/contact')} className="inline-flex items-center text-xs font-semibold text-[#B7F34A] hover:text-[#F5F7F2] transition-colors">
+              {t('Let’s discuss your project →', 'আপনার প্রজেক্ট নিয়ে কথা বলুন →')}
+            </a>
           </div>
 
           {/* Agency & Studio Links */}
           <div className="md:col-span-2 space-y-3">
             <span className="text-xs text-[#F5F7F2] font-bold uppercase tracking-wider block">
-              Agency
+              {t('Agency', 'এজেন্সি')}
             </span>
             <ul className="space-y-2.5 text-xs text-[#A1AAA2]">
               <li>
                 <a href="#services" onClick={(e) => handleNav(e, '#services')} className="hover:text-[#B7F34A] transition-colors">
-                  Services
+                  {t('Services', 'সার্ভিসেস')}
                 </a>
               </li>
               <li>
                 <a href="#portfolio" onClick={(e) => handleNav(e, '#portfolio')} className="hover:text-[#B7F34A] transition-colors">
-                  Portfolio
+                  {t('Portfolio', 'পোর্টফোলিও')}
                 </a>
               </li>
               <li>
                 <a href="#packages" onClick={(e) => handleNav(e, '#packages')} className="hover:text-[#B7F34A] transition-colors">
-                  Packages
+                  {t('Packages', 'প্যাকেজ')}
                 </a>
               </li>
               <li>
@@ -73,12 +81,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   onClick={(e) => handleNav(e, '/sowrov-hosen')}
                   className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
                 >
-                  Founder &amp; Team
+                  {t('Founder & Team', 'ফাউন্ডার ও টিম')}
                 </a>
               </li>
               <li>
                 <a href="/contact" onClick={(e) => handleNav(e, '/contact')} className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium">
-                  Contact Us
+                  {t('Contact Us', 'যোগাযোগ করুন')}
                 </a>
               </li>
             </ul>
@@ -87,7 +95,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
           {/* Software, Library & Courses */}
           <div className="md:col-span-3 space-y-3">
             <span className="text-xs text-[#F5F7F2] font-bold uppercase tracking-wider block">
-              Software, Library &amp; Courses
+              {t('Software, Library & Courses', 'সফটওয়্যার, লাইব্রেরি ও কোর্স')}
             </span>
             <ul className="space-y-2.5 text-xs text-[#A1AAA2]">
               <li>
@@ -96,31 +104,40 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   onClick={(e) => handleNav(e, '/mirrorpos')}
                   className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
                 >
-                  MirrorPOS · Smart POS Software
+                  {t('MirrorPOS · Smart POS Software', 'মিররপস · স্মার্ট পিওএস সফটওয়্যার')}
                 </a>
               </li>
               <li>
                 <a
                   href="/mirrorbot"
                   onClick={(e) => handleNav(e, '/mirrorbot')}
-                  className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium"
+                  className="hover:text-[#B7F34A] transition-colors text-[#F5F7F2] font-medium inline-flex items-center gap-1.5"
                 >
-                  Mirror Bot · AI Support Agent
+                  <img
+                    src="/mirrorbot-icon.png"
+                    alt="Mirror Bot"
+                    width={16}
+                    height={16}
+                    loading="eager"
+                    decoding="async"
+                    className="w-4 h-4 rounded object-contain shrink-0"
+                  />
+                  <span>{t('Mirror Bot · AI Support Agent', 'মিরর বট · এআই সাপোর্ট এজেন্ট')}</span>
                 </a>
               </li>
               <li>
                 <a href="#software" onClick={(e) => handleNav(e, '#software')} className="hover:text-[#B7F34A] transition-colors">
-                  Software Library
+                  {t('Software Library', 'সফটওয়্যার লাইব্রেরি')}
                 </a>
               </li>
               <li>
                 <a href="#plugins" onClick={(e) => handleNav(e, '#plugins')} className="hover:text-[#B7F34A] transition-colors">
-                  Plugin Library
+                  {t('Plugin Library', 'প্লাগইন লাইব্রেরি')}
                 </a>
               </li>
               <li>
                 <a href="#tutorials" onClick={(e) => handleNav(e, '#tutorials')} className="hover:text-[#B7F34A] transition-colors">
-                  Courses &amp; Free Tutorials
+                  {t('Courses & Free Tutorials', 'কোর্স ও ফ্রি টিউটোরিয়াল')}
                 </a>
               </li>
             </ul>
@@ -129,7 +146,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
           {/* Studio Network / Social Links */}
           <div className="md:col-span-2 space-y-3">
             <span className="text-xs text-[#F5F7F2] font-bold uppercase tracking-wider block">
-              Network
+              {t('Network', 'নেটওয়ার্ক')}
             </span>
             <ul className="space-y-2.5 text-xs text-[#A1AAA2]">
               <li>
@@ -139,7 +156,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   rel="noopener noreferrer"
                   className="hover:text-[#B7F34A] transition-colors font-medium text-[#F5F7F2]"
                 >
-                  Portfolio Studio ↗
+                  {t('Portfolio Studio ↗', 'পোর্টফোলিও স্টুডিও ↗')}
                 </a>
               </li>
               <li>
@@ -150,7 +167,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   aria-label="MirrorBook Official Facebook Page"
                   className="hover:text-[#B7F34A] transition-colors"
                 >
-                  Facebook
+                  {t('Facebook', 'ফেসবুক')}
                 </a>
               </li>
               <li>
@@ -161,7 +178,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   aria-label="MirrorBook Official Instagram Profile"
                   className="hover:text-[#B7F34A] transition-colors"
                 >
-                  Instagram
+                  {t('Instagram', 'ইনস্টাগ্রাম')}
                 </a>
               </li>
               <li>
@@ -172,7 +189,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   aria-label="MirrorBook Official TikTok Profile"
                   className="hover:text-[#B7F34A] transition-colors"
                 >
-                  TikTok
+                  {t('TikTok', 'টিকটক')}
                 </a>
               </li>
               <li>
@@ -183,7 +200,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   aria-label="MirrorBook Official LinkedIn Page"
                   className="hover:text-[#B7F34A] transition-colors"
                 >
-                  LinkedIn
+                  {t('LinkedIn', 'লিংকডইন')}
                 </a>
               </li>
               <li>
@@ -194,7 +211,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   aria-label="MirrorBook Official YouTube Channel"
                   className="hover:text-[#B7F34A] transition-colors"
                 >
-                  YouTube
+                  {t('YouTube', 'ইউটিউব')}
                 </a>
               </li>
               <li>
@@ -205,7 +222,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
                   aria-label="Chat with MirrorBook on WhatsApp"
                   className="hover:text-[#B7F34A] transition-colors font-medium text-[#F5F7F2]"
                 >
-                  Chat on WhatsApp
+                  {t('Chat on WhatsApp', 'হোয়াটসঅ্যাপে চ্যাট করুন')}
                 </a>
               </li>
               <li>
@@ -228,15 +245,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#A1AAA2] gap-4 text-center sm:text-left">
-          <p>© 2026 MirrorBook Studio. All rights reserved.</p>
+          <p>{t('© 2026 MirrorBook Studio. All rights reserved.', '© ২০২৬ মিরর বুক স্টুডিও। সর্বস্বত্ব সংরক্ষিত।')}</p>
 
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 gap-y-2">
             <a href="#services" className="hover:text-[#F5F7F2] transition-colors">
-              Privacy &amp; Licensing
+              {t('Privacy & Licensing', 'প্রাইভেসি ও লাইসেন্সিং')}
             </a>
             <span className="text-white/20">·</span>
             <span className="text-[#707A72] text-[11px]">
-              Encrypted Single-User Vault System
+              {t('Encrypted Single-User Vault System', 'সুরক্ষিত পার্সোনাল ভল্ট সিস্টেম')}
             </span>
           </div>
         </div>

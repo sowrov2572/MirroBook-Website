@@ -18,7 +18,6 @@ import {
   ShieldCheck,
   Laptop,
   Layers,
-  Languages,
   ChevronDown,
   Mail,
   Loader2,
@@ -47,6 +46,7 @@ import {
   submitMirrorPOSLicenseRequest,
   recordMirrorPOSFreeAccessInFirestore,
 } from '../utils/firebase';
+import { useLanguage } from '../utils/i18n';
 
 interface MirrorPOSPageProps {
   onNavigateHome: () => void;
@@ -63,7 +63,6 @@ interface MirrorPOSPageProps {
 }
 
 type BrowserTab = 'chrome' | 'edge';
-type GuideLang = 'en' | 'bn';
 
 interface UserGuideCategory {
   number: string;
@@ -114,10 +113,10 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
   isAdminVerified = false,
   onGoogleSignIn,
 }) => {
+  const { t } = useLanguage();
   const [activeScreenshot, setActiveScreenshot] = useState<number>(0);
   const [browserTab, setBrowserTab] = useState<BrowserTab>('chrome');
   const [openGuideIndex, setOpenGuideIndex] = useState<number | null>(0);
-  const [guideLang, setGuideLang] = useState<GuideLang>('en');
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   // Free Access Registration Form State
@@ -600,7 +599,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
     },
   ];
 
-  const userGuideCategories: Record<GuideLang, UserGuideCategory[]> = {
+  const userGuideCategories: { en: UserGuideCategory[] } = {
     en: [
       {
         number: '01',
@@ -735,140 +734,6 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         ],
       },
     ],
-    bn: [
-      {
-        number: '০১',
-        title: 'Getting Started (শুরু করার নিয়ম)',
-        summary: 'MirrorPOS সফটওয়্যার ওপেন করা, ডেস্কটপ অ্যাপ ইনস্টল ও মূল ড্যাশবোর্ড পরিচিতি।',
-        steps: [
-          'আপনার Windows 10/11 পিসিতে ইমেইল ভেরিফিকেশন লিংক অথবা অ্যাপ্রুভড ডেস্কটপ লাইসেন্স বাটনের মাধ্যমে Google Chrome বা Microsoft Edge দিয়ে MirrorPOS ওপেন করুন।',
-          'ব্রাউজার ট্যাব ছাড়া আলাদা ডেস্কটপ অ্যাপ উইন্ডোতে চালাতে অ্যাড্রেস বারের Install আইকনে ক্লিক করে টাস্কবারে পিন করুন।',
-          'বাম দিকের সাইডবার থেকে বিজনেস ড্যাশবোর্ড, পজ (POS), প্রোডাক্ট ও স্টক, কাস্টমার, সাপ্লায়ার, খরচ ও রিপোর্ট মেনু দেখুন।',
-        ],
-      },
-      {
-        number: '০২',
-        title: 'Account Registration and Login',
-        summary: 'ফ্রি অ্যাক্সেস রেজিস্ট্রেশন ও ওনার/স্টাফ মোড লগইন পরিচালনা।',
-        steps: [
-          'এই পেজের Free Access ফর্মে আপনার Full Name এবং Email Address সাবমিট করে ইমেইলে লঞ্চ লিংক ও গাইড সংগ্রহ করুন।',
-          'MirrorPOS ওপেন করে আপনার অ্যাকাউন্ট দিয়ে সাইন-ইন করুন।',
-          'কাউন্টার পরিচালনার জন্য প্রয়োজন অনুযায়ী Owner Mode বা Staff Mode নির্বাচন করুন।',
-        ],
-      },
-      {
-        number: '০৩',
-        title: 'Initial Business Setup',
-        summary: 'দোকানের নাম, ঠিকানা, কারেন্সি এবং থার্মাল/PDF ইনভয়েস সেটিংস নির্ধারণ।',
-        steps: [
-          'সাইডবার থেকে Store Settings অপশনে প্রবেশ করুন।',
-          'আপনার দোকানের নাম, ঠিকানা, মোবাইল নম্বর ও মেমোর নিচের ফুটনোট যুক্ত করুন।',
-          '৫৮মিমি/৮০মিমি থার্মাল প্রিন্টার অথবা A4 PDF পেপার সাইজ সেট করে সেভ করুন।',
-        ],
-      },
-      {
-        number: '০৪',
-        title: 'Adding Products',
-        summary: 'ক্রয়মূল্য, বিক্রয়মূল্য, বারকোড ও ভ্যারিয়েন্টসহ পণ্য যুক্ত করার নিয়ম।',
-        steps: [
-          '"Product & Stock" মেনু থেকে "+ Add Product" বাটনে ক্লিক করুন।',
-          'পণ্যের নাম, ক্যাটাগরি, বারকোড/SKU, কেনা দাম ও বিক্রয় দাম লিখুন।',
-          'ওপেনিং স্টক সংখ্যা এবং প্রয়োজন হলে সাইজ বা কালার ভ্যারিয়েন্ট দিয়ে সেভ করুন।',
-        ],
-      },
-      {
-        number: '০৫',
-        title: 'Creating Sales and Invoices',
-        summary: 'বারকোড স্ক্যান করে দ্রুত বিল তৈরি, ডিসকাউন্ট ও মেমো প্রিন্ট।',
-        steps: [
-          'ড্যাশবোর্ডের POS Billing বা "+ New Invoice" বাটনে ক্লিক করুন।',
-          'বারকোড স্ক্যানার দিয়ে স্ক্যান করে বা নাম লিখে সার্চ করে পণ্য কার্টে যোগ করুন।',
-          'ডিসকাউন্ট, কাস্টমার প্রোফাইল ও পেমেন্ট মেথড (Cash, Mobile Banking, Card বা Due) সিলেক্ট করুন।',
-          'Complete Sale ক্লিক করলে স্টক অটোমেটিক আপডেট হবে এবং থার্মাল বা PDF ক্যাশ মেমো তৈরি হবে।',
-        ],
-      },
-      {
-        number: '০৬',
-        title: 'Managing Inventory',
-        summary: 'রিয়েল-টাইম স্টক কন্ট্রোল, দ্রুত স্টক আপডেট এবং লো-স্টক সতর্কতা।',
-        steps: [
-          'যেকোনো পণ্যের পরিমাণ আপডেট করতে Quick Stock বাটন ব্যবহার করুন।',
-          'Suppliers / Purchases অপশন থেকে নতুন মাল কেনা এন্ট্রি করলে ক্রয়মূল্য ও স্টক একসাথে আপডেট হয়।',
-          'ড্যাশবোর্ডে থাকা Low-Stock Alerts দেখে চাহিদাসম্পন্ন পণ্য আগেই রি-স্টক করুন।',
-        ],
-      },
-      {
-        number: '০৭',
-        title: 'Customer Management',
-        summary: 'কাস্টমার প্রোফাইল সংরক্ষণ ও বাকি-বকেয়া (Receivables) লেজার হিসাব।',
-        steps: [
-          'Customer Management সেকশনে নিয়মিত ক্রেতাদের নাম ও ফোন নম্বর সংরক্ষণ করুন।',
-          'বাকি বা আংশিক পেমেন্টে বিক্রি করার সময় কাস্টমার সিলেক্ট করে বিল সম্পন্ন করুন।',
-          'কাস্টমার বকেয়া টাকা পরিশোধ করলে জমা এন্ট্রি করুন; সাথে সাথেই ব্যালেন্স আপডেট হবে।',
-        ],
-      },
-      {
-        number: '০৮',
-        title: 'Expense Management',
-        summary: 'দোকানের দৈনিক ও মাসিক খরচ হিসাব করে নিট লাভ নির্ভুল রাখা।',
-        steps: [
-          'ন্যাভিগেশন থেকে Shop Expense ট্যাবে যান।',
-          'দোকান ভাড়া, বিদ্যুৎ বিল, কর্মচারী বেতন, প্যাকেজিং বা কুরিয়ার খরচ ক্যাটাগরি অনুযায়ী এন্ট্রি করুন।',
-          'আর্থিক রিপোর্টে মোট খরচ ও প্রকৃত লাভ সরাসরি পর্যবেক্ষণ করুন।',
-        ],
-      },
-      {
-        number: '০৯',
-        title: 'Reports and Analytics',
-        summary: 'দৈনিক, মাসিক ও সর্বমোট বিক্রি এবং Profit & Loss বিবরণী দেখা।',
-        steps: [
-          'Reports & Analytics অপশনে গিয়ে Today, This Month বা All-Time ফিল্টার বেছে নিন।',
-          'মোট বিক্রি (Gross Revenue), পণ্যের ব্যয় (COGS), দোকান খরচ এবং নিট লাভ দেখুন।',
-          'Print Report বাটনের মাধ্যমে প্রিন্ট বা PDF রিপোর্ট সংরক্ষণ করুন।',
-        ],
-      },
-      {
-        number: '১০',
-        title: 'Offline Mode',
-        summary: 'ইন্টারনেট না থাকলেও বিরতিহীন বিলিং ও পরবর্তী অটো সিঙ্ক।',
-        steps: [
-          'ইন্টারনেট সংযোগ বিচ্ছিন্ন থাকলেও পজ বিলিং, পণ্য সার্চ এবং রসিদ প্রিন্ট স্বাভাবিকভাবে চালিয়ে যান।',
-          'অফলাইন থাকাকালীন সব হিসাব আপনার ডিভাইসে নিরাপদে সংরক্ষিত থাকবে।',
-          'ইন্টারনেট ফিরে এলেই পেন্ডিং সব সেলস ও স্টক ডাটা অটোমেটিক অনলাইনে সিঙ্ক হয়ে যাবে।',
-        ],
-      },
-      {
-        number: '১১',
-        title: 'Google Account Synchronization',
-        summary: 'Google অ্যাকাউন্ট যুক্ত করে Google Sheets সিঙ্ক ও ওয়ার্কস্পেস ইন্টিগ্রেশন।',
-        steps: [
-          'MirrorPOS-এর Sync সেটিংসে আপনার Google অ্যাকাউন্ট সংযুক্ত করুন।',
-          'ড্যাশবোর্ডের কুইক অ্যাকশন থেকে "Save to Google Sheets" ব্যবহার করে সরাসরি তথ্য সিঙ্ক করুন।',
-          'আপনার কানেক্টেড Google Sheets-এ সেলস, স্টক ও হিসাবের তথ্য যাচাই করুন।',
-        ],
-      },
-      {
-        number: '১২',
-        title: 'Data Backup and Recovery',
-        summary: 'লোকাল ব্যাকআপ ডাউনলোড, ক্লাউড সিঙ্ক ও রিস্টোর করার পদ্ধতি।',
-        steps: [
-          'Data Backup মেনু থেকে Export Backup ক্লিক করে দোকানের সম্পূর্ণ ডাটা ব্যাকআপ ফাইল ডাউনলোড করে রাখুন।',
-          'অনলাইনে থাকা অবস্থায় নিয়মিত Cloud Backup Sync চালিয়ে ক্লাউড কপি সুরক্ষিত রাখুন।',
-          'নতুন পিসি ব্যবহার করলে বা ডাটা রিসেট হলে Restore Backup অপশন দিয়ে পূর্বের সব তথ্য ফিরিয়ে আনুন।',
-        ],
-      },
-      {
-        number: '১৩',
-        title: 'Troubleshooting and Support',
-        summary: 'প্রিন্টার, বারকোড স্ক্যানার ও সিঙ্ক সমস্যার সমাধান এবং সাপোর্ট যোগাযোগ।',
-        steps: [
-          'থার্মাল প্রিন্ট সেটিংস: Chrome/Edge প্রিন্ট ডায়ালগে পেপার সাইজ 58mm/80mm এবং Margins: None রাখুন।',
-          'বারকোড স্ক্যান না হলে: স্ক্যানার USB HID কিবোর্ড মোডে আছে কিনা দেখুন এবং POS সার্চ বক্সে ক্লিক করে স্ক্যান করুন।',
-          'সিঙ্ক সমস্যা হলে: ইন্টারনেট কানেকশন নিশ্চিত করে Cloud Sync বাটনে ক্লিক করুন।',
-          'অতিরিক্ত সহায়তার জন্য mirrorbook.site@gmail.com ইমেইলে বা নিচের Technical Support বাটনে যোগাযোগ করুন।',
-        ],
-      },
-    ],
   };
 
   const installGuide = {
@@ -932,71 +797,11 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
         },
       ],
     },
-    bn: {
-      heading: 'মিররপস (MirrorPOS) ইনস্টল করার নিয়ম',
-      sub: 'Windows 10 বা Windows 11 পিসিতে Google Chrome অথবা Microsoft Edge দিয়ে MirrorPOS অ্যাপ হিসেবে ইনস্টল করুন।',
-      sysReqLabel: 'সিস্টেম রিকোয়ারমেন্ট:',
-      sysReqText:
-        'Windows 10/11 পিসি, Google Chrome বা Microsoft Edge ব্রাউজার এবং ঐচ্ছিক বারকোড স্ক্যানার ও 58mm/80mm থার্মাল প্রিন্টার।',
-      openBtn: 'MirrorPOS ওপেন করুন',
-      chromeSteps: [
-        {
-          step: 'ধাপ ০১',
-          title: 'Google Chrome-এ MirrorPOS ওপেন করুন',
-          detail:
-            'আপনার Gmail ভেরিফিকেশন লিংক অথবা অ্যাপ্রুভড ডেস্কটপ লাইসেন্স বাটনের মাধ্যমে Google Chrome-এ MirrorPOS ওপেন করুন।',
-        },
-        {
-          step: 'ধাপ ০২',
-          title: 'অ্যাড্রেস বারের Install আইকনে ক্লিক করুন',
-          detail:
-            'Chrome অ্যাড্রেস বারের ডান পাশে থাকা Install আইকনে ক্লিক করুন অথবা মেনু (⋮) থেকে Install page as app সিলেক্ট করুন।',
-        },
-        {
-          step: 'ধাপ ০৩',
-          title: 'ইনস্টল কনফার্ম করুন',
-          detail:
-            'পপআপ বক্সে "Install" বাটনে ক্লিক করুন; সাথে সাথেই এটি আলাদা ডেস্কটপ অ্যাপ উইন্ডোতে ওপেন হবে।',
-        },
-        {
-          step: 'ধাপ ০৪',
-          title: 'টাস্কবার ও ডেস্কটপে পিন করুন',
-          detail:
-            'টাস্কবারে MirrorPOS আইকনে রাইট-ক্লিক করে "Pin to taskbar" সিলেক্ট করুন।',
-        },
-      ],
-      edgeSteps: [
-        {
-          step: 'ধাপ ০১',
-          title: 'Microsoft Edge-এ MirrorPOS ওপেন করুন',
-          detail:
-            'আপনার Gmail ভেরিফিকেশন লিংক অথবা অ্যাপ্রুভড ডেস্কটপ লাইসেন্স বাটনের মাধ্যমে Microsoft Edge-এ MirrorPOS ওপেন করুন।',
-        },
-        {
-          step: 'ধাপ ০২',
-          title: '"Install this site as an app" সিলেক্ট করুন',
-          detail:
-            'Edge অ্যাড্রেস বারের App আইকনে ক্লিক করুন বা মেনু (⋯) → Apps → Install this site as an app সিলেক্ট করুন।',
-        },
-        {
-          step: 'ধাপ ০৩',
-          title: 'অ্যাপের নাম যাচাই করে Install দিন',
-          detail:
-            'নাম "MirrorPOS" রেখে "Install" বাটনে ক্লিক করুন।',
-        },
-        {
-          step: 'ধাপ ০৪',
-          title: 'ডেস্কটপ শর্টকাট ও টাস্কবার চালু করুন',
-          detail:
-            '"Pin to taskbar" এবং "Create Desktop shortcut" টিক দিয়ে OK করুন।',
-        },
-      ],
-    },
   };
 
-  const activeGuide = installGuide[guideLang];
+  const activeGuide = installGuide.en;
   const activeSteps = browserTab === 'chrome' ? activeGuide.chromeSteps : activeGuide.edgeSteps;
-  const activeManualCategories = userGuideCategories[guideLang];
+  const activeManualCategories = userGuideCategories.en;
 
   return (
     <div className="min-h-screen bg-[#0B0D0C] text-[#F5F7F2] overflow-x-clip">
@@ -1013,10 +818,10 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               className="hover:text-[#B7F34A] transition-colors flex items-center gap-1.5 whitespace-nowrap min-h-[36px]"
             >
               <ArrowLeft size={14} />
-              <span>MirrorBook Home</span>
+              <span>{t('MirrorBook Home', 'মিরর বুক হোম')}</span>
             </a>
             <span aria-hidden="true">/</span>
-            <span className="text-[#A1AAA2]">Software Library</span>
+            <span className="text-[#A1AAA2]">{t('Software Library', 'সফটওয়্যার লাইব্রেরি')}</span>
             <span aria-hidden="true">/</span>
             <span className="text-[#B7F34A] font-semibold">MirrorPOS</span>
           </nav>
@@ -1029,12 +834,12 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             {copiedLink ? (
               <>
                 <Check size={13} className="text-[#B7F34A]" />
-                <span className="text-[#B7F34A]">Link Copied</span>
+                <span className="text-[#B7F34A]">{t('Link Copied', 'লিংক কপি হয়েছে')}</span>
               </>
             ) : (
               <>
                 <Share2 size={13} className="text-[#B7F34A]" />
-                <span>Share Page</span>
+                <span>{t('Share Page', 'পেজ শেয়ার করুন')}</span>
               </>
             )}
           </button>
@@ -1103,9 +908,11 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#B7F34A] mb-1">
-                  <span>Developed by MirrorBook</span>
+                  <span>{t('Developed by MirrorBook', 'মিরর বুক নির্মিত')}</span>
                   <span aria-hidden="true" className="text-[#707A72]">·</span>
-                  <span className="text-[#A1AAA2] font-normal">Desktop POS Software</span>
+                  <span className="text-[#A1AAA2] font-normal">
+                    {t('Desktop POS Software', 'ডেস্কটপ POS সফটওয়্যার')}
+                  </span>
                 </div>
                 <h1 className="font-display text-3xl min-[375px]:text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F5F7F2] leading-none">
                   MirrorPOS
@@ -1114,13 +921,16 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
             </div>
 
             <p className="text-lg sm:text-2xl text-[#F5F7F2] font-semibold tracking-tight">
-              Smart POS Software for Modern Businesses.
+              {t(
+                'Smart POS Software for Modern Businesses.',
+                'আধুনিক ব্যবসার জন্য স্মার্ট POS সফটওয়্যার।'
+              )}
             </p>
 
             {/* Product Overview Spec Table */}
             <div className="glossy-card p-5 rounded-2xl border border-white/[0.09]">
               <h2 className="text-xs font-bold uppercase tracking-wider text-[#B7F34A] mb-4">
-                Product Overview
+                {t('Product Overview', 'প্রোডাক্ট ওভারভিউ')}
               </h2>
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 {overviewSpecs.map((spec) => (
@@ -1143,7 +953,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   rel="noopener noreferrer"
                   className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
-                  <span>Launch MirrorPOS</span>
+                  <span>{t('Launch MirrorPOS', 'MirrorPOS চালু করুন')}</span>
                   <ExternalLink size={15} />
                 </a>
               ) : (
@@ -1153,14 +963,14 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
                   <Mail size={15} />
-                  <span>Get Access via Email</span>
+                  <span>{t('Get Access via Email', 'ইমেইলের মাধ্যমে অ্যাক্সেস নিন')}</span>
                 </button>
               )}
 
               {isApprovedPaidUser ? (
                 <div className="w-full min-h-[46px] px-6 py-3.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/35 text-[#B7F34A] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap">
                   <ShieldCheck size={15} />
-                  <span>Desktop License Active</span>
+                  <span>{t('Desktop License Active', 'ডেস্কটপ লাইসেন্স সক্রিয়')}</span>
                 </div>
               ) : isPendingPaidUser ? (
                 <button
@@ -1169,7 +979,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   className="w-full min-h-[46px] px-6 py-3.5 rounded-xl bg-yellow-500/10 border border-yellow-500/35 text-yellow-300 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
                   <Clock size={15} />
-                  <span>Payment Under Review</span>
+                  <span>{t('Payment Under Review', 'পেমেন্ট যাচাই চলছে')}</span>
                 </button>
               ) : (
                 <button
@@ -1178,7 +988,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                   className="w-full min-h-[46px] px-6 py-3.5 rounded-xl glossy-btn-secondary border-[#B7F34A]/45 hover:border-[#B7F34A] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
                   <KeyRound size={15} className="text-[#B7F34A]" />
-                  <span>Desktop License - ৳9,999</span>
+                  <span>{t('Desktop License - ৳9,999', 'ডেস্কটপ লাইসেন্স - ৳৯,৯৯৯')}</span>
                 </button>
               )}
             </div>
@@ -1190,14 +1000,20 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               <div className="space-y-1.5 border-b border-white/[0.09] pb-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#B7F34A]/15 border border-[#B7F34A]/35 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A]">
-                    Free via Email · Desktop License ৳9,999
+                    {t(
+                      'Free via Email · Desktop License ৳9,999',
+                      'ইমেইলে ফ্রি · ডেস্কটপ লাইসেন্স ৳৯,৯৯৯'
+                    )}
                   </span>
                 </div>
                 <h2 className="font-display text-xl sm:text-2xl font-bold text-[#F5F7F2]">
-                  Get MirrorPOS Access
+                  {t('Get MirrorPOS Access', 'MirrorPOS অ্যাক্সেস নিন')}
                 </h2>
                 <p className="text-xs text-[#A1AAA2] leading-relaxed">
-                  For free access, register with your email below to receive a single-use verification link in Gmail. Or submit a manual bKash payment (৳9,999) for direct Desktop Lifetime License activation after admin verification.
+                  {t(
+                    'For free access, register with your email below to receive a single-use verification link in Gmail. Or submit a manual bKash payment (৳9,999) for direct Desktop Lifetime License activation after admin verification.',
+                    'ফ্রি অ্যাক্সেসের জন্য নিচে আপনার ইমেইল দিন — আপনার জিমেইলে ভেরিফিকেশন লিংক চলে যাবে। অথবা সরাসরি ডেস্কটপ লাইফটাইম লাইসেন্সের জন্য ৳৯,৯৯৯ বিকাশ পেমেন্ট সাবমিট করুন।'
+                  )}
                 </p>
               </div>
 
@@ -1311,7 +1127,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                             Open the single-use verification link inside your email inbox to launch MirrorPOS directly.
                           </p>
                           <p className="text-[11px] text-[#B7F34A]/90 leading-relaxed">
-                            Please also check your Spam folder if you don&apos;t see it in your inbox. (স্প্যাম ফোল্ডারও চেক করুন।)
+                            Please also check your Spam folder if you don&apos;t see it in your inbox.
                           </p>
                           <p className="text-[11px] font-mono text-[#B7F34A]">
                             Reference ID: {accessConfirmed.referenceId}
@@ -1572,31 +1388,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-3 self-start lg:self-end">
-                <div className="flex items-center gap-1 p-1 glass-tab-bar rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setGuideLang('en')}
-                    className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                      guideLang === 'en'
-                        ? 'bg-[#F5F7F2] text-black'
-                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
-                    }`}
-                  >
-                    English
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGuideLang('bn')}
-                    className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-                      guideLang === 'bn'
-                        ? 'bg-[#F5F7F2] text-black'
-                        : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
-                    }`}
-                  >
-                    <Languages size={13} />
-                    <span>বাংলা</span>
-                  </button>
-                </div>
+                {/* Browser switcher */}
 
                 <div className="flex items-center gap-1.5 p-1 glass-tab-bar rounded-xl">
                   <button
@@ -1699,31 +1491,6 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
               </p>
             </div>
 
-            <div className="glass-tab-bar self-start md:self-end shrink-0">
-              <button
-                type="button"
-                onClick={() => setGuideLang('en')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  guideLang === 'en'
-                    ? 'bg-[#B7F34A] text-[#0B0D0C]'
-                    : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
-                }`}
-              >
-                English
-              </button>
-              <button
-                type="button"
-                onClick={() => setGuideLang('bn')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-                  guideLang === 'bn'
-                    ? 'bg-[#B7F34A] text-[#0B0D0C]'
-                    : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
-                }`}
-              >
-                <Languages size={13} />
-                <span>বাংলা</span>
-              </button>
-            </div>
           </div>
 
           <div className="space-y-3">
@@ -1975,7 +1742,7 @@ export const MirrorPOSPage: React.FC<MirrorPOSPageProps> = ({
                         {bkashSuccessMessage}
                       </p>
                       <p className="text-[11px] text-[#B7F34A]/90 leading-relaxed">
-                        Please also check your Spam folder if you don&apos;t see the confirmation email in your inbox. (স্প্যাম ফোল্ডারও চেক করুন।)
+                        Please also check your Spam folder if you don&apos;t see the confirmation email in your inbox.
                       </p>
                     </div>
                   </div>

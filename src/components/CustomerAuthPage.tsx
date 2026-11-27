@@ -13,9 +13,11 @@ import {
   ShieldCheck,
   KeyRound,
 } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
 
 interface CustomerAuthPageProps {
   mode: 'login' | 'signup';
+  mirrorBotIntent?: boolean;
   onNavigate: (path: string) => void;
   onGoogleSignIn: () => Promise<void>;
   onEmailSignIn: (email: string, password: string) => Promise<void>;
@@ -25,12 +27,14 @@ interface CustomerAuthPageProps {
 
 export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
   mode,
+  mirrorBotIntent = false,
   onNavigate,
   onGoogleSignIn,
   onEmailSignIn,
   onEmailSignUp,
   onSendResetPassword,
 }) => {
+  const { t } = useLanguage();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -129,7 +133,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
           className="inline-flex items-center gap-2 min-h-[44px] text-xs text-[#A1AAA2] hover:text-[#B7F34A] transition-colors cursor-pointer"
         >
           <ArrowLeft size={14} />
-          <span>Back to MirrorBook</span>
+          <span>{t('Back to MirrorBook', 'মিরর বুকে ফিরে যান')}</span>
         </button>
 
         <div className="glossy-card rounded-2xl overflow-hidden shadow-[0_24px_60px_-15px_rgba(0,0,0,0.75)]">
@@ -151,22 +155,50 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
             <div className="min-w-0">
               <h1 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] tracking-normal">
                 {isResetMode
-                  ? 'Reset Password'
+                  ? t('Reset Password', 'পাসওয়ার্ড রিসেট করুন')
                   : mode === 'signup'
-                  ? 'Create Your Account'
-                  : 'Welcome Back to MirrorBook'}
+                  ? t('Create Your Account', 'নতুন অ্যাকাউন্ট তৈরি করুন')
+                  : t('Welcome Back to MirrorBook', 'মিরর বুকে আবার স্বাগতম')}
               </h1>
               <p className="text-xs text-[#A1AAA2]">
                 {isResetMode
-                  ? 'Enter your email to receive a password reset link'
+                  ? t(
+                      'Enter your email to receive a password reset link',
+                      'পাসওয়ার্ড রিসেট লিংক পেতে আপনার ইমেইল লিখুন'
+                    )
                   : mode === 'signup'
-                  ? 'Access purchased plugins, courses, license keys & downloads'
-                  : 'Sign in to access your purchases & downloads'}
+                  ? t(
+                      'Access purchased plugins, courses, license keys & downloads',
+                      'আপনার প্লাগইন, কোর্স, লাইসেন্স কী ও ডাউনলোড অ্যাক্সেস করুন'
+                    )
+                  : t(
+                      'Sign in to access your purchases & downloads',
+                      'আপনার পারচেজ ও ডাউনলোড দেখতে সাইন ইন করুন'
+                    )}
               </p>
             </div>
           </div>
 
           <div className="p-5 sm:p-7 space-y-5">
+            {mirrorBotIntent && !isResetMode && (
+              <div className="p-3.5 rounded-xl bg-[#B7F34A]/10 border border-[#B7F34A]/35 text-xs text-[#E5F9C2] flex items-center gap-3">
+                <img
+                  src="/mirrorbot-icon.png"
+                  alt="Mirror Bot"
+                  width={32}
+                  height={32}
+                  loading="eager"
+                  decoding="async"
+                  className="w-8 h-8 rounded-lg object-contain shrink-0 bg-[#0B0D0C] p-1 border border-[#B7F34A]/30"
+                />
+                <p className="leading-relaxed">
+                  {t(
+                    'Create your account or sign in to automatically add Mirror Bot to your Vault and connect Facebook, Messenger & WhatsApp.',
+                    'অ্যাকাউন্ট তৈরি বা সাইন ইন করলেই মিরর বট অটোমেটিক আপনার ভল্টে যোগ হয়ে যাবে এবং ফেসবুক, মেসেঞ্জার ও হোয়াটসঅ্যাপ কানেক্ট করতে পারবেন।'
+                  )}
+                </p>
+              </div>
+            )}
             {!isResetMode && (
               <>
                 <button
@@ -178,7 +210,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                   {isLoadingGoogle ? (
                     <>
                       <Loader2 size={16} className="animate-spin text-[#0B0D0C]" />
-                      <span>Connecting with Google...</span>
+                      <span>{t('Connecting with Google...', 'গুগলে কানেক্ট হচ্ছে...')}</span>
                     </>
                   ) : (
                     <>
@@ -200,14 +232,16 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                           d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                         />
                       </svg>
-                      <span>Continue with Google</span>
+                      <span>{t('Continue with Google', 'গুগল দিয়ে চালিয়ে যান')}</span>
                     </>
                   )}
                 </button>
 
                 <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-white/[0.09]" />
-                  <span className="text-[11px] text-[#707A72] uppercase tracking-wider">or</span>
+                  <span className="text-[11px] text-[#707A72] uppercase tracking-wider">
+                    {t('or', 'অথবা')}
+                  </span>
                   <div className="h-px flex-1 bg-white/[0.09]" />
                 </div>
 
@@ -222,7 +256,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                         : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
-                    Sign In
+                    {t('Sign In', 'সাইন ইন')}
                   </button>
                   <button
                     type="button"
@@ -233,7 +267,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                         : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
                     }`}
                   >
-                    Sign Up
+                    {t('Sign Up', 'সাইন আপ')}
                   </button>
                 </div>
               </>
@@ -376,16 +410,20 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                 {isSubmitting ? (
                   <>
                     <Loader2 size={15} className="animate-spin text-[#0B0D0C]" />
-                    <span>Please wait...</span>
+                    <span>{t('Please wait...', 'অপেক্ষা করুন...')}</span>
                   </>
                 ) : isResetMode ? (
                   <>
                     <KeyRound size={14} />
-                    <span>Send Reset Link</span>
+                    <span>{t('Send Reset Link', 'রিসেট লিংক পাঠান')}</span>
                   </>
                 ) : (
                   <>
-                    <span>{mode === 'signup' ? 'Create Account' : 'Sign In'}</span>
+                    <span>
+                      {mode === 'signup'
+                        ? t('Create Account', 'অ্যাকাউন্ট তৈরি করুন')
+                        : t('Sign In', 'সাইন ইন করুন')}
+                    </span>
                     <ArrowRight size={14} />
                   </>
                 )}
@@ -401,7 +439,7 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
                   }}
                   className="w-full min-h-[44px] py-2 text-xs text-[#A1AAA2] hover:text-[#F5F7F2] transition-colors cursor-pointer"
                 >
-                  Back to Sign In
+                  {t('Back to Sign In', 'সাইন ইনে ফিরে যান')}
                 </button>
               )}
             </form>
@@ -409,7 +447,10 @@ export const CustomerAuthPage: React.FC<CustomerAuthPageProps> = ({
             <div className="p-3.5 bg-[#121614] border border-white/[0.08] rounded-xl text-[11px] text-[#A1AAA2] flex items-start gap-2.5">
               <ShieldCheck size={15} className="text-[#B7F34A] shrink-0 mt-0.5" />
               <p className="leading-relaxed">
-                Protected by Firebase Authentication. Your purchases, plugin license keys, courses, and downloads sync securely to your personal account.
+                {t(
+                  'Protected by Firebase Authentication. Your purchases, plugin license keys, courses, and downloads sync securely to your personal account.',
+                  'সুরক্ষিত অ্যাকাউন্ট সিস্টেম। আপনার সব পারচেজ, প্লাগইন লাইসেন্স কী, কোর্স ও ডাউনলোড নিরাপদে আপনার অ্যাকাউন্টে সংরক্ষিত থাকবে।'
+                )}
               </p>
             </div>
           </div>

@@ -46,6 +46,11 @@ export const PackageCustomizerModal: React.FC<PackageCustomizerModalProps> = ({
   React.useEffect(() => {
     if (initialData?.initialService) {
       setRequiredService(initialData.initialService);
+      if (initialData.initialService.toLowerCase().includes('master')) {
+        setBudgetRange('৳45,000 / month (Master Pack)');
+      } else {
+        setBudgetRange('Starting From ৳25,000 / month');
+      }
     }
     setIsSubmitted(false);
     setErrorMsg('');
@@ -287,7 +292,7 @@ Sent via https://mirrorbook.site/`;
                       A confirmation email has been dispatched to <strong className="text-[#F5F7F2] break-all">{email}</strong>. Our team has received your order request and will contact you shortly to discuss next steps, payment details, and project requirements.
                     </p>
                     <p className="text-[11px] text-[#B7F34A]/90">
-                      Please also check your Spam folder. (স্প্যাম ফোল্ডারও চেক করুন।)
+                      Please also check your Spam folder if you don&apos;t see it in your inbox.
                     </p>
                   </div>
                 </div>
@@ -345,7 +350,7 @@ Sent via https://mirrorbook.site/`;
             <div className="p-3.5 rounded-xl bg-[#171C19] border border-white/[0.09] text-xs text-[#A1AAA2] flex items-start gap-2.5">
               <Sparkles size={16} className="text-[#B7F34A] shrink-0 mt-0.5" />
               <span>
-                <strong className="text-[#F5F7F2]">Note:</strong> Both packages start from ৳25,000/month. Custom pricing depends on your team&apos;s specific workload and quantity. Final pricing is confirmed after discussing your creative scope.
+                <strong className="text-[#F5F7F2]">Note:</strong> Individual packages start from ৳25,000/month, or choose the ৳45,000/month Master Pack for both Graphic Design &amp; Video Editing. Final pricing is confirmed after discussing your creative scope.
               </span>
             </div>
 
@@ -430,10 +435,10 @@ Sent via https://mirrorbook.site/`;
                     desc: '2 reels/day (~60 reels/mo)',
                   },
                   {
-                    id: 'Both Monthly Packages (Design + Reels)',
-                    label: 'Both Monthly Packages',
-                    price: 'Starting From ৳50,000/mo',
-                    desc: 'Complete creative & video presence',
+                    id: 'Master Pack (Graphic Design + Video Editing)',
+                    label: 'Master Pack',
+                    price: '৳45,000/mo',
+                    desc: 'Graphic Design + Video Editing combined',
                   },
                   {
                     id: 'Custom Scope / Specific Creative Needs',
@@ -445,7 +450,12 @@ Sent via https://mirrorbook.site/`;
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setRequiredService(s.id)}
+                    onClick={() => {
+                      setRequiredService(s.id);
+                      if (s.id.toLowerCase().includes('master')) {
+                        setBudgetRange('৳45,000 / month (Master Pack)');
+                      }
+                    }}
                     className={`min-h-[44px] p-3 rounded-xl text-left border transition-all cursor-pointer ${
                       requiredService === s.id
                         ? 'bg-[#B7F34A]/10 border-[#B7F34A] text-[#F5F7F2] shadow-[0_0_15px_rgba(183,243,74,0.15)]'
@@ -511,6 +521,7 @@ Sent via https://mirrorbook.site/`;
               >
                 <option value="Starting From ৳25,000 / month">Starting From ৳25,000 / month</option>
                 <option value="৳25,000 – ৳35,000 / month">৳25,000 – ৳35,000 / month</option>
+                <option value="৳45,000 / month (Master Pack)">৳45,000 / month (Master Pack)</option>
                 <option value="৳35,000 – ৳55,000 / month">৳35,000 – ৳55,000 / month</option>
                 <option value="৳55,000 – ৳85,000 / month">৳55,000 – ৳85,000 / month</option>
                 <option value="৳85,000+ / month (Enterprise Retainer)">৳85,000+ / month (Enterprise Retainer)</option>

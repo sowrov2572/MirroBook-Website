@@ -261,7 +261,7 @@ Sent via https://mirrorbook.site/`;
                       Confirmation email sent to <strong className="text-[#F5F7F2] break-all">{submittedInfo?.email || clientEmail}</strong>. Our team will review your project brief and follow up shortly.
                     </p>
                     <p className="text-[11px] text-[#B7F34A]/90">
-                      Please also check your Spam folder. (স্প্যাম ফোল্ডারও চেক করুন।)
+                      Please also check your Spam folder if you don&apos;t see it in your inbox.
                     </p>
                   </div>
                 </div>

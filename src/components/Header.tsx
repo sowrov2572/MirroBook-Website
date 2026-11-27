@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, ArrowRight, User as UserIcon, FolderDown, ShieldAlert } from 'lucide-react';
 import { AppUser, isVerifiedAdminUser } from '../types';
+import { useLanguage } from '../utils/i18n';
 
 interface HeaderProps {
   onStartProject: () => void;
@@ -24,16 +25,17 @@ export const Header: React.FC<HeaderProps> = ({
   currentPath = '/',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { lang, setLang, t } = useLanguage();
   const isOwner = isVerifiedAdminUser(user);
 
   const navLinks = [
-    { name: 'Services', href: '#services' },
-    { name: 'Portfolio', href: '#portfolio' },
-    { name: 'Founder & Team', href: '/sowrov-hosen' },
-    { name: 'Contact', href: '/contact' },
-    { name: 'Packages', href: '#packages' },
-    { name: 'Plugins & Software', href: '#plugins-software' },
-    { name: 'Courses & Tutorials', href: '#tutorials' },
+    { name: t('Services', 'সার্ভিসেস'), href: '#services' },
+    { name: t('Portfolio', 'পোর্টফোলিও'), href: '#portfolio' },
+    { name: t('Founder & Team', 'ফাউন্ডার ও টিম'), href: '/sowrov-hosen' },
+    { name: t('Contact', 'যোগাযোগ'), href: '/contact' },
+    { name: t('Packages', 'প্যাকেজ'), href: '#packages' },
+    { name: t('Plugins & Software', 'প্লাগইন ও সফটওয়্যার'), href: '#plugins-software' },
+    { name: t('Courses & Tutorials', 'কোর্স ও টিউটোরিয়াল'), href: '#tutorials' },
   ];
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -90,10 +92,10 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex flex-col">
             <span className="font-display text-base sm:text-lg font-bold tracking-tight text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight whitespace-nowrap">
-              MirrorBook
+              {t('MirrorBook', 'মিরর বুক')}
             </span>
             <span className="text-[11px] text-[#A1AAA2] font-normal leading-tight whitespace-nowrap hidden xl:block">
-              Reflecting Creativity
+              {t('Reflecting Creativity', 'রিফ্লেক্টিং ক্রিয়েটিভিটি')}
             </span>
           </div>
         </a>
@@ -127,16 +129,46 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Buttons & User Account Lockup */}
         <div className="hidden lg:flex items-center gap-2 shrink-0">
+          {/* Language Switcher: EN / বাংলা */}
+          <div
+            role="group"
+            aria-label="Language switcher"
+            className="flex items-center rounded-xl bg-[#121614] border border-white/[0.09] p-0.5 shrink-0"
+          >
+            <button
+              type="button"
+              onClick={() => setLang('en')}
+              className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                lang === 'en'
+                  ? 'bg-[#B7F34A] text-[#0B0D0C]'
+                  : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang('bn')}
+              className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                lang === 'bn'
+                  ? 'bg-[#B7F34A] text-[#0B0D0C]'
+                  : 'text-[#A1AAA2] hover:text-[#F5F7F2]'
+              }`}
+            >
+              বাংলা
+            </button>
+          </div>
+
           {/* Studio Owner Console Access */}
           {isOwner && onOpenAdmin && (
             <button
               type="button"
               onClick={onOpenAdmin}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs font-semibold text-amber-300 transition-all cursor-pointer whitespace-nowrap shrink-0"
-              title="Studio Owner Console"
+              title={t('Studio Owner Console', 'স্টুডিও অ্যাডমিন কনসোল')}
             >
               <ShieldAlert size={13} className="text-amber-400" />
-              <span>Studio Console</span>
+              <span>{t('Studio Console', 'অ্যাডমিন')}</span>
             </button>
           )}
 
@@ -146,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onOpenVault}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#171C19] hover:bg-[#1E2521] border border-white/[0.09] hover:border-[#B7F34A]/40 text-xs text-[#F5F7F2] transition-all cursor-pointer group whitespace-nowrap shrink-0"
-              title="Creator Vault & Downloads"
+              title={t('Creator Vault & Downloads', 'আমার ভল্ট ও ডাউনলোড')}
             >
               {user.photoURL ? (
                 <img
@@ -160,7 +192,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
               <span className="font-medium group-hover:text-[#B7F34A] transition-colors">
-                My Account
+                {t('My Account', 'আমার অ্যাকাউন্ট')}
               </span>
               {purchaseCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-md bg-[#B7F34A] text-[#0B0D0C] text-[10px] font-bold tabular-nums leading-none">
@@ -175,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl glossy-btn-secondary text-xs font-medium cursor-pointer whitespace-nowrap shrink-0"
             >
               <UserIcon size={13} className="text-[#B7F34A]" />
-              <span>Sign In</span>
+              <span>{t('Sign In', 'সাইন ইন')}</span>
             </button>
           )}
 
@@ -184,19 +216,44 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onStartProject}
             className="px-4 py-2 text-xs glossy-btn rounded-xl flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <span>Start a Project</span>
+            <span>{t('Start a Project', 'প্রজেক্ট শুরু করুন')}</span>
             <ArrowRight size={13} />
           </button>
         </div>
 
-        {/* Mobile Quick Account & Menu Toggle */}
+        {/* Mobile Quick Language, Account & Menu Toggle */}
         <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+          <div
+            role="group"
+            aria-label="Mobile language switcher"
+            className="flex items-center rounded-xl bg-[#171C19] border border-white/[0.09] p-0.5 shrink-0"
+          >
+            <button
+              type="button"
+              onClick={() => setLang('en')}
+              className={`min-h-[34px] px-2 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                lang === 'en' ? 'bg-[#B7F34A] text-[#0B0D0C]' : 'text-[#A1AAA2]'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang('bn')}
+              className={`min-h-[34px] px-2 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                lang === 'bn' ? 'bg-[#B7F34A] text-[#0B0D0C]' : 'text-[#A1AAA2]'
+              }`}
+            >
+              বাংলা
+            </button>
+          </div>
+
           {user ? (
             <button
               type="button"
               onClick={onOpenVault}
               className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#171C19] border border-white/[0.09] text-[#B7F34A] cursor-pointer"
-              title="My Account"
+              title={t('My Account', 'আমার অ্যাকাউন্ট')}
             >
               <FolderDown size={18} />
             </button>
@@ -205,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onSignIn}
               className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#171C19] border border-white/[0.09] text-[#F5F7F2] cursor-pointer"
-              title="Sign In"
+              title={t('Sign In', 'সাইন ইন')}
             >
               <UserIcon size={18} />
             </button>
@@ -262,7 +319,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full min-h-[44px] py-2.5 text-center text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShieldAlert size={14} className="text-amber-400" />
-                <span>Studio Owner Console</span>
+                <span>{t('Studio Owner Console', 'স্টুডিও অ্যাডমিন কনসোল')}</span>
               </button>
             )}
 
@@ -276,7 +333,12 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full min-h-[44px] py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FolderDown size={14} className="text-[#B7F34A]" />
-                <span>My Account Dashboard ({purchaseCount} items)</span>
+                <span>
+                  {t(
+                    `My Account Dashboard (${purchaseCount} items)`,
+                    `আমার অ্যাকাউন্ট ভল্ট (${purchaseCount}টি আইটেম)`
+                  )}
+                </span>
               </button>
             ) : (
               <button
@@ -288,7 +350,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full min-h-[44px] py-2.5 text-center text-xs font-semibold text-[#F5F7F2] bg-[#171C19] border border-white/[0.09] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UserIcon size={14} className="text-[#B7F34A]" />
-                <span>Sign In / Create Account</span>
+                <span>{t('Sign In / Create Account', 'সাইন ইন / নতুন অ্যাকাউন্ট')}</span>
               </button>
             )}
 
@@ -300,7 +362,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="w-full min-h-[44px] py-3 text-center text-xs glossy-btn rounded-xl cursor-pointer"
             >
-              Start a Project
+              {t('Start a Project', 'প্রজেক্ট শুরু করুন')}
             </button>
           </div>
         </div>

@@ -318,6 +318,50 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "action", "adminUid", "adminEmail", "targetRequestId", "newStatus", "timestamp"]
+    },
+    "MirrorBotWorkspace": {
+      "title": "MirrorBotWorkspace",
+      "description": "Per-customer Mirror Bot Vault configuration storing concise business info and public channel connection metadata (strictly excludes OAuth tokens)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "activatedInVault": { "type": "boolean" },
+        "businessName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "botName": { "type": "string", "minLength": 1, "maxLength": 50 },
+        "workPoints": { "type": "array", "description": "Bounded short bullet points of what the business works with (max 15 items)" },
+        "autoReplyEnabled": { "type": "boolean" },
+        "facebookPageConnected": { "type": "boolean" },
+        "facebookPageId": { "type": "string", "maxLength": 64 },
+        "facebookPageName": { "type": "string", "maxLength": 120 },
+        "messengerConnected": { "type": "boolean" },
+        "whatsappConnected": { "type": "boolean" },
+        "whatsappPhoneId": { "type": "string", "maxLength": 64 },
+        "whatsappDisplayPhone": { "type": "string", "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "activatedInVault", "businessName", "botName", "workPoints", "autoReplyEnabled", "createdAt", "updatedAt"]
+    },
+    "MirrorBotChannelSecret": {
+      "title": "MirrorBotChannelSecret",
+      "description": "Server-only Meta OAuth Page and WhatsApp access tokens strictly inaccessible from client SDKs",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "updatedAt"]
+    },
+    "MirrorBotChannelRoute": {
+      "title": "MirrorBotChannelRoute",
+      "description": "Server-only multi-tenant webhook routing index mapping Facebook Page IDs and WhatsApp Phone Number IDs to customer UIDs",
+      "type": "object",
+      "properties": {
+        "routeKey": { "type": "string" },
+        "uid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["routeKey", "uid", "updatedAt"]
     }
   },
   "firestore": {
@@ -384,6 +428,18 @@
     "/admin_activity_logs/{logId}": {
       "schema": "AdminActivityLog",
       "description": "Immutable audit trail of admin actions on MirrorPOS license requests"
+    },
+    "/mirrorbot_workspaces/{userId}": {
+      "schema": "MirrorBotWorkspace",
+      "description": "Per-customer Mirror Bot Vault profile and non-secret channel connection status isolated to owner UID"
+    },
+    "/mirrorbot_channel_secrets/{userId}": {
+      "schema": "MirrorBotChannelSecret",
+      "description": "Server-only Meta OAuth tokens isolated exclusively to backend Admin SDK"
+    },
+    "/mirrorbot_channel_routes/{routeId}": {
+      "schema": "MirrorBotChannelRoute",
+      "description": "Server-only webhook routing map for multi-tenant Facebook Page and WhatsApp auto-replies"
     }
   }
 }

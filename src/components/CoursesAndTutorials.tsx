@@ -19,6 +19,7 @@ import {
   Layers,
   BookOpen,
 } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
 
 interface CoursesAndTutorialsProps {
   onEnrollCourse: (item: CheckoutItem) => void;
@@ -49,6 +50,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
   enrolledCourseIds = [],
   loading = false,
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<LearningFilter>('all');
   const [inlinePlayingId, setInlinePlayingId] = useState<string | null>(null);
 
@@ -150,7 +152,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-10 pb-5 border-b border-white/[0.09]">
           <div className="min-w-0">
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight uppercase">
-              COURSES &amp; TUTORIALS
+              {t('COURSES & TUTORIALS', 'কোর্স ও টিউটোরিয়াল')}
             </h2>
           </div>
 
@@ -171,7 +173,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
               }`}
             >
               <Layers size={13} />
-              <span>View All</span>
+              <span>{t('View All', 'সব দেখুন')}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
                   activeTab === 'all'
@@ -195,7 +197,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
               }`}
             >
               <BookOpen size={13} />
-              <span>Courses</span>
+              <span>{t('Courses', 'কোর্সসমূহ')}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
                   activeTab === 'courses'
@@ -219,7 +221,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
               }`}
             >
               <Play size={13} />
-              <span>Free Tutorials</span>
+              <span>{t('Free Tutorials', 'ফ্রি টিউটোরিয়াল')}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
                   activeTab === 'tutorials'
@@ -251,13 +253,16 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
             </div>
             <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] mb-1">
               {activeTab === 'courses'
-                ? 'No Courses Available Right Now'
+                ? t('No Courses Available Right Now', 'এই মুহূর্তে কোনো কোর্স নেই')
                 : activeTab === 'tutorials'
-                ? 'No Free Tutorials Published Yet'
-                : 'No Courses or Tutorials Available Right Now'}
+                ? t('No Free Tutorials Published Yet', 'এখনো কোনো ফ্রি টিউটোরিয়াল প্রকাশিত হয়নি')
+                : t('No Courses or Tutorials Available Right Now', 'এই মুহূর্তে কোনো কোর্স বা টিউটোরিয়াল নেই')}
             </h3>
             <p className="text-xs sm:text-sm text-[#A1AAA2]">
-              Published courses and free tutorials will appear here automatically.
+              {t(
+                'Published courses and free tutorials will appear here automatically.',
+                'প্রকাশিত কোর্স ও ফ্রি টিউটোরিয়ালগুলো এখানে স্বয়ংক্রিয়ভাবে দেখা যাবে।'
+              )}
             </p>
           </div>
         ) : (
@@ -327,7 +332,9 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                     <div>
                       <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between gap-2 mb-4">
                         <span className="text-xs text-[#A1AAA2] font-medium">
-                          {isEnrolled ? 'Enrolled · Lifetime Access' : 'Lifetime Access'}
+                          {isEnrolled
+                            ? t('Enrolled · Lifetime Access', 'এনরোল করা · লাইফটাইম অ্যাক্সেস')
+                            : t('Lifetime Access', 'লাইফটাইম অ্যাক্সেস')}
                         </span>
                         <span className="font-display text-2xl font-bold text-[#F5F7F2] tabular-nums">
                           {entry.priceDisplay}
@@ -350,7 +357,11 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                         }}
                         className="w-full min-h-[44px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <span>{isEnrolled ? 'Open Course' : 'Get Access'}</span>
+                        <span>
+                          {isEnrolled
+                            ? t('Open Course', 'কোর্স ওপেন করুন')
+                            : t('Get Access', 'অ্যাক্সেস নিন')}
+                        </span>
                         <ArrowRight size={14} />
                       </button>
                     </div>
@@ -410,7 +421,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                         Khan Saheb Editz
                       </span>
                       <span className="min-h-[38px] glossy-btn text-xs inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg">
-                        <span>Visit Channel</span>
+                        <span>{t('Visit Channel', 'চ্যানেল দেখুন')}</span>
                         <ExternalLink size={12} />
                       </span>
                     </div>
@@ -519,7 +530,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                         title="Open in fullscreen modal player"
                       >
                         <Maximize2 size={12} className="text-[#B7F34A]" />
-                        <span>Modal</span>
+                        <span>{t('Modal', 'প্লেয়ার')}</span>
                       </button>
                       {tutorial.videoUrl && (
                         <a
@@ -530,7 +541,7 @@ export const CoursesAndTutorials: React.FC<CoursesAndTutorialsProps> = ({
                           className="min-h-[38px] glossy-btn text-xs inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg cursor-pointer"
                           title="Watch directly on YouTube"
                         >
-                          <span>Stream Free</span>
+                          <span>{t('Stream Free', 'ফ্রি দেখুন')}</span>
                           <ExternalLink size={12} />
                         </a>
                       )}

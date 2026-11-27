@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
 
 export const PORTFOLIO_EXTERNAL_URL =
   'https://sowrovhosenstudio.netlify.app/';
@@ -9,6 +10,8 @@ interface ShowcasesVaultProps {
 }
 
 export const ShowcasesVault: React.FC<ShowcasesVaultProps> = () => {
+  const { t } = useLanguage();
+
   return (
     <section
       id="portfolio"
@@ -18,10 +21,13 @@ export const ShowcasesVault: React.FC<ShowcasesVaultProps> = () => {
         <div className="glossy-card p-5 sm:p-8 lg:p-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl space-y-2.5 min-w-0">
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight">
-              Portfolio
+              {t('Portfolio', 'পোর্টফোলিও')}
             </h2>
             <p className="text-sm sm:text-base text-[#A1AAA2] font-normal leading-relaxed">
-              Explore our client work, commercial video productions, motion designs, and digital creations.
+              {t(
+                'Explore our client work, commercial video productions, motion designs, and digital creations.',
+                'আমাদের ক্লায়েন্ট প্রজেক্ট, কমার্শিয়াল ভিডিও প্রোডাকশন, মোশন ডিজাইন ও ডিজিটাল কাজগুলো দেখে নিন।'
+              )}
             </p>
           </div>
 
@@ -32,7 +38,7 @@ export const ShowcasesVault: React.FC<ShowcasesVaultProps> = () => {
               rel="noopener noreferrer"
               className="w-full md:w-auto min-h-[44px] px-7 py-3.5 text-xs sm:text-sm glossy-btn rounded-xl flex items-center justify-center gap-2.5 cursor-pointer group whitespace-nowrap"
             >
-              <span>View Portfolio</span>
+              <span>{t('View Portfolio', 'পোর্টফোলিও দেখুন')}</span>
               <ExternalLink
                 size={16}
                 className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"

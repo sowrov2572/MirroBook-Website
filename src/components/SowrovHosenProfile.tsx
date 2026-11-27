@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { ExternalLink, Globe, Mail, MessageCircle } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
 
 interface SowrovHosenProfileProps {
   onNavigateHome: () => void;
@@ -14,24 +15,28 @@ const teamMembers = [
   {
     name: 'Sowrov Hosen',
     role: 'Founder & Creative Director',
+    roleBn: 'প্রতিষ্ঠাতা ও ক্রিয়েটিভ ডিরেক্টর',
     photoUrl: 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg',
     portfolio: 'https://sowrovhosenstudio.netlify.app',
   },
   {
     name: 'Walid Ahmed Shraban',
     role: 'Founder & Web Developer',
+    roleBn: 'প্রতিষ্ঠাতা ও ওয়েব ডেভেলপার',
     photoUrl: 'https://i.ibb.co/BVtvZBg4/668652154-2513163962481178-6668835466422179627-n.jpg',
     portfolio: 'https://srabonx.netlify.app/',
   },
   {
     name: 'Musabbir Al Sayed',
     role: 'Team Member',
+    roleBn: 'টিম মেম্বার',
     photoUrl: 'https://i.ibb.co/67yR2bfy/Screenshot-2026-11-23-234418.png',
     portfolio: '',
   },
   {
     name: 'Mehedi Hasan',
     role: 'Team Member',
+    roleBn: 'টিম মেম্বার',
     photoUrl: 'https://i.ibb.co/FqNDq5v5/Mehedi-Hasan.jpg',
     portfolio: '',
   },
@@ -41,6 +46,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
   onNavigate,
   onOpenEmailSheet,
 }) => {
+  const { isBn, t } = useLanguage();
   useEffect(() => {
     const profileSchema = {
       '@context': 'https://schema.org',
@@ -87,7 +93,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
               id="founder-team-heading"
               className="font-display text-3xl sm:text-4xl font-semibold tracking-tight"
             >
-              Team &amp; Founder
+              {t('Team & Founder', 'টিম ও প্রতিষ্ঠাতা')}
             </h1>
           </div>
 
@@ -115,7 +121,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 </div>
                 <div className="p-4">
                   <h2 className="text-base font-semibold">{member.name}</h2>
-                  <p className="mt-1 text-sm text-[#A1AAA2]">{member.role}</p>
+                  <p className="mt-1 text-sm text-[#A1AAA2]">{isBn ? member.roleBn : member.role}</p>
                   {member.portfolio && (
                     <a
                       href={member.portfolio}
@@ -125,7 +131,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                       className="mt-4 inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg border border-[#B7F34A]/40 bg-[#B7F34A]/[0.08] px-4 py-2 text-sm font-semibold text-[#B7F34A] transition-colors hover:bg-[#B7F34A] hover:text-[#0B0D0C]"
                     >
                       <Globe size={15} />
-                      Portfolio
+                      {t('Portfolio', 'পোর্টফোলিও')}
                       <ExternalLink size={13} />
                     </a>
                   )}
@@ -140,10 +146,13 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
             id="contact-mirrorbook-heading"
             className="font-display text-2xl sm:text-3xl font-semibold tracking-tight"
           >
-            Contact MirrorBook
+            {t('Contact MirrorBook', 'মিরর বুকের সাথে যোগাযোগ')}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm sm:text-base leading-relaxed text-[#A1AAA2]">
-            Have a project or need a creative service? Get in touch with MirrorBook.
+            {t(
+              'Have a project or need a creative service? Get in touch with MirrorBook.',
+              'কোনো প্রজেক্ট বা ক্রিয়েটিভ সার্ভিসের প্রয়োজন? মিরর বুকের সাথে যোগাযোগ করুন।'
+            )}
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <a
@@ -153,7 +162,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
               className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[#B7F34A] px-5 py-3 text-sm font-bold text-[#0B0D0C] transition-opacity hover:opacity-90"
             >
               <MessageCircle size={15} />
-              Chat on WhatsApp
+              {t('Chat on WhatsApp', 'হোয়াটসঅ্যাপে চ্যাট করুন')}
             </a>
             {onOpenEmailSheet ? (
               <button
@@ -162,7 +171,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/[0.14] bg-[#171C19] px-5 py-3 text-sm font-semibold text-[#F5F7F2] transition-colors hover:border-[#B7F34A]/50 hover:text-[#B7F34A] cursor-pointer"
               >
                 <Mail size={15} />
-                Send us an Email
+                {t('Send us an Email', 'আমাদের ইমেইল পাঠান')}
               </button>
             ) : (
               <a
@@ -170,7 +179,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
                 className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/[0.14] bg-[#171C19] px-5 py-3 text-sm font-semibold text-[#F5F7F2] transition-colors hover:border-[#B7F34A]/50 hover:text-[#B7F34A]"
               >
                 <Mail size={15} />
-                Send us an Email
+                {t('Send us an Email', 'আমাদের ইমেইল পাঠান')}
               </a>
             )}
             <a
@@ -183,7 +192,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
               }}
               className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/[0.1] px-5 py-3 text-sm font-medium text-[#A1AAA2] transition-colors hover:border-white/25 hover:text-[#F5F7F2]"
             >
-              Contact Us <ExternalLink size={14} />
+              {t('Contact Us', 'যোগাযোগ করুন')} <ExternalLink size={14} />
             </a>
           </div>
         </section>

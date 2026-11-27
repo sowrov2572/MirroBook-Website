@@ -278,6 +278,34 @@ service cloud.firestore {
         && data.timestamp is timestamp;
     }
 
+    function isValidMirrorBotWorkspace(data) {
+      return data.keys().hasAll([
+          'uid', 'activatedInVault', 'businessName', 'botName', 'workPoints',
+          'autoReplyEnabled', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'activatedInVault', 'businessName', 'botName', 'workPoints',
+          'autoReplyEnabled', 'facebookPageConnected', 'facebookPageId', 'facebookPageName',
+          'messengerConnected', 'whatsappConnected', 'whatsappPhoneId', 'whatsappDisplayPhone',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.activatedInVault is bool
+        && data.businessName is string && data.businessName.size() >= 1 && data.businessName.size() <= 100
+        && data.botName is string && data.botName.size() >= 1 && data.botName.size() <= 50
+        && data.workPoints is list && data.workPoints.size() <= 15 && (data.workPoints.size() == 0 || data.workPoints[0] is string)
+        && data.autoReplyEnabled is bool
+        && (!('facebookPageConnected' in data) || data.facebookPageConnected is bool)
+        && (!('facebookPageId' in data) || (data.facebookPageId is string && data.facebookPageId.size() <= 64))
+        && (!('facebookPageName' in data) || (data.facebookPageName is string && data.facebookPageName.size() <= 120))
+        && (!('messengerConnected' in data) || data.messengerConnected is bool)
+        && (!('whatsappConnected' in data) || data.whatsappConnected is bool)
+        && (!('whatsappPhoneId' in data) || (data.whatsappPhoneId is string && data.whatsappPhoneId.size() <= 64))
+        && (!('whatsappDisplayPhone' in data) || (data.whatsappDisplayPhone is string && data.whatsappDisplayPhone.size() <= 60))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // ==================== COLLECTION RULES ====================
 
     // 1. Public Digital Store Catalog (Admin write only; paid URLs excluded)
@@ -535,6 +563,47 @@ service cloud.firestore {
         && incoming().adminUid == request.auth.uid
         && incoming().timestamp == request.time;
       allow update, delete: if false;
+    }
+
+    // 10. Mirror Bot Multi-Tenant Customer Workspaces (Strictly isolated per UID; zero OAuth tokens stored here)
+    match /mirrorbot_workspaces/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (isVerifiedOwnerEmail() || resource.data.uid == request.auth.uid);
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && request.auth.uid == userId
+        && isValidMirrorBotWorkspace(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidMirrorBotWorkspace(incoming())
+        && isValidId(userId)
+        && isSignedIn()
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            incoming().uid == existing().uid &&
+            incoming().createdAt == existing().createdAt &&
+            incoming().updatedAt == request.time &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'activatedInVault', 'businessName', 'botName', 'workPoints', 'autoReplyEnabled',
+              'facebookPageConnected', 'facebookPageId', 'facebookPageName',
+              'messengerConnected', 'whatsappConnected', 'whatsappPhoneId', 'whatsappDisplayPhone',
+              'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 10b. Server-Only Mirror Bot Meta OAuth Tokens & Multi-Tenant Webhook Routing (Admin SDK Only — zero client access)
+    match /mirrorbot_channel_secrets/{userId} {
+      allow read, write: if false;
+    }
+
+    match /mirrorbot_channel_routes/{routeId} {
+      allow read, write: if false;
     }
   }
 }

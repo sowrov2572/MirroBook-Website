@@ -18,14 +18,14 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/': {
     title: 'MirrorBook – Reflecting Creativity',
     description:
-      'MirrorBook is a Bangladesh-based creative agency and digital studio for graphic design, video editing, motion graphics, branding, web development, and digital products.',
+      'Reflecting Creativity. MirrorBook (মিরর বুক – রিফ্লেক্টিং ক্রিয়েটিভিটি) is a creative studio for graphic design, video editing, web development, plugins, and Mirror Bot AI.',
     keywords:
-      'MirrorBook, MirrorBook Agency, Reflecting Creativity, creative agency Bangladesh, graphic design, video editing, motion graphics, branding, web development, digital products, MirrorPOS',
+      'MirrorBook, Mirror Book, মিরর বুক, Reflecting Creativity, রিফ্লেক্টিং ক্রিয়েটিভিটি, creative agency Bangladesh, graphic design, video editing, motion graphics, branding, web development, digital products, MirrorPOS, Mirror Bot',
     canonicalUrl: `${SITE}/`,
     robots: INDEX_ROBOTS,
     ogType: 'website',
     ogImage: DEFAULT_OG_IMAGE,
-    ogImageAlt: 'MirrorBook official logo, Reflecting Creativity',
+    ogImageAlt: 'MirrorBook official logo – Reflecting Creativity',
   },
   '/mirrorpos': {
     title: 'MirrorPOS | Smart POS Software for Businesses',
@@ -42,13 +42,13 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
   '/mirrorbot': {
     title: 'Mirror Bot | MirrorBook AI Support Auto-Reply Agent',
     description:
-      'Explore Mirror Bot by MirrorBook AI Support: configure channel access permissions, add auto-reply categories, set FAQs and policies, and test automated customer replies in Bangla and English.',
+      'Connect Facebook Page, Messenger & WhatsApp in one click with Mirror Bot by MirrorBook for automatic AI replies to comments, messages, and customer photos.',
     keywords:
       'Mirror Bot, MirrorBook AI Support, AI support agent, auto reply bot Bangladesh, customer support automation, Bangla English AI bot, MirrorBook',
     canonicalUrl: `${SITE}/mirrorbot`,
     robots: INDEX_ROBOTS,
     ogType: 'product',
-    ogImage: `${SITE}/mirrorbook-ai-support-icon.svg`,
+    ogImage: `${SITE}/mirrorbot-icon.png`,
     ogImageAlt: 'Mirror Bot AI Support by MirrorBook',
   },
   '/sowrov-hosen': {
@@ -149,12 +149,15 @@ function upsertLinkCanonical(href: string) {
   el.setAttribute('href', href);
 }
 
-export function applyRouteSeoMetadata(path: string): void {
+export function applyRouteSeoMetadata(path: string, lang: 'en' | 'bn' = 'en'): void {
   if (typeof document === 'undefined') return;
   const normalized = path.toLowerCase().replace(/\/+$/, '') || '/';
   const config = ROUTE_SEO_CONFIG[normalized] || ROUTE_SEO_CONFIG['/'];
 
-  document.title = config.title;
+  document.title =
+    normalized === '/' && lang === 'bn'
+      ? 'মিরর বুক – রিফ্লেক্টিং ক্রিয়েটিভিটি'
+      : config.title;
   upsertMeta('name', 'description', config.description);
   upsertMeta('name', 'keywords', config.keywords);
   upsertMeta('name', 'author', 'MirrorBook');

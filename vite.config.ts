@@ -3,26 +3,29 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
-import { processPackageOrder } from './api/_handlers/package-order';
-import { processAuthSession } from './api/_handlers/auth/session';
-import { processPaymentSmsWebhook } from './api/_handlers/payment-sms/receive';
-import { processGetPaymentSmsLogs } from './api/_handlers/payment-sms/logs';
-import { processSubmitAndVerifyOrder } from './api/_handlers/orders/submit-and-verify';
-import { processAdminApproveOrder } from './api/_handlers/orders/admin-approve';
-import { processFreeSoftwareAccess } from './api/_handlers/software/free-access';
-import { processVerifyFreeAccess } from './api/_handlers/software/verify-free-access';
-import { processSoftwareAccess } from './api/_handlers/software/access';
+import { processPackageOrder } from './api/package-order';
+import { processAuthSession } from './api/auth/session';
+import { processPaymentSmsWebhook } from './api/payment-sms/receive';
+import { processGetPaymentSmsLogs } from './api/payment-sms/logs';
+import { processSubmitAndVerifyOrder } from './api/orders/submit-and-verify';
+import { processAdminApproveOrder } from './api/orders/admin-approve';
+import { processFreeSoftwareAccess } from './api/software/free-access';
+import { processVerifyFreeAccess } from './api/software/verify-free-access';
+import { processSoftwareAccess } from './api/software/access';
 import {
   processGetCourseLessons,
   processGetCourseLessonThumbnail,
-} from './api/_handlers/courses/lessons';
-import { processMirrorBotChat } from './api/_handlers/mirrorbot/chat';
-import { processSuggestBotNames } from './api/_handlers/mirrorbot/suggest-names';
-import { processMetaStatus } from './api/_handlers/mirrorbot/meta-status';
+} from './api/courses/lessons';
+import { processMirrorBotChat } from './api/mirrorbot/chat';
+import { processSuggestBotNames } from './api/mirrorbot/suggest-names';
+import { processMetaStatus } from './api/mirrorbot/meta-status';
+import { processMetaOAuthUrl } from './api/mirrorbot/meta-oauth-url';
+import { processMetaCallback } from './api/mirrorbot/meta-callback';
+import { processMetaConnect } from './api/mirrorbot/meta-connect';
 import {
   processMetaWebhookGet,
   processMetaWebhookPost,
-} from './api/_handlers/mirrorbot/meta-webhook';
+} from './api/mirrorbot/meta-webhook';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -417,14 +420,78 @@ function apiDevServerPlugin(): Plugin {
             sendJson(res, 405, { success: false, error: 'Method not allowed. Use GET.' });
             return;
           }
-          const hostHeader = typeof req.headers['host'] === 'string' ? req.headers['host'] : 'localhost:3000';
-          const originHeader = typeof req.headers['origin'] === 'string' ? req.headers['origin'] : `http://${hostHeader}`;
-          const result = processMetaStatus(originHeader);
+          const authHeader =
+            typeof req.headers['authorization'] === 'string'
+              ? req.headers['authorization']
+              : undefined;
+          const result = await processMetaStatus(authHeader);
           sendJson(res, result.status, result.data);
           return;
         }
 
-        if (url === '/api/mirrorbot/meta-webhook') {
+        if (url === '/api/mirrorbot/meta-oauth-url') {
+          if (req.method !== 'GET') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use GET.' });
+            return;
+          }
+          const hostHeader = typeof req.headers['host'] === 'string' ? req.headers['host'] : 'localhost:3000';
+          const originHeader = typeof req.headers['origin'] === 'string' ? req.headers['origin'] : `http://${hostHeader}`;
+          const authHeader =
+            typeof req.headers['authorization'] === 'string'
+              ? req.headers['authorization']
+              : undefined;
+          const params = new URLSearchParams(queryStr || '');
+          const result = await processMetaOAuthUrl({
+            channel: params.get('channel'),
+            requestOrigin: originHeader,
+            authorizationHeader: authHeader,
+          });
+          res.setHeader('Cache-Control', 'no-store');
+          sendJson(res, result.status, result.data);
+          return;
+        }
+
+        if (url === '/api/mirrorbot/meta-callback' || url === '/api/mirrorbot/meta-callback/') {
+          if (req.method !== 'GET') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use GET.' });
+            return;
+          }
+          const params = new URLSearchParams(queryStr || '');
+          const result = await processMetaCallback(params);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(result.html);
+          return;
+        }
+
+        if (url === '/api/mirrorbot/meta-connect') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+            return;
+          }
+          try {
+            const bodyStr = await readRequestBody(req, 256 * 1024);
+            let body = {};
+            try {
+              body = JSON.parse(bodyStr || '{}');
+            } catch {
+              sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+              return;
+            }
+            const authHeader =
+              typeof req.headers['authorization'] === 'string'
+                ? req.headers['authorization']
+                : undefined;
+            const result = await processMetaConnect(body, authHeader);
+            sendJson(res, result.status, result.data);
+          } catch (err: any) {
+            sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+          }
+          return;
+        }
+
+        if (url === '/api/mirrorbot/meta-webhook' || url === '/api/mirrorbot/meta-webhook/') {
           if (req.method === 'GET') {
             const params = new URLSearchParams(queryStr || '');
             const result = await processMetaWebhookGet(params);

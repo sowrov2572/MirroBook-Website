@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Terminal,
 } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
 
 interface PluginsAndSoftwareProps {
   plugins: ProductItem[];
@@ -34,6 +35,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
   onOpenMirrorPOS,
   onOpenMirrorBot,
 }) => {
+  const { t } = useLanguage();
   const [libraryFilter, setLibraryFilter] = useState<UnifiedLibraryFilter>('all');
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
@@ -108,7 +110,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-10 pb-5 border-b border-white/[0.09]">
           <div className="min-w-0">
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#B7F34A] tracking-tight uppercase">
-              PLUGINS &amp; SOFTWARE
+              {t('PLUGINS & SOFTWARE', 'প্লাগইন ও সফটওয়্যার')}
             </h2>
           </div>
 
@@ -129,7 +131,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
               }`}
             >
               <Layers size={13} />
-              <span>All Library</span>
+              <span>{t('All Library', 'সব লাইব্রেরি')}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
                   libraryFilter === 'all'
@@ -153,7 +155,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
               }`}
             >
               <Monitor size={13} />
-              <span>Software</span>
+              <span>{t('Software', 'সফটওয়্যার')}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
                   libraryFilter === 'software'
@@ -177,7 +179,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
               }`}
             >
               <Puzzle size={13} />
-              <span>Plugins</span>
+              <span>{t('Plugins', 'প্লাগইন')}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums leading-none ${
                   libraryFilter === 'plugins'
@@ -210,13 +212,16 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
             </div>
             <h3 className="font-display text-lg sm:text-xl font-bold text-[#F5F7F2] mb-2">
               {libraryFilter === 'software'
-                ? 'No Software Available Right Now'
+                ? t('No Software Available Right Now', 'এই মুহূর্তে কোনো সফটওয়্যার নেই')
                 : libraryFilter === 'plugins'
-                ? 'No Plugins Available Right Now'
-                : 'No Software or Plugins Available Right Now'}
+                ? t('No Plugins Available Right Now', 'এই মুহূর্তে কোনো প্লাগইন নেই')
+                : t('No Software or Plugins Available Right Now', 'এই মুহূর্তে কোনো সফটওয়্যার বা প্লাগইন নেই')}
             </h3>
             <p className="text-xs sm:text-sm text-[#A1AAA2] leading-relaxed">
-              Published software applications and creative editing plugins will appear here automatically.
+              {t(
+                'Published software applications and creative editing plugins will appear here automatically.',
+                'প্রকাশিত সফটওয়্যার ও ক্রিয়েটিভ এডিটিং প্লাগইনগুলো এখানে স্বয়ংক্রিয়ভাবে দেখা যাবে।'
+              )}
             </p>
           </div>
         ) : (
@@ -266,20 +271,23 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                         </div>
 
                         <span className="px-2.5 py-1 rounded-md bg-[#0B0D0C]/90 border border-[#B7F34A]/45 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A] whitespace-nowrap shrink-0">
-                          SOFTWARE
+                          {t('SOFTWARE', 'সফটওয়্যার')}
                         </span>
                       </div>
 
                       <p className="text-xs sm:text-sm text-[#D4DBD5] leading-relaxed">
-                        Smart POS Software for Modern Businesses.
+                        {t(
+                          'Smart POS Software for Modern Businesses.',
+                          'আধুনিক ব্যবসার জন্য স্মার্ট POS সফটওয়্যার।'
+                        )}
                       </p>
                     </div>
 
                     <div className="pt-4 mt-5 border-t border-white/[0.09]">
                       <div className="flex items-center justify-between gap-2 text-[11px] text-[#A1AAA2] mb-3">
-                        <span>Free via Email</span>
+                        <span>{t('Free via Email', 'ইমেইলের মাধ্যমে ফ্রি')}</span>
                         <span className="font-semibold text-[#F5F7F2] tabular-nums">
-                          Premium: ৳9,999
+                          {t('Premium: ৳9,999', 'প্রিমিয়াম: ৳৯,৯৯৯')}
                         </span>
                       </div>
                       <button
@@ -287,7 +295,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                         onClick={() => onOpenMirrorPOS()}
                         className="w-full min-h-[44px] py-2.5 px-5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <span>Get Access</span>
+                        <span>{t('Get Access', 'অ্যাক্সেস নিন')}</span>
                         <ArrowRight size={14} />
                       </button>
                     </div>
@@ -306,42 +314,45 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                     <div>
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <div className="flex items-center gap-3.5 min-w-0">
-                          <div className="w-12 h-12 rounded-xl bg-[#0B0D0C] border border-white/[0.12] p-2 flex items-center justify-center shrink-0 overflow-hidden">
+                          <div className="w-12 h-12 rounded-xl bg-[#0B0D0C] border border-white/[0.12] p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
                             <img
-                              src={item.iconUrl || '/mirrorbook-ai-support-icon.svg'}
+                              src="/mirrorbot-icon.png"
                               alt="Mirror Bot Logo"
                               width={48}
                               height={48}
-                              loading="lazy"
+                              loading="eager"
                               decoding="async"
                               className="w-full h-full object-contain"
                             />
                           </div>
                           <div className="min-w-0">
                             <span className="text-[11px] font-semibold text-[#B7F34A] block truncate">
-                              MirrorBook · AI Support
+                              {t('MirrorBook · AI Support', 'মিরর বুক · এআই সাপোর্ট')}
                             </span>
                             <h3 className="font-display text-xl font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors leading-tight truncate">
-                              Mirror Bot
+                              {t('Mirror Bot', 'মিরর বট')}
                             </h3>
                           </div>
                         </div>
 
                         <span className="px-2.5 py-1 rounded-md bg-[#0B0D0C]/90 border border-[#B7F34A]/45 text-[10px] font-bold uppercase tracking-wider text-[#B7F34A] whitespace-nowrap shrink-0">
-                          AI BOT
+                          {t('AI BOT', 'এআই বট')}
                         </span>
                       </div>
 
                       <p className="text-xs sm:text-sm text-[#D4DBD5] leading-relaxed">
-                        Gemini-powered AI agent that learns your business, inspects product photos, replies naturally in Bangla &amp; English, and confirms orders on Messenger &amp; WhatsApp.
+                        {t(
+                          'AI assistant that connects to your Facebook Page, Messenger & WhatsApp — replies naturally to messages, comments & product photos 24/7.',
+                          'আপনার ফেসবুক পেজ, মেসেঞ্জার ও হোয়াটসঅ্যাপে কানেক্ট হয়ে মেসেজ, কমেন্ট ও পণ্যের ছবি দেখে ২৪/৭ অটোমেটিক রিপ্লাই দেয়।'
+                        )}
                       </p>
                     </div>
 
                     <div className="pt-4 mt-5 border-t border-white/[0.09]">
                       <div className="flex items-center justify-between gap-2 text-[11px] text-[#A1AAA2] mb-3">
-                        <span>Powered by Gemini AI Agent</span>
+                        <span>{t('1-Click Channel Connect', '১-ক্লিক চ্যানেল কানেক্ট')}</span>
                         <span className="font-semibold text-[#F5F7F2]">
-                          Messenger &amp; WhatsApp
+                          {t('Facebook & WhatsApp', 'ফেসবুক ও হোয়াটসঅ্যাপ')}
                         </span>
                       </div>
                       <button
@@ -349,7 +360,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                         onClick={() => onOpenMirrorBot?.()}
                         className="w-full min-h-[44px] py-2.5 px-5 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <span>Get Access</span>
+                        <span>{t('Get Access', 'অ্যাক্সেস নিন')}</span>
                         <ArrowRight size={14} />
                       </button>
                     </div>
@@ -409,7 +420,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                       </div>
 
                       <div className="text-xs text-[#B7F34A] font-semibold mb-1 truncate">
-                        Developed by MirrorBook
+                        {t('Developed by MirrorBook', 'মিরর বুক নির্মিত')}
                       </div>
 
                       <h3 className="font-display text-base sm:text-lg font-bold text-[#F5F7F2] group-hover:text-[#B7F34A] transition-colors mb-1.5 leading-snug break-words">
@@ -427,10 +438,14 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                       <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between gap-2 mb-4">
                         <div className="flex items-center gap-1.5 text-xs text-[#A1AAA2]">
                           <ShieldCheck size={13} className="text-[#B7F34A]" />
-                          <span>{isFreeProduct ? 'Lifetime Access' : 'Protected License'}</span>
+                          <span>
+                            {isFreeProduct
+                              ? t('Lifetime Access', 'লাইফটাইম অ্যাক্সেস')
+                              : t('Protected License', 'সুরক্ষিত লাইসেন্স')}
+                          </span>
                         </div>
                         <span className="font-display text-xl font-bold text-[#F5F7F2] tabular-nums">
-                          {isFreeProduct ? 'Free' : priceLabel}
+                          {isFreeProduct ? t('Free', 'ফ্রি') : priceLabel}
                         </span>
                       </div>
 
@@ -441,7 +456,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                           rel="noopener noreferrer"
                           className="w-full min-h-[44px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                         >
-                          <span>Get Access</span>
+                          <span>{t('Get Access', 'অ্যাক্সেস নিন')}</span>
                           <ExternalLink size={14} />
                         </a>
                       ) : (
@@ -458,7 +473,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                           className="w-full min-h-[44px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <ShoppingBag size={14} />
-                          <span>Get License</span>
+                          <span>{t('Get License', 'লাইসেন্স নিন')}</span>
                         </button>
                       )}
                     </div>
@@ -532,7 +547,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                   <div>
                     <div className="pt-4 border-t border-white/[0.09] flex items-center justify-between gap-2 mb-4">
                       <span className="text-xs text-[#A1AAA2] font-medium">
-                        Instant License
+                        {t('Instant License', 'তাৎক্ষণিক লাইসেন্স')}
                       </span>
                       <span className="font-display text-xl font-bold text-[#F5F7F2] tabular-nums">
                         {priceLabel}
@@ -552,7 +567,7 @@ export const PluginsAndSoftware: React.FC<PluginsAndSoftwareProps> = ({
                       className="w-full min-h-[44px] py-3 text-xs glossy-btn rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ShoppingBag size={14} />
-                      <span>Buy Now</span>
+                      <span>{t('Buy Now', 'এখনই কিনুন')}</span>
                     </button>
                   </div>
                 </div>

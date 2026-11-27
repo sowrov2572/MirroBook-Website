@@ -74,7 +74,7 @@ export const CANONICAL_FEATURED_PRODUCTS: ProductItem[] = [
     price: 0,
     isFree: true,
     priceDisplay: 'AI Bot',
-    iconUrl: '/mirrorbook-ai-support-icon.svg',
+    iconUrl: '/mirrorbot-icon.png',
     launchUrl: 'https://mirrorbook-ai-support-sowrovhosenstudio.vercel.app',
     status: 'active',
     featured: true,
@@ -389,7 +389,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     createdAt: '2026-11-18'
   },
 
-  // Agency Packages (Two Separate Monthly Subscription Services Starting From ৳25,000/mo)
+  // Agency Packages (Monthly Subscription Services)
   {
     id: 'monthly-graphic-design',
     type: 'Agency Package',
@@ -411,6 +411,17 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     period: '/ month',
     priceDisplay: 'Starting From ৳25,000',
     createdAt: '2026-11-12'
+  },
+  {
+    id: 'master-pack',
+    type: 'Agency Package',
+    category: 'Monthly Retainer',
+    title: 'Master Pack (Graphic Design + Video Editing)',
+    description: 'Complete monthly graphic design and video editing bundle combining 4 custom designs/day (~120/month) and 2 edited reels/day (~60 reels/month).',
+    price: 45000,
+    period: '/ month',
+    priceDisplay: '৳45,000',
+    createdAt: '2026-11-27'
   }
 ];
 
@@ -431,6 +442,15 @@ export const PACKAGES: PackageItem[] = [
     period: '/ month',
     priceDisplay: 'Starting From ৳25,000',
     description: 'Professional short-form video editing (2 reels/day, ~60 reels/month, sound design & captions).',
+    featured: true
+  },
+  {
+    id: 'master-pack',
+    name: 'Master Pack',
+    price: 45000,
+    period: '/ month',
+    priceDisplay: '৳45,000',
+    description: 'Complete monthly graphic design & video editing combined (4 designs/day + 2 edited reels/day).',
     featured: true
   }
 ];

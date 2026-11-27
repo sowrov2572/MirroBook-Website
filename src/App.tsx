@@ -22,10 +22,11 @@ import { PackageCustomizerModal, PackageInquiryData } from './components/Package
 import { EmailComposeModal } from './components/EmailComposeModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { CustomerAuthPage } from './components/CustomerAuthPage';
-import { CustomerDashboard } from './components/CustomerDashboard';
+import { CustomerDashboard, DashboardTab } from './components/CustomerDashboard';
 import { AdminAuthPortal } from './components/AdminAuthPortal';
 import { CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { applyRouteSeoMetadata } from './utils/seo';
+import { useLanguage } from './utils/i18n';
 import {
   CANONICAL_FEATURED_PRODUCTS,
   COURSE_VIDEO_EDITING_FUNDAMENTALS_ID,
@@ -43,6 +44,7 @@ import {
   DownloadHistoryItem,
   MirrorPOSUserLicense,
   MirrorPOSLicenseRequest,
+  MirrorBotVaultWorkspace,
   AdminActivityLog,
   isVerifiedAdminUser,
   generateDeterministicLicenseKey,
@@ -92,6 +94,9 @@ import {
   subscribeToAllMirrorPOSRequests,
   subscribeToAdminActivityLogs,
   updateMirrorPOSLicenseRequestStatus,
+  subscribeToUserMirrorBotWorkspace,
+  activateMirrorBotInVault,
+  saveMirrorBotWorkspaceToVault,
   formatFirebaseAuthError,
 } from './utils/firebase';
 
@@ -128,6 +133,7 @@ function resolveRouteFromLocation(): string {
 }
 
 export default function App() {
+  const { lang } = useLanguage();
   const [checkoutItem, setCheckoutItem] = useState<CheckoutItem | null>(null);
   const [activeVideo, setActiveVideo] = useState<PlayableVideo | null>(null);
   const [isStartProjectOpen, setIsStartProjectOpen] = useState(false);
@@ -157,6 +163,9 @@ export default function App() {
   const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryItem[]>([]);
   const [mirrorPOSLicense, setMirrorPOSLicense] = useState<MirrorPOSUserLicense | null>(null);
   const [userMirrorPOSRequests, setUserMirrorPOSRequests] = useState<MirrorPOSLicenseRequest[]>([]);
+  const [mirrorBotWorkspace, setMirrorBotWorkspace] = useState<MirrorBotVaultWorkspace | null>(null);
+  const [pendingMirrorBotAccess, setPendingMirrorBotAccess] = useState<boolean>(false);
+  const [accountInitialTab, setAccountInitialTab] = useState<DashboardTab>('overview');
 
   // Payment configuration for bKash, Nagad, Bank, Google Sheets, Telegram
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(loadPaymentConfig);
@@ -187,21 +196,24 @@ export default function App() {
     }, 4500);
   }, []);
 
-  const navigateTo = useCallback((path: string) => {
-    const normalized = path.toLowerCase().replace(/\/+$/, '') || '/';
-    if (typeof window !== 'undefined' && window.location.pathname !== normalized) {
-      window.history.pushState({}, '', normalized);
-    }
-    setCurrentPath(normalized);
-    applyRouteSeoMetadata(normalized);
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, []);
+  const navigateTo = useCallback(
+    (path: string) => {
+      const normalized = path.toLowerCase().replace(/\/+$/, '') || '/';
+      if (typeof window !== 'undefined' && window.location.pathname !== normalized) {
+        window.history.pushState({}, '', normalized);
+      }
+      setCurrentPath(normalized);
+      applyRouteSeoMetadata(normalized, lang);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    },
+    [lang]
+  );
 
   useEffect(() => {
-    applyRouteSeoMetadata(currentPath);
-  }, [currentPath]);
+    applyRouteSeoMetadata(currentPath, lang);
+  }, [currentPath, lang]);
 
   // 1. Firebase Auth state listener with Backend Session Verification & Role Resolution
   useEffect(() => {
@@ -223,6 +235,7 @@ export default function App() {
         setDownloadHistory([]);
         setMirrorPOSLicense(null);
         setUserMirrorPOSRequests([]);
+        setMirrorBotWorkspace(null);
         setAdminOrders([]);
         setAllCustomers([]);
         setProductSecrets({});
@@ -280,11 +293,20 @@ export default function App() {
   // Redirect authenticated customers away from /login & /signup to /account
   useEffect(() => {
     if (authReady && user && (currentPath === '/login' || currentPath === '/signup')) {
-      navigateTo('/account');
+      if (pendingMirrorBotAccess) {
+        setPendingMirrorBotAccess(false);
+        setAccountInitialTab('mirrorbot');
+        activateMirrorBotInVault(user.uid, userProfile?.company || user.displayName || '').catch(
+          () => {}
+        );
+        navigateTo('/account');
+      } else {
+        navigateTo('/account');
+      }
     }
-  }, [authReady, user, currentPath, navigateTo]);
+  }, [authReady, user, currentPath, pendingMirrorBotAccess, userProfile?.company, navigateTo]);
 
-  // 2. Customer-scoped Firestore Subscriptions (Purchases, Orders, Downloads, MirrorPOS License)
+  // 2. Customer-scoped Firestore Subscriptions (Purchases, Orders, Downloads, MirrorPOS License, Mirror Bot Vault)
   useEffect(() => {
     if (!user) {
       setUserOrders([]);
@@ -292,6 +314,7 @@ export default function App() {
       setDownloadHistory([]);
       setMirrorPOSLicense(null);
       setUserMirrorPOSRequests([]);
+      setMirrorBotWorkspace(null);
       return;
     }
 
@@ -315,6 +338,9 @@ export default function App() {
     const unsubMirrorPOSRequests = subscribeToUserMirrorPOSRequests(user.uid, (reqs) => {
       setUserMirrorPOSRequests(reqs);
     });
+    const unsubMirrorBotWorkspace = subscribeToUserMirrorBotWorkspace(user.uid, (ws) => {
+      setMirrorBotWorkspace(ws);
+    });
 
     return () => {
       unsubPurchases();
@@ -322,6 +348,7 @@ export default function App() {
       unsubDownloads();
       unsubMirrorPOSLicense();
       unsubMirrorPOSRequests();
+      unsubMirrorBotWorkspace();
     };
   }, [user?.uid, user?.email, user?.emailVerified]);
 
@@ -446,7 +473,7 @@ export default function App() {
     const handlePopState = () => {
       const next = resolveRouteFromLocation();
       setCurrentPath(next);
-      applyRouteSeoMetadata(next);
+      applyRouteSeoMetadata(next, lang);
     };
 
     const handleHash = () => {
@@ -579,11 +606,83 @@ export default function App() {
       }).catch(() => {});
     }
 
+    if (redirectToAccount && pendingMirrorBotAccess) {
+      await activateMirrorBotInVault(
+        firebaseUser.uid,
+        syncedProfile?.company || firebaseUser.displayName || ''
+      ).catch(() => {});
+      setPendingMirrorBotAccess(false);
+      setAccountInitialTab('mirrorbot');
+      showToast('✓ Account ready! Mirror Bot has been added to your Vault.');
+      navigateTo('/account');
+      return;
+    }
+
     showToast(`✓ Welcome, ${appUser.displayName || firebaseUser.email}!`);
 
     if (redirectToAccount) {
+      setAccountInitialTab('overview');
       navigateTo('/account');
     }
+  };
+
+  // Mirror Bot Vault handlers (strictly scoped to Mirror Bot)
+  const handleOpenMirrorBotFromStore = () => {
+    if (!user) {
+      setPendingMirrorBotAccess(true);
+      navigateTo('/signup');
+      return;
+    }
+    if (!mirrorBotWorkspace?.activatedInVault) {
+      activateMirrorBotInVault(user.uid, userProfile?.company || user.displayName || '')
+        .then(() => {
+          showToast('✓ Mirror Bot added to your Vault! You can edit business info anytime from your Vault.');
+        })
+        .catch(() => {});
+    }
+    navigateTo('/mirrorbot');
+  };
+
+  const handleActivateMirrorBotInVault = async () => {
+    if (!user) return;
+    await activateMirrorBotInVault(user.uid, userProfile?.company || user.displayName || '');
+    showToast('✓ Mirror Bot added to your Vault!');
+  };
+
+  const handleSaveMirrorBotVaultInfo = async (updates: {
+    businessName: string;
+    botName: string;
+    workPoints: string[];
+    autoReplyEnabled: boolean;
+  }) => {
+    if (!user) throw new Error('Please sign in first.');
+    await saveMirrorBotWorkspaceToVault(user.uid, updates);
+
+    // Sync business info directly to the backend live-webhook workspace for this UID
+    try {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const idToken = await currentUser.getIdToken();
+        await fetch('/api/mirrorbot/meta-connect', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            action: 'save_profile',
+            businessName: updates.businessName,
+            botName: updates.botName,
+            workPoints: updates.workPoints,
+            autoReplyEnabled: updates.autoReplyEnabled,
+          }),
+        });
+      }
+    } catch {
+      // Firestore Vault write succeeded; backend will re-sync on /mirrorbot load if offline
+    }
+
+    showToast('✓ Mirror Bot business info updated in Vault.');
   };
 
   const handleCustomerGoogleSignIn = async () => {
@@ -722,6 +821,9 @@ export default function App() {
     setDownloadHistory([]);
     setMirrorPOSLicense(null);
     setUserMirrorPOSRequests([]);
+    setMirrorBotWorkspace(null);
+    setPendingMirrorBotAccess(false);
+    setAccountInitialTab('overview');
     setAdminOrders([]);
     setAllCustomers([]);
     setProductSecrets({});
@@ -1002,7 +1104,10 @@ export default function App() {
       <Header
         onStartProject={() => setIsStartProjectOpen(true)}
         user={user}
-        onOpenVault={() => navigateTo('/account')}
+        onOpenVault={() => {
+          setAccountInitialTab('overview');
+          navigateTo('/account');
+        }}
         onSignIn={() => navigateTo('/login')}
         purchaseCount={userPurchases.length}
         onOpenAdmin={() => navigateTo('/admin')}
@@ -1015,6 +1120,7 @@ export default function App() {
         {currentPath === '/login' || currentPath === '/signup' ? (
           <CustomerAuthPage
             mode={currentPath === '/signup' ? 'signup' : 'login'}
+            mirrorBotIntent={pendingMirrorBotAccess}
             onNavigate={navigateTo}
             onGoogleSignIn={handleCustomerGoogleSignIn}
             onEmailSignIn={handleEmailSignIn}
@@ -1028,6 +1134,11 @@ export default function App() {
             purchases={userPurchases}
             orders={userOrders}
             downloadHistory={downloadHistory}
+            initialTab={accountInitialTab}
+            mirrorBotWorkspace={mirrorBotWorkspace}
+            onActivateMirrorBot={handleActivateMirrorBotInVault}
+            onSaveMirrorBotInfo={handleSaveMirrorBotVaultInfo}
+            onOpenMirrorBotChannels={() => navigateTo('/mirrorbot')}
             onNavigate={navigateTo}
             onSignOut={handleSignOut}
             onSelectDownload={(target) => setSecureDownloadTarget(target)}
@@ -1126,8 +1237,22 @@ export default function App() {
           />
         ) : currentPath === '/mirrorbot' ? (
           <MirrorBotPage
+            user={user}
+            vaultWorkspace={mirrorBotWorkspace}
             onNavigateHome={() => navigateTo('/')}
             onStartProject={() => setIsStartProjectOpen(true)}
+            onRequireSignUp={() => {
+              setPendingMirrorBotAccess(true);
+              navigateTo('/signup');
+            }}
+            onRequireSignIn={() => {
+              setPendingMirrorBotAccess(true);
+              navigateTo('/login');
+            }}
+            onOpenVaultMirrorBot={() => {
+              setAccountInitialTab('mirrorbot');
+              navigateTo('/account');
+            }}
           />
         ) : (
           <>
@@ -1169,7 +1294,7 @@ export default function App() {
               loading={productsLoading}
               onBuyItem={(item) => setCheckoutItem(item)}
               onOpenMirrorPOS={() => navigateTo('/mirrorpos')}
-              onOpenMirrorBot={() => navigateTo('/mirrorbot')}
+              onOpenMirrorBot={handleOpenMirrorBotFromStore}
               user={user}
               onOpenSignIn={() => setIsAuthModalOpen(true)}
               onNotify={showToast}
@@ -1317,7 +1442,10 @@ export default function App() {
         onNavigateHome={() => navigateTo('/')}
         cartCount={checkoutItem ? 1 : 0}
         user={user}
-        onOpenVault={() => navigateTo('/account')}
+        onOpenVault={() => {
+          setAccountInitialTab('overview');
+          navigateTo('/account');
+        }}
         onSignIn={() => navigateTo('/login')}
         onOpenCartOrStore={() => {
           if (!checkoutItem) {
