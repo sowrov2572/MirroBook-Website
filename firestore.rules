@@ -287,6 +287,7 @@ service cloud.firestore {
           'uid', 'activatedInVault', 'businessName', 'botName', 'workPoints',
           'autoReplyEnabled', 'facebookPageConnected', 'facebookPageId', 'facebookPageName',
           'messengerConnected', 'whatsappConnected', 'whatsappPhoneId', 'whatsappDisplayPhone',
+          'knowledgeText', 'knowledgeItems', 'autoLearnKnowledge',
           'createdAt', 'updatedAt'
         ])
         && isValidId(data.uid)
@@ -302,6 +303,9 @@ service cloud.firestore {
         && (!('whatsappConnected' in data) || data.whatsappConnected is bool)
         && (!('whatsappPhoneId' in data) || (data.whatsappPhoneId is string && data.whatsappPhoneId.size() <= 64))
         && (!('whatsappDisplayPhone' in data) || (data.whatsappDisplayPhone is string && data.whatsappDisplayPhone.size() <= 60))
+        && (!('knowledgeText' in data) || (data.knowledgeText is string && data.knowledgeText.size() <= 8000))
+        && (!('knowledgeItems' in data) || (data.knowledgeItems is list && data.knowledgeItems.size() <= 30 && (data.knowledgeItems.size() == 0 || data.knowledgeItems[0] is map)))
+        && (!('autoLearnKnowledge' in data) || data.autoLearnKnowledge is bool)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -590,6 +594,7 @@ service cloud.firestore {
               'activatedInVault', 'businessName', 'botName', 'workPoints', 'autoReplyEnabled',
               'facebookPageConnected', 'facebookPageId', 'facebookPageName',
               'messengerConnected', 'whatsappConnected', 'whatsappPhoneId', 'whatsappDisplayPhone',
+              'knowledgeText', 'knowledgeItems', 'autoLearnKnowledge',
               'updatedAt'
             ])
           )
@@ -597,12 +602,28 @@ service cloud.firestore {
       allow delete: if isAdmin() && isValidId(userId);
     }
 
-    // 10b. Server-Only Mirror Bot Meta OAuth Tokens & Multi-Tenant Webhook Routing (Admin SDK Only — zero client access)
+    // 10b. Server-Only Mirror Bot Meta OAuth Tokens, Routing & Reply Logs (Admin SDK Only — zero client access)
     match /mirrorbot_channel_secrets/{userId} {
       allow read, write: if false;
     }
 
     match /mirrorbot_channel_routes/{routeId} {
+      allow read, write: if false;
+    }
+
+    match /mirrorbot_reply_logs/{userId} {
+      allow read, write: if false;
+    }
+
+    match /mirrorbot_diagnostics/{docId} {
+      allow read, write: if false;
+    }
+
+    match /mirrorbot_webhook_dedup/{docId} {
+      allow read, write: if false;
+    }
+
+    match /mirrorbot_oauth_sessions/{sessionId} {
       allow read, write: if false;
     }
   }

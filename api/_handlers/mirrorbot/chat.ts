@@ -1,4 +1,4 @@
-import { Type } from '@google/genai';
+import { ThinkingLevel, Type } from '@google/genai';
 import {
   MIRRORBOT_GEMINI_MODEL,
   checkMirrorBotRateLimit,
@@ -24,6 +24,13 @@ export interface MirrorBotBusinessContext {
   supportPhone?: string;
   extraNotes?: string;
   botName: string;
+  knowledgeText?: string;
+  knowledgeItems?: Array<{
+    title: string;
+    category?: string;
+    content: string;
+  }>;
+  autoLearnKnowledge?: boolean;
   connectedChannels?: {
     facebookPage?: string;
     messengerConnected?: boolean;
@@ -43,6 +50,7 @@ export interface MirrorBotChatRequest {
   business: MirrorBotBusinessContext;
   history?: MirrorBotHistoryEntry[];
   message?: string;
+  fastWebhookMode?: boolean;
   image?: {
     mimeType: string;
     base64Data: string;
@@ -57,6 +65,12 @@ export interface CapturedOrderData {
   priceNote: string;
 }
 
+export interface SuggestedKnowledgeOutput {
+  title: string;
+  category: 'product' | 'faq' | 'policy' | 'offer' | 'general';
+  content: string;
+}
+
 export interface MirrorBotChatResult {
   status: number;
   data: {
@@ -66,6 +80,7 @@ export interface MirrorBotChatResult {
     orderStage?: 'browsing' | 'interested' | 'collecting_details' | 'order_confirmed' | 'human_handoff';
     imageObserved?: string;
     capturedOrder?: CapturedOrderData | null;
+    suggestedKnowledge?: SuggestedKnowledgeOutput | null;
     modelUsed?: string;
     error?: string;
   };
@@ -119,6 +134,21 @@ function buildSystemInstruction(biz: MirrorBotBusinessContext): string {
     );
   }
 
+  const knowledgeText = cleanStr(biz.knowledgeText, 8000);
+  const knowledgeItemLines =
+    Array.isArray(biz.knowledgeItems) && biz.knowledgeItems.length > 0
+      ? biz.knowledgeItems
+          .slice(0, 30)
+          .map(
+            (item, idx) =>
+              `${idx + 1}. [${cleanStr(item.category || 'general', 20).toUpperCase()}] ${cleanStr(
+                item.title,
+                120
+              )}: ${cleanStr(item.content, 500)}`
+          )
+          .join('\n')
+      : '';
+
   return `You are "${botName}", a real, intelligent human-style business manager & sales executive running customer conversations on behalf of "${businessName}" while the business owner is away.
 
 === BUSINESS CONTEXT YOU MANAGE ===
@@ -133,10 +163,24 @@ function buildSystemInstruction(biz: MirrorBotBusinessContext): string {
 - Owner's Extra Rules: ${cleanStr(biz.extraNotes, 500) || 'None'}
 - Active Channels: ${channelsSummary.length > 0 ? channelsSummary.join(' | ') : 'Direct Inbox'}
 
+=== INTEGRATED LIVE BUSINESS DATA (OWNER'S DIRECT DATA — PRIORITY SOURCE) ===
+${knowledgeText || 'No additional raw business notes added yet.'}
+
+=== STRUCTURED KNOWLEDGE BASE (PRODUCTS, PRICES, FAQS & POLICIES) ===
+${knowledgeItemLines || 'No structured knowledge cards added yet.'}
+
 === LIVE PRODUCT & PRICE CATALOG ===
 ${catalogLines}
 
 === HOW YOU MUST COMMUNICATE (REAL HUMAN MANAGER — ZERO TEMPLATES) ===
+0. PRIORITY KNOWLEDGE RULE:
+   - ALWAYS check "INTEGRATED LIVE BUSINESS DATA" and "STRUCTURED KNOWLEDGE BASE" first before answering!
+   - Treat all prices, packages, services, offers, FAQs, phone numbers, and policies written there as live ground truth for "${businessName}".
+   - ${
+     biz.autoLearnKnowledge !== false
+       ? 'AUTO-GENERATE KNOWLEDGE: If the customer asks a genuinely useful new business question or clarifies a common inquiry pattern that is NOT already clearly covered as its own item in STRUCTURED KNOWLEDGE BASE (and you gave a helpful answer grounded in the business info without inventing fake prices), you may populate "suggestedKnowledge" with shouldSave=true and a crisp Q&A/fact card in the customer\'s language; otherwise set shouldSave=false.'
+       : 'Set suggestedKnowledge.shouldSave = false.'
+   }
 1. GENUINE REAL-TIME UNDERSTANDING (NO CANNED / ROBOTIC TEMPLATES):
    - Understand whatever the customer actually says — casual Bangla, Banglish, typos, short replies ("koto?", "nibo", "dhaka te pathaben?", "discount hobe?"), questions, greetings, or multi-part messages.
    - Reply freshly and naturally every single time like an attentive real person chatting on Facebook Messenger or WhatsApp. Never repeat stiff boilerplate or sound like a keyword auto-responder. Never say "As an AI".
@@ -278,11 +322,15 @@ export async function processMirrorBotChat(
   });
 
   try {
+    const isFastWebhook = Boolean(body.fastWebhookMode);
     const { response, modelUsed } = await generateMirrorBotContent({
       model: MIRRORBOT_GEMINI_MODEL,
+      timeoutMs: isFastWebhook ? 11000 : 20000,
+      maxAttemptsPerModel: isFastWebhook ? 1 : 2,
       contents,
       config: {
         systemInstruction: buildSystemInstruction(biz),
+        ...(isFastWebhook ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
         responseMimeType: 'application/json',
         responseSchema: {
           type: Type.OBJECT,
@@ -321,14 +369,37 @@ export async function processMirrorBotChat(
               },
               required: ['customerName', 'phone', 'address', 'productSummary', 'priceNote'],
             },
+            suggestedKnowledge: {
+              type: Type.OBJECT,
+              description:
+                'Optional auto-generated knowledge card when a customer asks a valuable new recurring question not yet in STRUCTURED KNOWLEDGE BASE.',
+              properties: {
+                shouldSave: { type: Type.BOOLEAN },
+                title: { type: Type.STRING },
+                category: { type: Type.STRING },
+                content: { type: Type.STRING },
+              },
+              required: ['shouldSave', 'title', 'category', 'content'],
+            },
           },
-          required: ['replies', 'needsHumanWait', 'orderStage', 'imageObserved', 'capturedOrder'],
+          required: [
+            'replies',
+            'needsHumanWait',
+            'orderStage',
+            'imageObserved',
+            'capturedOrder',
+            'suggestedKnowledge',
+          ],
         },
       },
     });
 
     const rawText = (response.text || '').trim();
-    const parsed = JSON.parse(rawText || '{}');
+    const cleanedJson = rawText
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+    const parsed = JSON.parse(cleanedJson || '{}');
 
     const replies: string[] = Array.isArray(parsed?.replies)
       ? parsed.replies
@@ -362,6 +433,23 @@ export async function processMirrorBotChat(
       typeof co === 'object' &&
       (cleanStr(co.phone, 40).length >= 6 || cleanStr(co.address, 200).length >= 4);
 
+    const sk = parsed.suggestedKnowledge;
+    const validCategories = new Set(['product', 'faq', 'policy', 'offer', 'general']);
+    const skCat = cleanStr(sk?.category, 20).toLowerCase();
+    const suggestedKnowledge: SuggestedKnowledgeOutput | null =
+      biz.autoLearnKnowledge !== false &&
+      sk &&
+      typeof sk === 'object' &&
+      sk.shouldSave === true &&
+      cleanStr(sk.title, 120).length >= 3 &&
+      cleanStr(sk.content, 500).length >= 8
+        ? {
+            title: cleanStr(sk.title, 120),
+            category: (validCategories.has(skCat) ? skCat : 'faq') as SuggestedKnowledgeOutput['category'],
+            content: cleanStr(sk.content, 500),
+          }
+        : null;
+
     return {
       status: 200,
       data: {
@@ -371,6 +459,7 @@ export async function processMirrorBotChat(
         orderStage,
         imageObserved: cleanStr(parsed.imageObserved, 240),
         modelUsed,
+        suggestedKnowledge,
         capturedOrder: hasCapturedOrder
           ? {
               customerName: cleanStr(co.customerName, 100),

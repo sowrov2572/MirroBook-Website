@@ -337,10 +337,24 @@
         "whatsappConnected": { "type": "boolean" },
         "whatsappPhoneId": { "type": "string", "maxLength": 64 },
         "whatsappDisplayPhone": { "type": "string", "maxLength": 60 },
+        "knowledgeText": { "type": "string", "maxLength": 8000 },
+        "knowledgeItems": { "type": "array", "description": "Bounded structured business knowledge cards integrated into live Mirror Bot replies (max 30 items)" },
+        "autoLearnKnowledge": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "activatedInVault", "businessName", "botName", "workPoints", "autoReplyEnabled", "createdAt", "updatedAt"]
+    },
+    "MirrorBotReplyLog": {
+      "title": "MirrorBotReplyLog",
+      "description": "Server-only per-tenant auto-reply activity log for Messenger, Facebook comments, WhatsApp, and live tests",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "items": { "type": "array" }
+      },
+      "required": ["uid", "updatedAt"]
     },
     "MirrorBotChannelSecret": {
       "title": "MirrorBotChannelSecret",
@@ -362,6 +376,30 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["routeKey", "uid", "updatedAt"]
+    },
+    "MirrorBotDiagnosticLog": {
+      "title": "MirrorBotDiagnosticLog",
+      "description": "Server-only 10-stage Messenger webhook diagnostic trace buffer accessible strictly to verified studio administrators via backend API",
+      "type": "object",
+      "properties": {
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "events": { "type": "array" }
+      },
+      "required": ["updatedAt"]
+    },
+    "MirrorBotWebhookDedup": {
+      "title": "MirrorBotWebhookDedup",
+      "description": "Server-only cross-instance Meta webhook event deduplication lock preventing duplicate Messenger/WhatsApp replies",
+      "type": "object",
+      "properties": {
+        "docId": { "type": "string" },
+        "channel": { "type": "string" },
+        "pageId": { "type": "string" },
+        "status": { "type": "string" },
+        "claimedAtMs": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["docId", "status", "claimedAtMs", "updatedAt"]
     }
   },
   "firestore": {
@@ -440,6 +478,18 @@
     "/mirrorbot_channel_routes/{routeId}": {
       "schema": "MirrorBotChannelRoute",
       "description": "Server-only webhook routing map for multi-tenant Facebook Page and WhatsApp auto-replies"
+    },
+    "/mirrorbot_reply_logs/{userId}": {
+      "schema": "MirrorBotReplyLog",
+      "description": "Server-only per-tenant auto-reply activity log strictly inaccessible from client SDKs"
+    },
+    "/mirrorbot_diagnostics/{docId}": {
+      "schema": "MirrorBotDiagnosticLog",
+      "description": "Server-only 10-stage Messenger webhook diagnostic events strictly inaccessible from client SDKs"
+    },
+    "/mirrorbot_webhook_dedup/{docId}": {
+      "schema": "MirrorBotWebhookDedup",
+      "description": "Server-only cross-instance webhook deduplication records strictly inaccessible from client SDKs"
     }
   }
 }

@@ -27,6 +27,18 @@ import {
   processMetaWebhookPost,
 } from './api/_handlers/mirrorbot/meta-webhook';
 import { processMetaDataDeletion } from './api/_handlers/mirrorbot/meta-data-deletion';
+import {
+  processMetaRepliesGet,
+  processMetaRepliesPost,
+} from './api/_handlers/mirrorbot/meta-replies';
+import {
+  processMirrorBotKnowledgeGet,
+  processMirrorBotKnowledgePost,
+} from './api/_handlers/mirrorbot/knowledge';
+import {
+  processMetaDiagnosticsGet,
+  processMetaDiagnosticsPost,
+} from './api/_handlers/mirrorbot/meta-diagnostics';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -565,6 +577,110 @@ function apiDevServerPlugin(): Plugin {
           });
           res.setHeader('Cache-Control', 'no-store');
           sendJson(res, result.status, result.data);
+          return;
+        }
+
+        if (url === '/api/mirrorbot/meta-replies' || url === '/api/mirrorbot/meta-replies/') {
+          const authHeader =
+            typeof req.headers['authorization'] === 'string'
+              ? req.headers['authorization']
+              : undefined;
+          if (req.method === 'GET') {
+            const result = await processMetaRepliesGet(authHeader);
+            res.setHeader('Cache-Control', 'no-store');
+            sendJson(res, result.status, result.data);
+            return;
+          }
+          if (req.method === 'POST') {
+            try {
+              const bodyStr = await readRequestBody(req, 256 * 1024);
+              let body = {};
+              try {
+                body = JSON.parse(bodyStr || '{}');
+              } catch {
+                sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+                return;
+              }
+              const result = await processMetaRepliesPost(body, authHeader);
+              res.setHeader('Cache-Control', 'no-store');
+              sendJson(res, result.status, result.data);
+            } catch (err: any) {
+              sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+            }
+            return;
+          }
+          sendJson(res, 405, { success: false, error: 'Method not allowed.' });
+          return;
+        }
+
+        if (url === '/api/mirrorbot/knowledge' || url === '/api/mirrorbot/knowledge/') {
+          const authHeader =
+            typeof req.headers['authorization'] === 'string'
+              ? req.headers['authorization']
+              : undefined;
+          if (req.method === 'GET') {
+            const result = await processMirrorBotKnowledgeGet(authHeader);
+            res.setHeader('Cache-Control', 'no-store');
+            sendJson(res, result.status, result.data);
+            return;
+          }
+          if (req.method === 'POST') {
+            try {
+              const bodyStr = await readRequestBody(req, 512 * 1024);
+              let body = {};
+              try {
+                body = JSON.parse(bodyStr || '{}');
+              } catch {
+                sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+                return;
+              }
+              const result = await processMirrorBotKnowledgePost(body, authHeader);
+              res.setHeader('Cache-Control', 'no-store');
+              sendJson(res, result.status, result.data);
+            } catch (err: any) {
+              sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+            }
+            return;
+          }
+          sendJson(res, 405, { success: false, error: 'Method not allowed.' });
+          return;
+        }
+
+        if (
+          url === '/api/mirrorbot/meta-diagnostics' ||
+          url === '/api/mirrorbot/meta-diagnostics/'
+        ) {
+          const authHeader =
+            typeof req.headers['authorization'] === 'string'
+              ? req.headers['authorization']
+              : undefined;
+          if (req.method === 'GET') {
+            const params = new URLSearchParams(queryStr || '');
+            const checkGemini = params.get('checkGemini') === '1';
+            const result = await processMetaDiagnosticsGet(authHeader, { checkGemini });
+            res.setHeader('Cache-Control', 'no-store');
+            sendJson(res, result.status, result.data);
+            return;
+          }
+          if (req.method === 'POST') {
+            try {
+              const bodyStr = await readRequestBody(req, 128 * 1024);
+              let body = {};
+              try {
+                body = JSON.parse(bodyStr || '{}');
+              } catch {
+                sendJson(res, 400, { success: false, error: 'Invalid JSON request body.' });
+                return;
+              }
+              const result = await processMetaDiagnosticsPost(body, authHeader);
+              res.setHeader('Cache-Control', 'no-store');
+              sendJson(res, result.status, result.data);
+            } catch (err: any) {
+              sendJson(res, 500, { success: false, error: err?.message || 'Server error' });
+            }
+            return;
+          }
+          sendJson(res, 405, { success: false, error: 'Method not allowed.' });
           return;
         }
         next();

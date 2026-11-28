@@ -16,6 +16,9 @@ import handler14 from './_handlers/mirrorbot/meta-oauth-url.js';
 import handler15 from './_handlers/mirrorbot/meta-callback.js';
 import handler16 from './_handlers/mirrorbot/meta-connect.js';
 import handler17 from './_handlers/mirrorbot/meta-data-deletion.js';
+import handler18 from './_handlers/mirrorbot/meta-replies.js';
+import handler19 from './_handlers/mirrorbot/knowledge.js';
+import handler20 from './_handlers/mirrorbot/meta-diagnostics.js';
 
 export const config = {
   api: {
@@ -61,6 +64,9 @@ const handlers: Record<string, (req: any, res: any) => any> = {
   'mirrorbot/meta-callback': handler15,
   'mirrorbot/meta-connect': handler16,
   'mirrorbot/meta-data-deletion': handler17,
+  'mirrorbot/meta-replies': handler18,
+  'mirrorbot/knowledge': handler19,
+  'mirrorbot/meta-diagnostics': handler20,
   'orders/admin-approve': handler6,
   'orders/submit-and-verify': handler7,
   'package-order': handler8,
@@ -99,6 +105,13 @@ export default async function handler(req: any, res: any) {
   }
 
   const method = String(req.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    if (req.rawBody === undefined && Buffer.isBuffer(req.body)) {
+      req.rawBody = req.body.toString('utf8');
+    } else if (req.rawBody === undefined && typeof req.body === 'string') {
+      req.rawBody = req.body;
+    }
+  }
   if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS' && req.body === undefined) {
     try {
       const rawStr = await readRawRequestBody(req);

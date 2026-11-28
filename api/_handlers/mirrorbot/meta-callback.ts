@@ -1,7 +1,12 @@
 import {
   consumeOAuthState,
   createOAuthSession,
+  getChannelRouteOwner,
+  getGraphApiVersion,
+  getWorkspaceByUid,
+  recordDiagnosticEvent,
   saveWorkspaceByUid,
+  subscribeFacebookPageWebhook,
   toSafeWorkspace,
   type DiscoveredFacebookPage,
   type DiscoveredWhatsAppNumber,
@@ -62,31 +67,11 @@ function buildPopupHtml(
 </html>`;
 }
 
-async function subscribePageWebhook(pageId: string, pageAccessToken: string): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(pageId)}/subscribed_apps`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${pageAccessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscribed_fields: ['messages', 'messaging_postbacks', 'feed'],
-        }),
-      }
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
 async function subscribeWabaWebhook(wabaId: string, accessToken: string): Promise<boolean> {
+  const version = getGraphApiVersion();
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(wabaId)}/subscribed_apps`,
+      `https://graph.facebook.com/${version}/${encodeURIComponent(wabaId)}/subscribed_apps`,
       {
         method: 'POST',
         headers: {
@@ -178,6 +163,7 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
   }
 
   try {
+    const graphVersion = getGraphApiVersion();
     // 1. Exchange authorization code via POST body (client_secret never in URL)
     const tokenParams = new URLSearchParams({
       client_id: appId,
@@ -185,7 +171,7 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
       redirect_uri: stateEntry.redirectUri,
       code,
     });
-    const tokenRes = await fetch('https://graph.facebook.com/v21.0/oauth/access_token', {
+    const tokenRes = await fetch(`https://graph.facebook.com/${graphVersion}/oauth/access_token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: tokenParams.toString(),
@@ -209,7 +195,7 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
         client_secret: appSecret,
         fb_exchange_token: userAccessToken,
       });
-      const longRes = await fetch('https://graph.facebook.com/v21.0/oauth/access_token', {
+      const longRes = await fetch(`https://graph.facebook.com/${graphVersion}/oauth/access_token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: longParams.toString(),
@@ -228,7 +214,7 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
     // 3. Fetch managed Facebook Pages
     try {
       const pagesRes = await fetch(
-        'https://graph.facebook.com/v21.0/me/accounts?fields=id,name,category,access_token&limit=25',
+        `https://graph.facebook.com/${graphVersion}/me/accounts?fields=id,name,category,access_token&limit=25`,
         { headers: { Authorization: `Bearer ${userAccessToken}` } }
       );
       const pagesJson: any = await pagesRes.json().catch(() => null);
@@ -251,7 +237,7 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
     // 4. Fetch WhatsApp Business Accounts & phone numbers
     try {
       const bizRes = await fetch(
-        'https://graph.facebook.com/v21.0/me/businesses?fields=id,name,owned_whatsapp_business_accounts{id,name,phone_numbers{id,display_phone_number,verified_name}}&limit=20',
+        `https://graph.facebook.com/${graphVersion}/me/businesses?fields=id,name,owned_whatsapp_business_accounts{id,name,phone_numbers{id,display_phone_number,verified_name}}&limit=20`,
         { headers: { Authorization: `Bearer ${userAccessToken}` } }
       );
       const bizJson: any = await bizRes.json().catch(() => null);
@@ -299,13 +285,89 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
 
     let autoConnected = false;
     let safeWorkspace = null;
+    const currentWorkspace = await getWorkspaceByUid(stateEntry.uid);
+
+    // Check which discovered pages / WhatsApp numbers are already claimed by another Mirror Bot account
+    const pagesWithStatus = await Promise.all(
+      pages.map(async (p) => {
+        const ownerUid = await getChannelRouteOwner('page', p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          alreadyConnectedToOther: Boolean(ownerUid && ownerUid !== stateEntry.uid),
+          alreadyConnectedToSelf: Boolean(ownerUid && ownerUid === stateEntry.uid),
+        };
+      })
+    );
+
+    const whatsappWithStatus = await Promise.all(
+      whatsappNumbers.map(async (w) => {
+        const ownerUid = await getChannelRouteOwner('wa', w.phoneNumberId);
+        return {
+          wabaId: w.wabaId,
+          wabaName: w.wabaName,
+          phoneNumberId: w.phoneNumberId,
+          displayPhone: w.displayPhone,
+          verifiedName: w.verifiedName,
+          alreadyConnectedToOther: Boolean(ownerUid && ownerUid !== stateEntry.uid),
+          alreadyConnectedToSelf: Boolean(ownerUid && ownerUid === stateEntry.uid),
+        };
+      })
+    );
 
     if (
       (stateEntry.channel === 'facebook' || stateEntry.channel === 'messenger') &&
       pages.length === 1
     ) {
       const page = pages[0];
-      const subscribed = await subscribePageWebhook(page.id, page.accessToken);
+      const existingOwner = await getChannelRouteOwner('page', page.id);
+      if (existingOwner && existingOwner !== stateEntry.uid) {
+        const msg =
+          'এই ফেসবুক পেজটি ইতিমধ্যেই অন্য একটি Mirror Bot অ্যাকাউন্টে কানেক্ট করা আছে। এটি দিয়ে পুনরায় কানেক্ট করা সম্ভব নয় — অনুগ্রহ করে অন্য একটি পেজ চেষ্টা করুন। (This Facebook Page is already connected to another Mirror Bot account. Please try a different page.)';
+        return {
+          status: 200,
+          html: buildPopupHtml(
+            { type: 'MIRRORBOT_META_OAUTH_ERROR', code: 'PAGE_ALREADY_CONNECTED', error: msg },
+            msg,
+            callbackOrigin
+          ),
+        };
+      }
+      if (
+        currentWorkspace.facebookPage.connected &&
+        currentWorkspace.facebookPage.pageId &&
+        currentWorkspace.facebookPage.pageId !== page.id
+      ) {
+        const msg =
+          'একটি গুগল/মিরর বুক অ্যাকাউন্ট থেকে শুধুমাত্র ১টি ফেসবুক পেজ কানেক্ট করা যাবে। নতুন পেজ যোগ করতে আগে বর্তমান পেজটি ডিসকানেক্ট করুন। (Only 1 Facebook Page can be connected per account. Disconnect your current page first.)';
+        return {
+          status: 200,
+          html: buildPopupHtml(
+            { type: 'MIRRORBOT_META_OAUTH_ERROR', code: 'ONE_PAGE_LIMIT', error: msg },
+            msg,
+            callbackOrigin
+          ),
+        };
+      }
+
+      const subResult = await subscribeFacebookPageWebhook(page.id, page.accessToken);
+      const subscribed = subResult.subscribed;
+      await recordDiagnosticEvent(
+        {
+          stage: subscribed ? 'WEBHOOK_VALIDATED' : 'MESSAGE_PROCESSING_FAILED',
+          channel: 'system',
+          pageId: page.id,
+          success: subscribed,
+          detail: subscribed
+            ? `Page subscribed via OAuth callback (${subResult.fields.join(', ')})`
+            : `OAuth Page subscribe failed: ${subResult.errorMessage || 'unknown'}`,
+          errorCode: subResult.errorCode,
+          errorSubcode: subResult.errorSubcode,
+          fbtraceId: subResult.fbtraceId,
+        },
+        true
+      );
       const nowIso = new Date().toISOString();
       const updated = await saveWorkspaceByUid(stateEntry.uid, (curr) => ({
         ...curr,
@@ -330,6 +392,36 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
       autoConnected = true;
     } else if (stateEntry.channel === 'whatsapp' && whatsappNumbers.length === 1) {
       const wa = whatsappNumbers[0];
+      const existingOwner = await getChannelRouteOwner('wa', wa.phoneNumberId);
+      if (existingOwner && existingOwner !== stateEntry.uid) {
+        const msg =
+          'এই হোয়াটসঅ্যাপ নম্বরটি ইতিমধ্যেই অন্য একটি Mirror Bot অ্যাকাউন্টে কানেক্ট করা আছে। এটি দিয়ে পুনরায় কানেক্ট করা সম্ভব নয় — অন্য একটি নম্বর চেষ্টা করুন। (This WhatsApp number is already connected to another Mirror Bot account. Please try another number.)';
+        return {
+          status: 200,
+          html: buildPopupHtml(
+            { type: 'MIRRORBOT_META_OAUTH_ERROR', code: 'WA_ALREADY_CONNECTED', error: msg },
+            msg,
+            callbackOrigin
+          ),
+        };
+      }
+      if (
+        currentWorkspace.whatsapp.connected &&
+        currentWorkspace.whatsapp.phoneNumberId &&
+        currentWorkspace.whatsapp.phoneNumberId !== wa.phoneNumberId
+      ) {
+        const msg =
+          'একটি অ্যাকাউন্ট থেকে শুধুমাত্র ১টি হোয়াটসঅ্যাপ নম্বর কানেক্ট করা যাবে। নতুন নম্বর যোগ করতে আগে বর্তমান নম্বরটি ডিসকানেক্ট করুন। (Only 1 WhatsApp number can be connected per account.)';
+        return {
+          status: 200,
+          html: buildPopupHtml(
+            { type: 'MIRRORBOT_META_OAUTH_ERROR', code: 'ONE_WA_LIMIT', error: msg },
+            msg,
+            callbackOrigin
+          ),
+        };
+      }
+
       if (wa.wabaId) {
         await subscribeWabaWebhook(wa.wabaId, wa.accessToken);
       }
@@ -360,14 +452,8 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
           sessionId: session.id,
           autoConnected,
           workspace: safeWorkspace,
-          pages: pages.map((p) => ({ id: p.id, name: p.name, category: p.category })),
-          whatsappNumbers: whatsappNumbers.map((w) => ({
-            wabaId: w.wabaId,
-            wabaName: w.wabaName,
-            phoneNumberId: w.phoneNumberId,
-            displayPhone: w.displayPhone,
-            verifiedName: w.verifiedName,
-          })),
+          pages: pagesWithStatus,
+          whatsappNumbers: whatsappWithStatus,
         },
         autoConnected
           ? 'Connected! Live AI auto-reply is now active. Closing window...'

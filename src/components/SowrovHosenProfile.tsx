@@ -16,28 +16,40 @@ const teamMembers = [
     name: 'Sowrov Hosen',
     role: 'Founder & Creative Director',
     roleBn: 'প্রতিষ্ঠাতা ও ক্রিয়েটিভ ডিরেক্টর',
-    photoUrl: 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg',
+    photoWebp: '/team/sowrov-hosen.webp',
+    photoUrl: '/team/sowrov-hosen.jpg',
+    width: 720,
+    height: 900,
     portfolio: 'https://sowrovhosenstudio.netlify.app',
   },
   {
     name: 'Walid Ahmed Shraban',
     role: 'Founder & Web Developer',
     roleBn: 'প্রতিষ্ঠাতা ও ওয়েব ডেভেলপার',
-    photoUrl: 'https://i.ibb.co/BVtvZBg4/668652154-2513163962481178-6668835466422179627-n.jpg',
+    photoWebp: '/team/walid-ahmed-shraban.webp',
+    photoUrl: '/team/walid-ahmed-shraban.jpg',
+    width: 200,
+    height: 200,
     portfolio: 'https://srabonx.netlify.app/',
   },
   {
     name: 'Musabbir Al Sayed',
     role: 'Team Member',
     roleBn: 'টিম মেম্বার',
-    photoUrl: 'https://i.ibb.co/67yR2bfy/Screenshot-2026-11-23-234418.png',
+    photoWebp: '/team/musabbir-al-sayed.webp',
+    photoUrl: '/team/musabbir-al-sayed.jpg',
+    width: 900,
+    height: 897,
     portfolio: '',
   },
   {
     name: 'Mehedi Hasan',
     role: 'Team Member',
     roleBn: 'টিম মেম্বার',
-    photoUrl: 'https://i.ibb.co/FqNDq5v5/Mehedi-Hasan.jpg',
+    photoWebp: '/team/mehedi-hasan.webp',
+    photoUrl: '/team/mehedi-hasan.jpg',
+    width: 900,
+    height: 893,
     portfolio: '',
   },
 ];
@@ -63,7 +75,7 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
           '@type': 'Person',
           name: member.name,
           jobTitle: member.role,
-          ...(member.photoUrl ? { image: member.photoUrl } : {}),
+          ...(member.photoUrl ? { image: `https://mirrorbook.site${member.photoUrl}` } : {}),
           ...(member.portfolio ? { sameAs: member.portfolio } : {}),
         })),
       },
@@ -105,14 +117,19 @@ export const SowrovHosenProfile: React.FC<SowrovHosenProfileProps> = ({
               >
                 <div className="aspect-[4/5] bg-[#1B211D] overflow-hidden">
                   {member.photoUrl ? (
-                    <img
-                      src={member.photoUrl}
-                      alt={member.name}
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-top"
-                    />
+                    <picture className="block w-full h-full">
+                      <source srcSet={member.photoWebp} type="image/webp" />
+                      <img
+                        src={member.photoUrl}
+                        alt={member.name}
+                        width={member.width}
+                        height={member.height}
+                        loading="eager"
+                        decoding="async"
+                        fetchPriority="high"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </picture>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl font-semibold text-[#B7F34A]">
                       {member.name.split(' ').map((part) => part[0]).slice(0, 2).join('')}

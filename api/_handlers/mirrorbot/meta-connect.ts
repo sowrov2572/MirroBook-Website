@@ -1,37 +1,25 @@
 import {
+  getChannelRouteOwner,
+  getGraphApiVersion,
   getOAuthSession,
   getWorkspaceByUid,
+  recordDiagnosticEvent,
+  sanitizeKnowledgeItems,
   saveWorkspaceByUid,
+  subscribeFacebookPageWebhook,
+  syncOwnerFallbackWorkspace,
   toSafeWorkspace,
   unregisterChannelRoute,
   verifyCallerAuth,
 } from '../../_lib/metaStore.js';
 
-async function subscribePageWebhook(pageId: string, pageAccessToken: string): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(pageId)}/subscribed_apps`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${pageAccessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscribed_fields: ['messages', 'messaging_postbacks', 'feed'],
-        }),
-      }
-    );
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+const OWNER_ADMIN_EMAIL = 'khansaheb2572@gmail.com';
 
 async function subscribeWabaWebhook(wabaId: string, accessToken: string): Promise<boolean> {
+  const version = getGraphApiVersion();
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(wabaId)}/subscribed_apps`,
+      `https://graph.facebook.com/${version}/${encodeURIComponent(wabaId)}/subscribed_apps`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -69,6 +57,9 @@ export async function processMetaConnect(
       .map((item: unknown) => String(item || '').trim().slice(0, 140))
       .filter(Boolean)
       .slice(0, 15);
+    const hasKnowledgeText = typeof body.knowledgeText === 'string';
+    const hasKnowledgeItems = Array.isArray(body.knowledgeItems);
+    const hasAutoLearn = typeof body.autoLearnKnowledge === 'boolean';
 
     if (!businessName) {
       return { status: 400, data: { success: false, error: 'Please enter your business name.' } };
@@ -80,9 +71,28 @@ export async function processMetaConnect(
       businessName,
       botName,
       workPoints,
+      knowledgeText: hasKnowledgeText ? body.knowledgeText.slice(0, 8000) : curr.knowledgeText,
+      knowledgeItems: hasKnowledgeItems
+        ? sanitizeKnowledgeItems(body.knowledgeItems)
+        : curr.knowledgeItems,
+      autoLearnKnowledge: hasAutoLearn ? Boolean(body.autoLearnKnowledge) : curr.autoLearnKnowledge,
       autoReplyEnabled:
         typeof body.autoReplyEnabled === 'boolean' ? body.autoReplyEnabled : curr.autoReplyEnabled,
     }));
+
+    const isOwner =
+      Boolean(caller.emailVerified) &&
+      String(caller.email || '').trim().toLowerCase() === OWNER_ADMIN_EMAIL;
+    if (isOwner) {
+      await syncOwnerFallbackWorkspace({
+        businessName: updated.businessName,
+        botName: updated.botName,
+        workPoints: updated.workPoints,
+        knowledgeText: updated.knowledgeText,
+        knowledgeItems: updated.knowledgeItems,
+        autoLearnKnowledge: updated.autoLearnKnowledge,
+      });
+    }
 
     return {
       status: 200,
@@ -118,7 +128,55 @@ export async function processMetaConnect(
       return { status: 404, data: { success: false, error: 'Selected Facebook Page not found.' } };
     }
 
-    const subscribed = await subscribePageWebhook(page.id, page.accessToken);
+    // Strict uniqueness check: block if this page is already connected to another Mirror Bot account
+    const existingOwner = await getChannelRouteOwner('page', page.id);
+    if (existingOwner && existingOwner !== uid) {
+      return {
+        status: 409,
+        data: {
+          success: false,
+          code: 'PAGE_ALREADY_CONNECTED',
+          error:
+            'এই ফেসবুক পেজটি ইতিমধ্যেই অন্য একটি Mirror Bot অ্যাকাউন্টে কানেক্ট করা আছে। এটি দিয়ে সম্ভব নয় — অনুগ্রহ করে অন্য একটি পেজ চেষ্টা করুন। (This Facebook Page is already connected to another Mirror Bot account. Please try another page.)',
+        },
+      };
+    }
+
+    // Strict 1-Page-per-account enforcement
+    const currentWs = await getWorkspaceByUid(uid);
+    if (
+      currentWs.facebookPage.connected &&
+      currentWs.facebookPage.pageId &&
+      currentWs.facebookPage.pageId !== page.id
+    ) {
+      return {
+        status: 409,
+        data: {
+          success: false,
+          code: 'ONE_PAGE_LIMIT',
+          error:
+            'একটি অ্যাকাউন্ট থেকে শুধুমাত্র ১টি ফেসবুক পেজ কানেক্ট করে চালানো যাবে। নতুন পেজ কানেক্ট করতে আগে বর্তমান পেজটি ডিসকানেক্ট করুন। (Only 1 Facebook Page can be connected per account. Disconnect your current page first.)',
+        },
+      };
+    }
+
+    const subResult = await subscribeFacebookPageWebhook(page.id, page.accessToken);
+    const subscribed = subResult.subscribed;
+    await recordDiagnosticEvent(
+      {
+        stage: subscribed ? 'WEBHOOK_VALIDATED' : 'MESSAGE_PROCESSING_FAILED',
+        channel: 'system',
+        pageId: page.id,
+        success: subscribed,
+        detail: subscribed
+          ? `Page subscribed via connect_page (${subResult.fields.join(', ')})`
+          : `connect_page subscribe failed: ${subResult.errorMessage || 'unknown'}`,
+        errorCode: subResult.errorCode,
+        errorSubcode: subResult.errorSubcode,
+        fbtraceId: subResult.fbtraceId,
+      },
+      true
+    );
     const nowIso = new Date().toISOString();
 
     const updated = await saveWorkspaceByUid(uid, (curr) => ({
@@ -143,7 +201,13 @@ export async function processMetaConnect(
 
     return {
       status: 200,
-      data: { success: true, webhookSubscribed: subscribed, workspace: toSafeWorkspace(updated) },
+      data: {
+        success: true,
+        webhookSubscribed: subscribed,
+        subscribedFields: subResult.fields,
+        subscriptionError: subscribed ? undefined : subResult.errorMessage,
+        workspace: toSafeWorkspace(updated),
+      },
     };
   }
 
@@ -163,6 +227,38 @@ export async function processMetaConnect(
       return {
         status: 404,
         data: { success: false, error: 'Selected WhatsApp Business number not found.' },
+      };
+    }
+
+    // Strict uniqueness check: block if this WhatsApp number is already connected to another Mirror Bot account
+    const existingWaOwner = await getChannelRouteOwner('wa', wa.phoneNumberId);
+    if (existingWaOwner && existingWaOwner !== uid) {
+      return {
+        status: 409,
+        data: {
+          success: false,
+          code: 'WA_ALREADY_CONNECTED',
+          error:
+            'এই হোয়াটসঅ্যাপ নম্বরটি ইতিমধ্যেই অন্য একটি Mirror Bot অ্যাকাউন্টে কানেক্ট করা আছে। এটি দিয়ে সম্ভব নয় — অন্য একটি নম্বর চেষ্টা করুন। (This WhatsApp number is already connected to another Mirror Bot account. Please try another number.)',
+        },
+      };
+    }
+
+    // Strict 1-WhatsApp-number-per-account enforcement
+    const currentWs = await getWorkspaceByUid(uid);
+    if (
+      currentWs.whatsapp.connected &&
+      currentWs.whatsapp.phoneNumberId &&
+      currentWs.whatsapp.phoneNumberId !== wa.phoneNumberId
+    ) {
+      return {
+        status: 409,
+        data: {
+          success: false,
+          code: 'ONE_WA_LIMIT',
+          error:
+            'একটি অ্যাকাউন্ট থেকে শুধুমাত্র ১টি হোয়াটসঅ্যাপ নম্বর কানেক্ট করা যাবে। নতুন নম্বর যোগ করতে আগে বর্তমান নম্বরটি ডিসকানেক্ট করুন। (Only 1 WhatsApp number can be connected per account. Disconnect your current number first.)',
+        },
       };
     }
 

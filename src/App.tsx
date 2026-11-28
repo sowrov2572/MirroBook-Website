@@ -1258,6 +1258,7 @@ export default function App() {
               setAccountInitialTab('mirrorbot');
               navigateTo('/account');
             }}
+            onSaveBusinessInfo={handleSaveMirrorBotVaultInfo}
           />
         ) : currentPath === '/privacy-policy' ? (
           <PrivacyPolicyPage

@@ -44,6 +44,9 @@ import {
   MirrorPOSPaymentStatus,
   MirrorPOSLicenseStatus,
   AdminActivityLog,
+  MirrorBotKnowledgeCategory,
+  MirrorBotKnowledgeItem,
+  MirrorBotKnowledgeSource,
   MirrorBotVaultWorkspace,
   generateDeterministicLicenseKey,
 } from '../types';
@@ -1618,6 +1621,46 @@ export async function recordMirrorPOSFreeAccessInFirestore(entry: {
 
 // ==================== MIRROR BOT VAULT WORKSPACE HELPERS ====================
 
+const VALID_KB_CATEGORIES = new Set<MirrorBotKnowledgeCategory>([
+  'product',
+  'faq',
+  'policy',
+  'offer',
+  'general',
+]);
+const VALID_KB_SOURCES = new Set<MirrorBotKnowledgeSource>([
+  'manual',
+  'ai_structured',
+  'ai_generated',
+  'auto_learned',
+]);
+
+function sanitizeVaultKnowledgeItems(raw: unknown): MirrorBotKnowledgeItem[] {
+  if (!Array.isArray(raw)) return [];
+  const cleaned: MirrorBotKnowledgeItem[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const obj = item as Record<string, unknown>;
+    const title = String(obj.title || '').trim().slice(0, 120);
+    const content = String(obj.content || '').trim().slice(0, 500);
+    if (!title || !content) continue;
+    const rawCat = String(obj.category || 'general').trim().toLowerCase() as MirrorBotKnowledgeCategory;
+    const rawSrc = String(obj.source || 'manual').trim().toLowerCase() as MirrorBotKnowledgeSource;
+    cleaned.push({
+      id:
+        String(obj.id || '').trim().slice(0, 64) ||
+        `kb_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+      title,
+      category: VALID_KB_CATEGORIES.has(rawCat) ? rawCat : 'general',
+      content,
+      source: VALID_KB_SOURCES.has(rawSrc) ? rawSrc : 'manual',
+      createdAt: String(obj.createdAt || new Date().toISOString()).slice(0, 64),
+    });
+    if (cleaned.length >= 30) break;
+  }
+  return cleaned;
+}
+
 function mapMirrorBotWorkspaceDoc(uid: string, raw: Record<string, any>): MirrorBotVaultWorkspace {
   return {
     uid: String(raw.uid || uid),
@@ -1635,6 +1678,9 @@ function mapMirrorBotWorkspaceDoc(uid: string, raw: Record<string, any>): Mirror
     whatsappConnected: Boolean(raw.whatsappConnected),
     whatsappPhoneId: String(raw.whatsappPhoneId || '').slice(0, 64),
     whatsappDisplayPhone: String(raw.whatsappDisplayPhone || '').slice(0, 60),
+    knowledgeText: typeof raw.knowledgeText === 'string' ? raw.knowledgeText.slice(0, 8000) : '',
+    knowledgeItems: sanitizeVaultKnowledgeItems(raw.knowledgeItems),
+    autoLearnKnowledge: raw.autoLearnKnowledge !== false,
     createdAt: formatTimestampField(raw.createdAt),
     updatedAt: formatTimestampField(raw.updatedAt),
   };
@@ -1841,6 +1887,45 @@ export async function syncMirrorBotChannelStatusToVault(
     await updateDoc(ref, patch);
   } catch (err) {
     handleFirestoreError(err, OperationType.UPDATE, docPath);
+  }
+}
+
+/**
+ * Persists the customer's integrated Mirror Bot business data & structured knowledge cards
+ * into their isolated Firestore Vault workspace so it survives reloads and syncs live.
+ */
+export async function saveMirrorBotKnowledgeToVault(
+  uid: string,
+  updates: {
+    knowledgeText?: string;
+    knowledgeItems?: MirrorBotKnowledgeItem[];
+    autoLearnKnowledge?: boolean;
+  }
+): Promise<void> {
+  if (!uid || !auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error('You must be signed in to update Mirror Bot knowledge data.');
+  }
+  const docPath = `${MIRRORBOT_WORKSPACES_COLLECTION}/${uid}`;
+  const ref = doc(db, MIRRORBOT_WORKSPACES_COLLECTION, uid);
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await activateMirrorBotInVault(uid);
+    }
+    const patch: Record<string, any> = { updatedAt: serverTimestamp() };
+    if (typeof updates.knowledgeText === 'string') {
+      patch.knowledgeText = updates.knowledgeText.slice(0, 8000);
+    }
+    if (Array.isArray(updates.knowledgeItems)) {
+      patch.knowledgeItems = sanitizeVaultKnowledgeItems(updates.knowledgeItems);
+    }
+    if (typeof updates.autoLearnKnowledge === 'boolean') {
+      patch.autoLearnKnowledge = updates.autoLearnKnowledge;
+    }
+    await updateDoc(ref, patch);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, docPath);
+    throw err;
   }
 }
 

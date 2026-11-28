@@ -40,29 +40,64 @@ function isTransientOverloadError(err: unknown): boolean {
     status === 503 ||
     status === 429 ||
     status === 500 ||
+    status === 504 ||
     msg.includes('503') ||
     msg.includes('unavailable') ||
     msg.includes('high demand') ||
     msg.includes('overloaded') ||
     msg.includes('temporarily') ||
     msg.includes('resource_exhausted') ||
-    msg.includes('429')
+    msg.includes('429') ||
+    msg.includes('timeout') ||
+    msg.includes('timed out')
   );
+}
+
+function isModelNotFoundError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase();
+  const status = (err as any)?.status ?? (err as any)?.code;
+  return status === 404 || msg.includes('not_found') || msg.includes('404') || msg.includes('not found');
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  if (!timeoutMs || timeoutMs <= 0) return promise;
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Gemini request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    promise.then(
+      (val) => {
+        clearTimeout(timer);
+        resolve(val);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 /**
- * Calls Gemini with exponential backoff retries on transient 503/high-demand spikes
- * and automatic failover to gemini-3.1-flash-lite so live customer replies stay reliable.
+ * Calls Gemini with exponential backoff retries on transient 503/high-demand spikes,
+ * per-attempt timeout guards, and automatic failover to gemini-3.1-flash-lite
+ * so live customer replies stay fast and reliable.
  */
 export async function generateMirrorBotContent(
-  params: Omit<GenerateContentParameters, 'model'> & { model?: string }
+  params: Omit<GenerateContentParameters, 'model'> & {
+    model?: string;
+    timeoutMs?: number;
+    maxAttemptsPerModel?: number;
+  }
 ): Promise<{ response: GenerateContentResponse; modelUsed: string }> {
   const ai = getGeminiClient();
-  const primaryModel = params.model || MIRRORBOT_GEMINI_MODEL;
+  const envOverride = (process.env.GEMINI_MODEL || '').trim();
+  const { timeoutMs = 20000, maxAttemptsPerModel = 2, model: requestedModel, ...sdkParams } = params;
+  const primaryModel = requestedModel || envOverride || MIRRORBOT_GEMINI_MODEL;
   const candidateModels =
     primaryModel === MIRRORBOT_FALLBACK_MODEL
       ? [MIRRORBOT_FALLBACK_MODEL]
@@ -72,22 +107,30 @@ export async function generateMirrorBotContent(
 
   for (let mIdx = 0; mIdx < candidateModels.length; mIdx++) {
     const model = candidateModels[mIdx];
-    const maxAttempts = mIdx === 0 ? 2 : 2;
+    const maxAttempts = Math.max(1, Math.min(3, maxAttemptsPerModel));
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const response = await ai.models.generateContent({
-          ...params,
-          model,
-        });
+        const response = await withTimeout(
+          ai.models.generateContent({
+            ...sdkParams,
+            model,
+          }),
+          timeoutMs
+        );
         return { response, modelUsed: model };
       } catch (err) {
         lastError = err;
+        const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase();
+        if (isModelNotFoundError(err) || msg.includes('timed out')) {
+          // Immediately fail over to the next faster candidate model
+          break;
+        }
         if (!isTransientOverloadError(err)) {
           throw err;
         }
         // Wait briefly before retry or model fallback
-        const delayMs = attempt === 1 ? 650 : 1200;
+        const delayMs = attempt === 1 ? 500 : 950;
         await sleep(delayMs);
       }
     }

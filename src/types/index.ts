@@ -284,6 +284,19 @@ export interface AdminActivityLog {
   timestamp: string;
 }
 
+export type MirrorBotKnowledgeCategory = 'product' | 'faq' | 'policy' | 'offer' | 'general';
+
+export type MirrorBotKnowledgeSource = 'manual' | 'ai_structured' | 'ai_generated' | 'auto_learned';
+
+export interface MirrorBotKnowledgeItem {
+  id: string;
+  title: string;
+  category: MirrorBotKnowledgeCategory;
+  content: string;
+  source: MirrorBotKnowledgeSource;
+  createdAt: string;
+}
+
 export interface MirrorBotVaultWorkspace {
   uid: string;
   activatedInVault: boolean;
@@ -298,6 +311,9 @@ export interface MirrorBotVaultWorkspace {
   whatsappConnected: boolean;
   whatsappPhoneId: string;
   whatsappDisplayPhone: string;
+  knowledgeText?: string;
+  knowledgeItems?: MirrorBotKnowledgeItem[];
+  autoLearnKnowledge?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

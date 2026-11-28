@@ -60,7 +60,7 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
     canonicalUrl: `${SITE}/sowrov-hosen`,
     robots: INDEX_ROBOTS,
     ogType: 'profile',
-    ogImage: 'https://i.ibb.co.com/BHmVcvxW/Sowrov-Hosen.jpg',
+    ogImage: `${SITE}/team/sowrov-hosen.jpg`,
     ogImageAlt: 'Sowrov Hosen, Founder of MirrorBook',
   },
   '/contact': {
