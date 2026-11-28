@@ -105,7 +105,7 @@ export async function processMetaConnect(
   if (action === 'connect_page') {
     const sessionId = String(body.sessionId || '').trim();
     const pageId = String(body.pageId || '').trim();
-    const session = getOAuthSession(sessionId);
+    const session = await getOAuthSession(sessionId);
     if (!session || session.uid !== uid) {
       return {
         status: 401,
@@ -150,7 +150,7 @@ export async function processMetaConnect(
   if (action === 'connect_whatsapp') {
     const sessionId = String(body.sessionId || '').trim();
     const phoneNumberId = String(body.phoneNumberId || '').trim();
-    const session = getOAuthSession(sessionId);
+    const session = await getOAuthSession(sessionId);
     if (!session || session.uid !== uid) {
       return {
         status: 401,
