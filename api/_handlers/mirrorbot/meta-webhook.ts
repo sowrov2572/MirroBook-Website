@@ -140,41 +140,49 @@ async function sendMessengerReply(
   recipientId: string,
   text: string,
   pageToken: string
-): Promise<void> {
-  if (!pageToken || !recipientId || !text) return;
-
-  await fetch('https://graph.facebook.com/v21.0/me/messages', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${pageToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messaging_type: 'RESPONSE',
-      recipient: { id: recipientId },
-      message: { text },
-    }),
-  });
+): Promise<boolean> {
+  if (!pageToken || !recipientId || !text) return false;
+  try {
+    const response = await fetch('https://graph.facebook.com/v21.0/me/messages', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${pageToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_type: 'RESPONSE',
+        recipient: { id: recipientId },
+        message: { text },
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function sendFacebookCommentReply(
   commentId: string,
   text: string,
   pageToken: string
-): Promise<void> {
-  if (!pageToken || !commentId || !text) return;
-
-  await fetch(
-    `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}/comments`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${pageToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: text }),
-    }
-  );
+): Promise<boolean> {
+  if (!pageToken || !commentId || !text) return false;
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}/comments`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${pageToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: text }),
+      }
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function sendWhatsAppReply(
@@ -182,22 +190,26 @@ async function sendWhatsAppReply(
   text: string,
   waToken: string,
   phoneNumberId: string
-): Promise<void> {
-  if (!waToken || !phoneNumberId || !toNumber || !text) return;
-
-  await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneNumberId)}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${waToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to: toNumber,
-      type: 'text',
-      text: { body: text },
-    }),
-  });
+): Promise<boolean> {
+  if (!waToken || !phoneNumberId || !toNumber || !text) return false;
+  try {
+    const response = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneNumberId)}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${waToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: toNumber,
+        type: 'text',
+        text: { body: text },
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function processMetaWebhookGet(query: URLSearchParams): Promise<{
@@ -270,6 +282,7 @@ export async function processMetaWebhookPost(params: {
   }
 
   let handled = 0;
+  let deliveryFailed = 0;
 
   // 1. Multi-Tenant Facebook Page Comments & Messenger DMs (Text + Photos)
   if (payload?.object === 'page' && Array.isArray(payload.entry)) {
@@ -332,10 +345,13 @@ export async function processMetaWebhookPost(params: {
             params.clientIp
           );
           if (aiResult.status === 200 && Array.isArray(aiResult.data.replies)) {
+            let delivered = false;
             for (const replyText of aiResult.data.replies) {
-              await sendMessengerReply(String(senderId), replyText, pageToken);
+              const sent = await sendMessengerReply(String(senderId), replyText, pageToken);
+              delivered = delivered || sent;
+              if (!sent) deliveryFailed += 1;
             }
-            handled += 1;
+            if (delivered) handled += 1;
           }
         }
       }
@@ -372,8 +388,9 @@ export async function processMetaWebhookPost(params: {
           );
           if (aiResult.status === 200 && Array.isArray(aiResult.data.replies)) {
             const combined = aiResult.data.replies.join(' ');
-            await sendFacebookCommentReply(String(commentId), combined, pageToken);
-            handled += 1;
+            const sent = await sendFacebookCommentReply(String(commentId), combined, pageToken);
+            if (sent) handled += 1;
+            else deliveryFailed += 1;
           }
         }
       }
@@ -439,17 +456,20 @@ export async function processMetaWebhookPost(params: {
             params.clientIp
           );
           if (aiResult.status === 200 && Array.isArray(aiResult.data.replies)) {
+            let delivered = false;
             for (const replyText of aiResult.data.replies) {
-              await sendWhatsAppReply(String(from), replyText, waToken, incomingPhoneId);
+              const sent = await sendWhatsAppReply(String(from), replyText, waToken, incomingPhoneId);
+              delivered = delivered || sent;
+              if (!sent) deliveryFailed += 1;
             }
-            handled += 1;
+            if (delivered) handled += 1;
           }
         }
       }
     }
   }
 
-  return { status: 200, data: { success: true, handled } };
+  return { status: 200, data: { success: true, handled, deliveryFailed } };
 }
 
 function extractQueryParams(req: any): URLSearchParams {
