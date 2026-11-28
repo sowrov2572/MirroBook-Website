@@ -278,7 +278,7 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
     }
 
     // Store tokens strictly server-side bound to this customer UID
-    const session = createOAuthSession({
+    const session = await createOAuthSession({
       uid: stateEntry.uid,
       channel: stateEntry.channel,
       pages,
