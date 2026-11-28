@@ -75,6 +75,28 @@ export const ROUTE_SEO_CONFIG: Record<string, RouteSeoConfig> = {
     ogImage: DEFAULT_OG_IMAGE,
     ogImageAlt: 'Contact MirrorBook creative studio',
   },
+  '/privacy-policy': {
+    title: 'Privacy Policy | MirrorBook & Mirror Bot',
+    description:
+      'Read how MirrorBook and Mirror Bot handle account data, connected Facebook Pages, Messenger, and WhatsApp Business automation securely.',
+    keywords: 'MirrorBook privacy policy, Mirror Bot privacy policy, Meta app privacy policy',
+    canonicalUrl: `${SITE}/privacy-policy`,
+    robots: INDEX_ROBOTS,
+    ogType: 'website',
+    ogImage: DEFAULT_OG_IMAGE,
+    ogImageAlt: 'MirrorBook Privacy Policy',
+  },
+  '/data-deletion': {
+    title: 'User Data Deletion Instructions | MirrorBook & Mirror Bot',
+    description:
+      'Step-by-step instructions to disconnect Facebook Page, Messenger, or WhatsApp Business channels and delete your data from MirrorBook and Mirror Bot.',
+    keywords: 'MirrorBook data deletion, Mirror Bot user data deletion, Meta data deletion instructions',
+    canonicalUrl: `${SITE}/data-deletion`,
+    robots: INDEX_ROBOTS,
+    ogType: 'website',
+    ogImage: DEFAULT_OG_IMAGE,
+    ogImageAlt: 'MirrorBook User Data Deletion',
+  },
   '/login': {
     title: 'Customer Sign In | MirrorBook',
     description: 'Sign in to your MirrorBook customer account to access purchased plugins, courses, licenses, and downloads.',

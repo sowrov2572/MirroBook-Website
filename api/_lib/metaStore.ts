@@ -165,13 +165,37 @@ export async function verifyCallerAuth(
   }
 }
 
+const OAUTH_SESSIONS_COLLECTION = 'mirrorbot_oauth_sessions';
+const consumedStateNonces = new Map<string, number>();
+const ephemeralFallbackSecret = crypto.randomBytes(32).toString('hex');
+
+function getStateSigningSecret(): string {
+  const secret = (process.env.META_APP_SECRET || '').trim();
+  return secret || ephemeralFallbackSecret;
+}
+
+function safeEqualsString(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 export function resolveAppBaseUrl(requestOrigin?: string): string {
+  const cleanOrigin = (requestOrigin || '').trim().replace(/\/+$/, '');
+  if (
+    cleanOrigin &&
+    /^https:\/\//i.test(cleanOrigin) &&
+    !/^https:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(cleanOrigin)
+  ) {
+    return cleanOrigin;
+  }
   const envUrl = (process.env.APP_URL || '').trim().replace(/\/+$/, '');
   if (envUrl && /^https?:\/\//i.test(envUrl) && !envUrl.includes('MY_APP_URL')) {
     return envUrl;
   }
-  if (requestOrigin && /^https?:\/\//i.test(requestOrigin)) {
-    return requestOrigin.replace(/\/+$/, '');
+  if (cleanOrigin && /^https?:\/\//i.test(cleanOrigin)) {
+    return cleanOrigin;
   }
   return 'https://mirrorbook.site';
 }
@@ -191,26 +215,83 @@ export function createOAuthState(
       oauthStates.delete(key);
     }
   }
-  const state = crypto.randomBytes(24).toString('hex');
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const payload = {
+    n: nonce,
+    u: uid,
+    c: channel,
+    r: redirectUri,
+    t: now,
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const sig = crypto
+    .createHmac('sha256', getStateSigningSecret())
+    .update(encodedPayload, 'utf8')
+    .digest('base64url');
+  const state = `${encodedPayload}.${sig}`;
   oauthStates.set(state, { uid, channel, redirectUri, createdAt: now });
   return state;
 }
 
 export function consumeOAuthState(state: string): MetaOAuthStateEntry | null {
   if (!state) return null;
-  const entry = oauthStates.get(state) || null;
-  oauthStates.delete(state);
-  if (!entry) return null;
-  if (Date.now() - entry.createdAt > STATE_TTL_MS) return null;
-  return entry;
+  const now = Date.now();
+
+  // Clean expired consumed nonces
+  for (const [nonce, ts] of consumedStateNonces.entries()) {
+    if (now - ts > STATE_TTL_MS) {
+      consumedStateNonces.delete(nonce);
+    }
+  }
+
+  // Fast path: in-memory state (local dev / warm serverless instance)
+  const memEntry = oauthStates.get(state) || null;
+  if (memEntry) {
+    oauthStates.delete(state);
+    if (now - memEntry.createdAt > STATE_TTL_MS) return null;
+    return memEntry;
+  }
+
+  // Stateless HMAC-signed state verification (works across Vercel serverless cold starts)
+  const parts = state.split('.');
+  if (parts.length !== 2) return null;
+  const [encodedPayload, providedSig] = parts;
+  if (!encodedPayload || !providedSig) return null;
+
+  const expectedSig = crypto
+    .createHmac('sha256', getStateSigningSecret())
+    .update(encodedPayload, 'utf8')
+    .digest('base64url');
+  if (!safeEqualsString(expectedSig, providedSig)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    const nonce = typeof parsed?.n === 'string' ? parsed.n : '';
+    const uid = typeof parsed?.u === 'string' ? parsed.u : '';
+    const channel = parsed?.c as MetaChannelType;
+    const redirectUri = typeof parsed?.r === 'string' ? parsed.r : '';
+    const createdAt = typeof parsed?.t === 'number' ? parsed.t : 0;
+
+    if (!nonce || !uid || !redirectUri || !createdAt) return null;
+    if (channel !== 'facebook' && channel !== 'messenger' && channel !== 'whatsapp') return null;
+    if (now - createdAt > STATE_TTL_MS) return null;
+    if (consumedStateNonces.has(nonce)) return null;
+
+    consumedStateNonces.set(nonce, now);
+    return { uid, channel, redirectUri, createdAt };
+  } catch {
+    return null;
+  }
 }
 
-export function createOAuthSession(params: {
+export async function createOAuthSession(params: {
   uid: string;
   channel: MetaChannelType;
   pages: DiscoveredFacebookPage[];
   whatsappNumbers: DiscoveredWhatsAppNumber[];
-}): MetaOAuthSession {
+}): Promise<MetaOAuthSession> {
   const now = Date.now();
   for (const [key, sess] of oauthSessions.entries()) {
     if (now - sess.createdAt > SESSION_TTL_MS) {
@@ -226,18 +307,56 @@ export function createOAuthSession(params: {
     whatsappNumbers: params.whatsappNumbers,
   };
   oauthSessions.set(session.id, session);
+
+  if (isFirebaseAdminConfigured()) {
+    try {
+      const store = createFirebaseAdminStore();
+      await store.setDoc(OAUTH_SESSIONS_COLLECTION, session.id, session);
+    } catch {
+      // Non-fatal in local preview
+    }
+  }
+
   return session;
 }
 
-export function getOAuthSession(sessionId: string): MetaOAuthSession | null {
+export async function getOAuthSession(sessionId: string): Promise<MetaOAuthSession | null> {
   if (!sessionId) return null;
-  const sess = oauthSessions.get(sessionId) || null;
-  if (!sess) return null;
-  if (Date.now() - sess.createdAt > SESSION_TTL_MS) {
-    oauthSessions.delete(sessionId);
-    return null;
+  const now = Date.now();
+  const memSess = oauthSessions.get(sessionId) || null;
+  if (memSess) {
+    if (now - memSess.createdAt > SESSION_TTL_MS) {
+      oauthSessions.delete(sessionId);
+      return null;
+    }
+    return memSess;
   }
-  return sess;
+
+  if (isFirebaseAdminConfigured()) {
+    try {
+      const store = createFirebaseAdminStore();
+      const doc = await store.getDoc(OAUTH_SESSIONS_COLLECTION, sessionId);
+      if (doc && typeof doc.uid === 'string' && typeof doc.createdAt === 'number') {
+        if (now - doc.createdAt > SESSION_TTL_MS) {
+          return null;
+        }
+        const restored: MetaOAuthSession = {
+          id: sessionId,
+          uid: doc.uid,
+          channel: (doc.channel as MetaChannelType) || 'facebook',
+          createdAt: doc.createdAt,
+          pages: Array.isArray(doc.pages) ? doc.pages : [],
+          whatsappNumbers: Array.isArray(doc.whatsappNumbers) ? doc.whatsappNumbers : [],
+        };
+        oauthSessions.set(sessionId, restored);
+        return restored;
+      }
+    } catch {
+      // Fallback to null
+    }
+  }
+
+  return null;
 }
 
 function hydrateRecord(uid: string, doc: Record<string, any>): MirrorBotWorkspaceRecord {

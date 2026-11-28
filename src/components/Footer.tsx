@@ -248,8 +248,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenEmailSheet }) 
           <p>{t('© 2026 MirrorBook Studio. All rights reserved.', '© ২০২৬ মিরর বুক স্টুডিও। সর্বস্বত্ব সংরক্ষিত।')}</p>
 
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 gap-y-2">
-            <a href="#services" className="hover:text-[#F5F7F2] transition-colors">
-              {t('Privacy & Licensing', 'প্রাইভেসি ও লাইসেন্সিং')}
+            <a
+              href="/privacy-policy"
+              onClick={(e) => handleNav(e, '/privacy-policy')}
+              className="hover:text-[#B7F34A] transition-colors"
+            >
+              {t('Privacy Policy', 'প্রাইভেসি পলিসি')}
+            </a>
+            <span className="text-white/20">·</span>
+            <a
+              href="/data-deletion"
+              onClick={(e) => handleNav(e, '/data-deletion')}
+              className="hover:text-[#B7F34A] transition-colors"
+            >
+              {t('Data Deletion', 'ডেটা ডিলিট')}
             </a>
             <span className="text-white/20">·</span>
             <span className="text-[#707A72] text-[11px]">

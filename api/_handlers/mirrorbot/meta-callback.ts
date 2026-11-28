@@ -16,8 +16,13 @@ function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function buildPopupHtml(payload: Record<string, any>, messageText: string): string {
+function buildPopupHtml(
+  payload: Record<string, any>,
+  messageText: string,
+  targetOrigin = '*'
+): string {
   const safeJson = JSON.stringify(payload).replace(/</g, '\\u003c');
+  const safeOrigin = JSON.stringify(targetOrigin || '*').replace(/</g, '\\u003c');
   const safeText = escapeHtml(messageText);
   return `<!DOCTYPE html>
 <html lang="en">
@@ -40,9 +45,10 @@ function buildPopupHtml(payload: Record<string, any>, messageText: string): stri
   <script>
     (function () {
       var data = ${safeJson};
+      var origin = ${safeOrigin};
       try {
         if (window.opener && !window.opener.closed) {
-          window.opener.postMessage(data, '*');
+          window.opener.postMessage(data, origin);
           setTimeout(function () { window.close(); }, 350);
           return;
         }
@@ -278,12 +284,18 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
     }
 
     // Store tokens strictly server-side bound to this customer UID
-    const session = createOAuthSession({
+    const session = await createOAuthSession({
       uid: stateEntry.uid,
       channel: stateEntry.channel,
       pages,
       whatsappNumbers,
     });
+    let callbackOrigin = '*';
+    try {
+      callbackOrigin = new URL(stateEntry.redirectUri).origin;
+    } catch {
+      callbackOrigin = '*';
+    }
 
     let autoConnected = false;
     let safeWorkspace = null;
@@ -359,7 +371,8 @@ export async function processMetaCallback(query: URLSearchParams): Promise<{
         },
         autoConnected
           ? 'Connected! Live AI auto-reply is now active. Closing window...'
-          : 'Login successful! Choose your account in Mirror Bot. Closing window...'
+          : 'Login successful! Choose your account in Mirror Bot. Closing window...',
+        callbackOrigin
       ),
     };
   } catch (err: any) {
@@ -378,7 +391,16 @@ export default async function handler(req: any, res: any) {
   }
 
   const urlObj = new URL(req.url || '/', 'https://mirrorbook.site');
-  const result = await processMetaCallback(urlObj.searchParams);
+  const params = new URLSearchParams(urlObj.searchParams);
+  if (req.query && typeof req.query === 'object') {
+    for (const [key, value] of Object.entries(req.query)) {
+      if (!params.has(key) && value !== undefined && value !== null) {
+        params.set(key, Array.isArray(value) ? String(value[0] ?? '') : String(value));
+      }
+    }
+  }
+
+  const result = await processMetaCallback(params);
   res.status(result.status);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');

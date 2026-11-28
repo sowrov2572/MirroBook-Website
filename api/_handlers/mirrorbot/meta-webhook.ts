@@ -273,20 +273,34 @@ export async function processMetaWebhookPost(params: {
 
   // 1. Multi-Tenant Facebook Page Comments & Messenger DMs (Text + Photos)
   if (payload?.object === 'page' && Array.isArray(payload.entry)) {
+    const fallbackPageToken = (process.env.META_PAGE_ACCESS_TOKEN || '').trim();
     for (const entry of payload.entry) {
       const pageId = String(entry?.id || '').trim();
       if (!pageId) continue;
 
       const workspace = await resolveWorkspaceByPageId(pageId);
-      if (!workspace || !workspace.autoReplyEnabled) continue;
+      if (workspace && !workspace.autoReplyEnabled) continue;
 
-      const pageToken = workspace.facebookPage.pageAccessToken || '';
+      const pageToken = workspace?.facebookPage.pageAccessToken || fallbackPageToken;
       if (!pageToken) continue;
 
-      const business = buildBusinessContextFromWorkspace(workspace);
+      const messengerEnabled = workspace ? workspace.messenger.connected : Boolean(fallbackPageToken);
+      const feedEnabled = workspace ? workspace.facebookPage.connected : Boolean(fallbackPageToken);
+      const business: MirrorBotBusinessContext = workspace
+        ? buildBusinessContextFromWorkspace(workspace)
+        : {
+            businessName: 'MirrorBook',
+            businessCategory: 'Business',
+            whatYouWorkWith: 'Customer support and inquiries.',
+            openingHours: '',
+            deliveryInfo: '',
+            codAvailable: true,
+            supportPhone: '',
+            botName: 'Mirror Bot',
+          };
 
       // 1a. Messenger direct messages (supports text + customer photos)
-      if (workspace.messenger.connected) {
+      if (messengerEnabled) {
         const events = Array.isArray(entry?.messaging) ? entry.messaging : [];
         for (const event of events) {
           const senderId = event?.sender?.id;
@@ -327,7 +341,7 @@ export async function processMetaWebhookPost(params: {
       }
 
       // 1b. Facebook Page post comments (supports text + photo comments)
-      if (workspace.facebookPage.connected) {
+      if (feedEnabled) {
         const changes = Array.isArray(entry?.changes) ? entry.changes : [];
         for (const change of changes) {
           if (change?.field !== 'feed') continue;
@@ -339,7 +353,7 @@ export async function processMetaWebhookPost(params: {
           const photoUrl = typeof val.photo === 'string' ? val.photo.trim() : '';
           const fromId = val.from?.id;
 
-          if (!commentId || (fromId && fromId === workspace.facebookPage.pageId)) {
+          if (!commentId || (fromId && fromId === (workspace?.facebookPage.pageId || pageId))) {
             continue;
           }
           if (!messageText && !photoUrl) continue;
@@ -368,19 +382,35 @@ export async function processMetaWebhookPost(params: {
 
   // 2. Multi-Tenant WhatsApp Business Cloud API (Text + Customer Photos)
   if (payload?.object === 'whatsapp_business_account' && Array.isArray(payload.entry)) {
+    const fallbackWaToken = (process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
+    const fallbackWaPhoneId = (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
+
     for (const entry of payload.entry) {
       const changes = Array.isArray(entry?.changes) ? entry.changes : [];
       for (const change of changes) {
-        const incomingPhoneId = String(change?.value?.metadata?.phone_number_id || '').trim();
+        const incomingPhoneId = String(
+          change?.value?.metadata?.phone_number_id || fallbackWaPhoneId || ''
+        ).trim();
         if (!incomingPhoneId) continue;
 
         const workspace = await resolveWorkspaceByWhatsAppPhoneId(incomingPhoneId);
-        if (!workspace || !workspace.autoReplyEnabled || !workspace.whatsapp.connected) continue;
+        if (workspace && (!workspace.autoReplyEnabled || !workspace.whatsapp.connected)) continue;
 
-        const waToken = workspace.whatsapp.accessToken || '';
+        const waToken = workspace?.whatsapp.accessToken || fallbackWaToken;
         if (!waToken) continue;
 
-        const business = buildBusinessContextFromWorkspace(workspace);
+        const business: MirrorBotBusinessContext = workspace
+          ? buildBusinessContextFromWorkspace(workspace)
+          : {
+              businessName: 'MirrorBook',
+              businessCategory: 'Business',
+              whatYouWorkWith: 'Customer support and inquiries.',
+              openingHours: '',
+              deliveryInfo: '',
+              codAvailable: true,
+              supportPhone: '',
+              botName: 'Mirror Bot',
+            };
         const incoming = Array.isArray(change?.value?.messages) ? change.value.messages : [];
 
         for (const msg of incoming) {
@@ -422,19 +452,40 @@ export async function processMetaWebhookPost(params: {
   return { status: 200, data: { success: true, handled } };
 }
 
+function extractQueryParams(req: any): URLSearchParams {
+  const urlObj = new URL(req.url || '/', 'https://mirrorbook.site');
+  const params = new URLSearchParams(urlObj.searchParams);
+  if (req.query && typeof req.query === 'object') {
+    for (const [key, value] of Object.entries(req.query)) {
+      if (!params.has(key) && value !== undefined && value !== null) {
+        params.set(key, Array.isArray(value) ? String(value[0] ?? '') : String(value));
+      }
+    }
+  }
+  return params;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method === 'GET') {
-    const urlObj = new URL(req.url || '/', 'https://mirrorbook.site');
-    const result = await processMetaWebhookGet(urlObj.searchParams);
+    const queryParams = extractQueryParams(req);
+    const result = await processMetaWebhookGet(queryParams);
     res.status(result.status);
-    res.setHeader('Content-Type', result.contentType);
+    res.setHeader(
+      'Content-Type',
+      result.contentType === 'text/plain' ? 'text/plain; charset=utf-8' : result.contentType
+    );
+    res.setHeader('Cache-Control', 'no-store');
     res.send(result.body);
     return;
   }
 
   if (req.method === 'POST') {
     const rawBody =
-      typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
+      typeof req.rawBody === 'string'
+        ? req.rawBody
+        : typeof req.body === 'string'
+          ? req.body
+          : JSON.stringify(req.body || {});
     const signatureHeader =
       typeof req.headers?.['x-hub-signature-256'] === 'string'
         ? req.headers['x-hub-signature-256']

@@ -18,6 +18,7 @@ import { SowrovHosenProfile } from './components/SowrovHosenProfile';
 import { ContactPage } from './components/ContactPage';
 import { MirrorPOSPage } from './components/MirrorPOSPage';
 import { MirrorBotPage } from './components/MirrorBotPage';
+import { PrivacyPolicyPage, DataDeletionPage } from './components/LegalPages';
 import { PackageCustomizerModal, PackageInquiryData } from './components/PackageCustomizerModal';
 import { EmailComposeModal } from './components/EmailComposeModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -106,6 +107,8 @@ const KNOWN_ROUTES = new Set([
   '/contact',
   '/mirrorpos',
   '/mirrorbot',
+  '/privacy-policy',
+  '/data-deletion',
   '/login',
   '/signup',
   '/account',
@@ -124,6 +127,8 @@ function resolveRouteFromLocation(): string {
   if (hash === '#/contact') return '/contact';
   if (hash === '#/mirrorpos') return '/mirrorpos';
   if (hash === '#/mirrorbot') return '/mirrorbot';
+  if (hash === '#/privacy-policy') return '/privacy-policy';
+  if (hash === '#/data-deletion') return '/data-deletion';
   if (hash === '#/login') return '/login';
   if (hash === '#/signup') return '/signup';
   if (hash === '#/account') return '/account';
@@ -1252,6 +1257,24 @@ export default function App() {
             onOpenVaultMirrorBot={() => {
               setAccountInitialTab('mirrorbot');
               navigateTo('/account');
+            }}
+          />
+        ) : currentPath === '/privacy-policy' ? (
+          <PrivacyPolicyPage
+            onNavigateHome={() => navigateTo('/')}
+            onNavigate={navigateTo}
+            onOpenEmailSheet={(subject) => {
+              setEmailSheetSubject(subject || 'Privacy Policy Inquiry');
+              setIsEmailSheetOpen(true);
+            }}
+          />
+        ) : currentPath === '/data-deletion' ? (
+          <DataDeletionPage
+            onNavigateHome={() => navigateTo('/')}
+            onNavigate={navigateTo}
+            onOpenEmailSheet={(subject) => {
+              setEmailSheetSubject(subject || 'Data Deletion Request');
+              setIsEmailSheetOpen(true);
             }}
           />
         ) : (

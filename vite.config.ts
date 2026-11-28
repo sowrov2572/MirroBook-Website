@@ -19,13 +19,14 @@ import {
 import { processMirrorBotChat } from './api/_handlers/mirrorbot/chat';
 import { processSuggestBotNames } from './api/_handlers/mirrorbot/suggest-names';
 import { processMetaStatus } from './api/_handlers/mirrorbot/meta-status';
-import { processMetaOAuthUrl } from './api/mirrorbot/meta-oauth-url';
-import { processMetaCallback } from './api/mirrorbot/meta-callback';
-import { processMetaConnect } from './api/mirrorbot/meta-connect';
+import { processMetaOAuthUrl } from './api/_handlers/mirrorbot/meta-oauth-url';
+import { processMetaCallback } from './api/_handlers/mirrorbot/meta-callback';
+import { processMetaConnect } from './api/_handlers/mirrorbot/meta-connect';
 import {
   processMetaWebhookGet,
   processMetaWebhookPost,
 } from './api/_handlers/mirrorbot/meta-webhook';
+import { processMetaDataDeletion } from './api/_handlers/mirrorbot/meta-data-deletion';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -434,8 +435,19 @@ function apiDevServerPlugin(): Plugin {
             sendJson(res, 405, { success: false, error: 'Method not allowed. Use GET.' });
             return;
           }
-          const hostHeader = typeof req.headers['host'] === 'string' ? req.headers['host'] : 'localhost:3000';
-          const originHeader = typeof req.headers['origin'] === 'string' ? req.headers['origin'] : `http://${hostHeader}`;
+          const protoHeader =
+            typeof req.headers['x-forwarded-proto'] === 'string'
+              ? req.headers['x-forwarded-proto'].split(',')[0].trim()
+              : 'http';
+          const hostHeader =
+            (typeof req.headers['x-forwarded-host'] === 'string'
+              ? req.headers['x-forwarded-host'].split(',')[0].trim()
+              : '') ||
+            (typeof req.headers['host'] === 'string' ? req.headers['host'] : 'localhost:3000');
+          const originHeader =
+            typeof req.headers['origin'] === 'string' && req.headers['origin']
+              ? req.headers['origin']
+              : `${protoHeader}://${hostHeader}`;
           const authHeader =
             typeof req.headers['authorization'] === 'string'
               ? req.headers['authorization']
@@ -519,6 +531,40 @@ function apiDevServerPlugin(): Plugin {
             return;
           }
           sendJson(res, 405, { success: false, error: 'Method not allowed.' });
+          return;
+        }
+
+        if (
+          url === '/api/mirrorbot/meta-data-deletion' ||
+          url === '/api/mirrorbot/meta-data-deletion/'
+        ) {
+          const protoHeader =
+            typeof req.headers['x-forwarded-proto'] === 'string'
+              ? req.headers['x-forwarded-proto'].split(',')[0].trim()
+              : 'http';
+          const hostHeader =
+            (typeof req.headers['x-forwarded-host'] === 'string'
+              ? req.headers['x-forwarded-host'].split(',')[0].trim()
+              : '') ||
+            (typeof req.headers['host'] === 'string' ? req.headers['host'] : 'localhost:3000');
+          const originHeader = `${protoHeader}://${hostHeader}`;
+          const bodyStr = req.method === 'POST' ? await readRequestBody(req, 256 * 1024) : '';
+          let parsedBody: any = bodyStr;
+          const contentType = String(req.headers['content-type'] || '').toLowerCase();
+          if (contentType.includes('application/json') && bodyStr.trim()) {
+            try {
+              parsedBody = JSON.parse(bodyStr);
+            } catch {
+              parsedBody = {};
+            }
+          }
+          const result = await processMetaDataDeletion({
+            method: req.method || 'GET',
+            body: parsedBody,
+            requestOrigin: originHeader,
+          });
+          res.setHeader('Cache-Control', 'no-store');
+          sendJson(res, result.status, result.data);
           return;
         }
         next();
